@@ -1,7 +1,7 @@
 
 package com.example.mylibrary.dao;
 
-import com.example.mylibrary.model.Customer;
+import com.example.mylibrary.models.Customer;
 import com.google.firebase.firestore.FirebaseFirestore;
 
 public class AuthDAO {
@@ -15,8 +15,11 @@ public class AuthDAO {
     // Lưu thông tin khách hàng vào collection customers
     public void saveCustomer(Customer customer,
                              OnCustomerSaveListener listener) {
+        if (listener == null) {
+            return;
+        }
         if (customer == null || customer.getId() == null
-                || customer.getId().isEmpty()) {
+                || customer.getId().trim().isEmpty()) {
             listener.onFailure("Thông tin khách hàng không hợp lệ.");
             return;
         }
