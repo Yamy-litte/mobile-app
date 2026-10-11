@@ -1,0 +1,39 @@
+{
+  "project_info": {
+    "project_number": "888517484241",
+    "project_id": "mylibrary-uef",
+    "storage_bucket": "mylibrary-uef.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:888517484241:android:e1bb6523862bb9555d2ff0",
+        "android_client_info": {
+          "package_name": "com.example.mylibrary"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "888517484241-pjlog4r8nge1li8msrgkunf9uvajhg7u.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyB5kExZVmH4ZA-aZ3qX2IjN7W8Br2GmXxs"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "888517484241-pjlog4r8nge1li8msrgkunf9uvajhg7u.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
