@@ -1,168 +1,79 @@
-
 package com.example.mylibrary.service;
 
-import com.example.mylibrary.dao.AuthDAO;
-import com.example.mylibrary.model.Customer;
+import android.content.Context;
+import android.content.SharedPreferences;
+
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
 
 public class AuthService {
+    private final FirebaseAuth auth;
+    private final SharedPreferences sharedPreferences;
+    private static final String PREFS_NAME = "LibraryPrefs";
+    private static final String USER_TYPE_KEY = "userType";
 
-    private final FirebaseAuth firebaseAuth;
-    private final AuthDAO authDAO;
-
-    public AuthService() {
-        firebaseAuth = FirebaseAuth.getInstance();
-        authDAO = new AuthDAO();
+    public AuthService(Context context) {
+        this.auth = FirebaseAuth.getInstance();
+        this.sharedPreferences = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE);
     }
 
-    // Đăng ký tài khoản và lưu hồ sơ khách hàng
-
-    public void register(
-            String fullName,
-            String email,
-            String password,
-            FirebaseAuthCallback callback) {
-
-        if (callback == null) {
-            return;
-        }
-
-        if (fullName == null || fullName.trim().isEmpty()) {
-            callback.onFailure("Vui lòng nhập họ và tên.");
-            return;
-        }
-
-        if (email == null || email.trim().isEmpty()) {
-            callback.onFailure("Vui lòng nhập email.");
-            return;
-        }
-
-        if (password == null || password.length() < 6) {
-            callback.onFailure("Mật khẩu phải có ít nhất 6 ký tự.");
-            return;
-        }
-
-        String name = fullName.trim();
-        String normalizedEmail = email.trim();
-
-        firebaseAuth.createUserWithEmailAndPassword(
-                normalizedEmail,
-                password
-        ).addOnCompleteListener(task -> {
-            if (!task.isSuccessful()) {
-                String message = task.getException() != null
-                        ? task.getException().getMessage()
-                        : "Không thể đăng ký tài khoản.";
-
-                callback.onFailure(message);
-                return;
-            }
-
-            FirebaseUser user = firebaseAuth.getCurrentUser();
-
-            if (user == null) {
-                callback.onFailure(
-                        "Tài khoản đã tạo nhưng không lấy được thông tin người dùng."
-                );
-                return;
-            }
-
-            long currentTime = System.currentTimeMillis();
-
-            Customer customer = new Customer(
-                    user.getUid(),
-                    normalizedEmail,
-                    name,
-                    "",
-                    "",
-                    "active",
-                    currentTime,
-                    currentTime
-            );
-
-            authDAO.saveCustomer(customer,
-                    new AuthDAO.OnCustomerSaveListener() {
-                        @Override
-                        public void onSuccess() {
-                            callback.onSuccess(user);
-                        }
-
-                        @Override
-                        public void onFailure(String error) {
-                            callback.onFailure(
-                                    "Tài khoản đã được tạo nhưng lưu hồ sơ thất bại: "
-                                            + error
-                            );
-                        }
-                    });
-        });
+    public void registerUser(String email, String password, String userType, AuthCallback callback) {
+        auth.createUserWithEmailAndPassword(email, password)
+                .addOnSuccessListener(result -> {
+                    if (result.getUser() != null) {
+                        saveUserType(result.getUser().getUid(), userType);
+                        callback.onSuccess(result.getUser());
+                    } else {
+                        callback.onError(new Exception("User creation failed"));
+                    }
+                })
+                .addOnFailureListener(callback::onError);
     }
 
-
-    // Đăng nhập bằng email và mật khẩu
-    public void login(
-            String email,
-            String password,
-            FirebaseAuthCallback callback) {
-
-        if (callback == null) {
-            return;
-        }
-
-        if (email == null || email.trim().isEmpty()) {
-            callback.onFailure("Vui lòng nhập email.");
-            return;
-        }
-
-        if (password == null || password.isEmpty()) {
-            callback.onFailure("Vui lòng nhập mật khẩu.");
-            return;
-        }
-
-        firebaseAuth.signInWithEmailAndPassword(
-                email.trim(),
-                password
-        ).addOnCompleteListener(task -> {
-            if (task.isSuccessful()) {
-                FirebaseUser user = firebaseAuth.getCurrentUser();
-
-                if (user != null) {
-                    callback.onSuccess(user);
-                } else {
-                    callback.onFailure(
-                            "Đăng nhập thành công nhưng không lấy được thông tin người dùng."
-                    );
-                }
-            } else {
-                String message = task.getException() != null
-                        ? task.getException().getMessage()
-                        : "Email hoặc mật khẩu không chính xác.";
-
-                callback.onFailure(message);
-            }
-        });
+    public void loginUser(String email, String password, AuthCallback callback) {
+        auth.signInWithEmailAndPassword(email, password)
+                .addOnSuccessListener(result -> {
+                    if (result.getUser() != null) {
+                        callback.onSuccess(result.getUser());
+                    } else {
+                        callback.onError(new Exception("Login failed"));
+                    }
+                })
+                .addOnFailureListener(callback::onError);
     }
 
-    // Đăng xuất
     public void logout() {
-        firebaseAuth.signOut();
+        auth.signOut();
+        clearUserPreferences();
     }
 
-    // Lấy người dùng hiện tại
     public FirebaseUser getCurrentUser() {
-        return firebaseAuth.getCurrentUser();
+        return auth.getCurrentUser();
     }
 
-    // Kiểm tra trạng thái đăng nhập
-    public boolean isLoggedIn() {
-        return firebaseAuth.getCurrentUser() != null;
+    public boolean isUserLoggedIn() {
+        return auth.getCurrentUser() != null;
     }
 
-    // Callback trả kết quả cho giao diện
-    public interface FirebaseAuthCallback {
+    public void saveUserType(String userId, String userType) {
+        SharedPreferences.Editor editor = sharedPreferences.edit();
+        editor.putString("userId", userId);
+        editor.putString(USER_TYPE_KEY, userType);
+        editor.apply();
+    }
+
+    public String getUserType() {
+        return sharedPreferences.getString(USER_TYPE_KEY, "CUSTOMER");
+    }
+
+    private void clearUserPreferences() {
+        SharedPreferences.Editor editor = sharedPreferences.edit();
+        editor.clear();
+        editor.apply();
+    }
+
+    public interface AuthCallback {
         void onSuccess(FirebaseUser user);
-
-        void onFailure(String errorMessage);
+        void onError(Exception e);
     }
 }
