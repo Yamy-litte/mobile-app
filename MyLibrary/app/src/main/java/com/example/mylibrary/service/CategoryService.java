@@ -1,70 +1,50 @@
-
 package com.example.mylibrary.service;
 
-import com.example.mylibrary.dao.CategoryDAO;
-import com.example.mylibrary.model.Category;
+import com.example.mylibrary.dao.CategoryDao;
+import com.example.mylibrary.dao.DataCallback;
+import com.example.mylibrary.dao.FirestoreCategoryDao;
+import com.example.mylibrary.models.Category;
 
 import java.util.List;
 
 public class CategoryService {
 
-    private final CategoryDAO categoryDAO;
+    private final CategoryDao categoryDao;
 
     public CategoryService() {
-        categoryDAO = new CategoryDAO();
+        categoryDao = new FirestoreCategoryDao();
     }
 
     public interface CategoryServiceCallback {
         void onSuccess(List<Category> categories);
-
         void onFailure(String errorMessage);
     }
 
-    public void getActiveCategories(
-            CategoryServiceCallback callback
-    ) {
-        categoryDAO.getActiveCategories(
-                new CategoryDAO.CategoryCallback() {
+    public void getActiveCategories(CategoryServiceCallback callback) {
+        categoryDao.getCategories(new DataCallback<List<Category>>() {
+            @Override
+            public void onSuccess(List<Category> result) {
+                callback.onSuccess(result);
+            }
 
-                    @Override
-                    public void onSuccess(
-                            List<Category> categories
-                    ) {
-                        callback.onSuccess(categories);
-                    }
-
-                    @Override
-                    public void onFailure(
-                            String errorMessage
-                    ) {
-                        callback.onFailure(errorMessage);
-                    }
-                }
-        );
+            @Override
+            public void onFailure(String errorMessage) {
+                callback.onFailure(errorMessage);
+            }
+        });
     }
 
-    public void getCategoryById(
-            String categoryId,
-            CategoryServiceCallback callback
-    ) {
-        categoryDAO.getCategoryById(
-                categoryId,
-                new CategoryDAO.CategoryCallback() {
+    public void getCategoryById(String categoryId, CategoryServiceCallback callback) {
+        categoryDao.getCategoryById(categoryId, new DataCallback<Category>() {
+            @Override
+            public void onSuccess(Category result) {
+                callback.onSuccess(java.util.Collections.singletonList(result));
+            }
 
-                    @Override
-                    public void onSuccess(
-                            List<Category> categories
-                    ) {
-                        callback.onSuccess(categories);
-                    }
-
-                    @Override
-                    public void onFailure(
-                            String errorMessage
-                    ) {
-                        callback.onFailure(errorMessage);
-                    }
-                }
-        );
+            @Override
+            public void onFailure(String errorMessage) {
+                callback.onFailure(errorMessage);
+            }
+        });
     }
 }

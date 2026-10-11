@@ -2,50 +2,146 @@
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="#F3F5F7"
-    android:orientation="vertical"
-    android:padding="20dp">
+    android:background="#F7F8FC"
+    android:orientation="vertical">
 
-    <TextView
+    <LinearLayout
         android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:text="Profile"
-        android:textColor="#1F4E5F"
-        android:textSize="28sp"
-        android:textStyle="bold"
-        android:layout_marginBottom="24dp" />
+        android:layout_height="56dp"
+        android:background="#243B64"
+        android:gravity="center_vertical"
+        android:paddingHorizontal="16dp">
 
-    <TextView
-        android:id="@+id/tvUserDisplayName"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:text="Full Name"
-        android:textColor="#1F4E5F"
-        android:textSize="18sp"
-        android:layout_marginBottom="16dp" />
+        <TextView
+            android:id="@+id/txtProfileBack"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="← Tài khoản độc giả"
+            android:textColor="#FFFFFF"
+            android:textSize="18sp"
+            android:textStyle="bold" />
+    </LinearLayout>
 
-    <TextView
-        android:id="@+id/tvUserEmail"
+    <ScrollView
         android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:text="Email"
-        android:textColor="#5F6B7A"
-        android:textSize="16sp"
-        android:layout_marginBottom="24dp" />
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:fillViewport="true">
 
-    <TextView
-        android:id="@+id/tvLibraryCardNumber"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:text="Library Card Number"
-        android:textColor="#1F4E5F"
-        android:textSize="14sp"
-        android:layout_marginBottom="24dp" />
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:padding="20dp">
 
-    <Button
-        android:id="@+id/btnLogoutProfile"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:backgroundTint="#D95C5C"
-        android:text="Logout" />
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:background="#FFFFFF"
+                android:gravity="center"
+                android:orientation="vertical"
+                android:padding="20dp">
+
+                <TextView
+                    android:layout_width="64dp"
+                    android:layout_height="64dp"
+                    android:background="#E8EEF5"
+                    android:gravity="center"
+                    android:text="👤"
+                    android:textSize="32sp" />
+
+                <TextView
+                    android:id="@+id/tvUserDisplayName"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="12dp"
+                    android:text="LÊ MINH DŨNG"
+                    android:textColor="#243B64"
+                    android:textSize="18sp"
+                    android:textStyle="bold" />
+
+                <TextView
+                    android:id="@+id/tvUserEmail"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="4dp"
+                    android:text="dunglm23@dunglm23uef.edu.vn"
+                    android:textColor="#667085"
+                    android:textSize="14sp" />
+
+                <TextView
+                    android:id="@+id/tvLibraryCardNumber"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="4dp"
+                    android:text="Mã thẻ: LH-88402-VN"
+                    android:textColor="#243B64"
+                    android:textSize="13sp" />
+            </LinearLayout>
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="16dp"
+                android:background="#FFFFFF"
+                android:orientation="vertical">
+
+                <Button
+                    android:id="@+id/btnViewLibraryCard"
+                    style="?android:attr/borderlessButtonStyle"
+                    android:layout_width="match_parent"
+                    android:layout_height="56dp"
+                    android:gravity="start|center_vertical"
+                    android:paddingHorizontal="16dp"
+                    android:text="🪪  Thẻ thư viện số"
+                    android:textColor="#243B64"
+                    android:textSize="15sp" />
+
+                <View
+                    android:layout_width="match_parent"
+                    android:layout_height="1dp"
+                    android:background="#F2F4F7" />
+
+                <Button
+                    android:id="@+id/btnViewBorrowHistory"
+                    style="?android:attr/borderlessButtonStyle"
+                    android:layout_width="match_parent"
+                    android:layout_height="56dp"
+                    android:gravity="start|center_vertical"
+                    android:paddingHorizontal="16dp"
+                    android:text="📜  Lịch sử mượn trả &amp; Phí phạt"
+                    android:textColor="#243B64"
+                    android:textSize="15sp" />
+
+                <View
+                    android:layout_width="match_parent"
+                    android:layout_height="1dp"
+                    android:background="#F2F4F7" />
+
+                <Button
+                    android:id="@+id/btnViewReservations"
+                    style="?android:attr/borderlessButtonStyle"
+                    android:layout_width="match_parent"
+                    android:layout_height="56dp"
+                    android:gravity="start|center_vertical"
+                    android:paddingHorizontal="16dp"
+                    android:text="📌  Yêu cầu đặt trước sách"
+                    android:textColor="#243B64"
+                    android:textSize="15sp" />
+
+            </LinearLayout>
+
+            <Button
+                android:id="@+id/btnLogoutProfile"
+                android:layout_width="match_parent"
+                android:layout_height="50dp"
+                android:layout_marginTop="28dp"
+                android:backgroundTint="#D92D20"
+                android:text="Đăng xuất"
+                android:textAllCaps="false"
+                android:textColor="#FFFFFF"
+                android:textSize="16sp" />
+
+        </LinearLayout>
+    </ScrollView>
 </LinearLayout>
