@@ -1,7 +1,7 @@
 
 package com.example.mylibrary.dao;
 
-import com.example.mylibrary.model.Book;
+import com.example.mylibrary.models.Book;
 import com.google.firebase.firestore.FirebaseFirestore;
 import com.google.firebase.firestore.QueryDocumentSnapshot;
 
