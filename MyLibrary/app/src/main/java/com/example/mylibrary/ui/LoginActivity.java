@@ -119,6 +119,7 @@ public class LoginActivity extends AppCompatActivity {
 
                                     if ("Customer".equals(selectedRole)) {
                                         String customerName = document.getString("fullName");
+                                        if (customerName == null) customerName = document.getString("full_name");
 
                                         Intent intent = new Intent(
                                                 LoginActivity.this,
@@ -142,6 +143,7 @@ public class LoginActivity extends AppCompatActivity {
                                 })
                                 .addOnFailureListener(e -> {
                                     authService.logout();
+                                    btnLogin.setEnabled(true);
 
                                     Toast.makeText(
                                             LoginActivity.this,
