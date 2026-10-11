@@ -1,152 +1,95 @@
 <?xml version="1.0" encoding="utf-8"?>
-<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="#FFFFFF"
-    android:fillViewport="true">
+    android:background="#F3F5F7"
+    android:orientation="vertical"
+    android:padding="20dp">
 
-    <LinearLayout
+    <TextView
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:orientation="vertical">
+        android:text="Book Details"
+        android:textColor="#1F4E5F"
+        android:textSize="28sp"
+        android:textStyle="bold"
+        android:layout_marginBottom="16dp" />
 
-        <!-- Header -->
-        <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="64dp"
-            android:background="#FFF8EF"
-            android:gravity="center_vertical"
-            android:orientation="horizontal"
-            android:paddingStart="20dp"
-            android:paddingEnd="20dp">
-
-            <TextView
-                android:id="@+id/txtDetailBack"
-                android:layout_width="48dp"
-                android:layout_height="48dp"
-                android:clickable="true"
-                android:focusable="true"
-                android:gravity="center"
-                android:text="‹"
-                android:textColor="#205D52"
-                android:textSize="36sp" />
-
-            <TextView
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:layout_marginStart="8dp"
-                android:text="Chi tiết sách"
-                android:textColor="#183D35"
-                android:textSize="22sp"
-                android:textStyle="bold" />
-
-            <TextView
-                android:id="@+id/txtDetailFavorite"
-                android:layout_width="44dp"
-                android:layout_height="44dp"
-                android:background="@drawable/bg_detail_circle"
-                android:gravity="center"
-                android:text="♡"
-                android:textColor="#205D52"
-                android:textSize="30sp" />
-
-        </LinearLayout>
-
-        <!-- Book cover -->
-        <FrameLayout
-            android:layout_width="match_parent"
-            android:layout_height="290dp"
-            android:background="#FFFFFF"
-            android:foregroundGravity="center">
-
-            <ImageView
-                android:id="@+id/imgBookCover"
-                android:layout_width="200dp"
-                android:layout_height="260dp"
-                android:layout_gravity="center"
-                android:contentDescription="Ảnh bìa sách"
-                android:scaleType="fitCenter"
-                android:src="@android:drawable/ic_menu_gallery" />
-
-        </FrameLayout>
-
-        <!-- Existing book information -->
+    <ScrollView
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1">
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:orientation="vertical"
-            android:padding="24dp">
+            android:orientation="vertical">
 
             <TextView
-                android:id="@+id/txtDetailTitle"
+                android:id="@+id/tvBookTitle"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:text="Tên sách"
-                android:textColor="#183D35"
-                android:textSize="24sp"
-                android:textStyle="bold" />
+                android:text="Title"
+                android:textColor="#1F4E5F"
+                android:textSize="22sp"
+                android:textStyle="bold"
+                android:layout_marginBottom="8dp" />
 
             <TextView
-                android:id="@+id/txtDetailRating"
+                android:id="@+id/tvBookAuthor"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="8dp"
-                android:text="Chưa có đánh giá"
-                android:textColor="#B7791F"
-                android:textSize="14sp" />
+                android:text="Author"
+                android:textColor="#5F6B7A"
+                android:layout_marginBottom="12dp" />
 
             <TextView
-                android:id="@+id/txtDetailAuthor"
+                android:id="@+id/tvBookPublisher"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="8dp"
-                android:text="Tác giả"
-                android:textColor="#64736F"
-                android:textSize="16sp" />
+                android:text="Publisher"
+                android:textColor="#5F6B7A"
+                android:layout_marginBottom="12dp" />
 
             <TextView
-                android:id="@+id/txtDetailCategory"
+                android:id="@+id/tvBookYear"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="8dp"
-                android:text="Danh mục"
-                android:textColor="#205D52"
-                android:textSize="14sp" />
+                android:text="Year"
+                android:textColor="#5F6B7A"
+                android:layout_marginBottom="12dp" />
 
             <TextView
+                android:id="@+id/tvBookSummary"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="24dp"
-                android:text="Giới thiệu sách"
-                android:textColor="#183D35"
-                android:textSize="18sp"
-                android:textStyle="bold" />
+                android:text="Summary"
+                android:textColor="#1A1A1A"
+                android:layout_marginBottom="12dp" />
 
             <TextView
-                android:id="@+id/txtDetailDescription"
+                android:id="@+id/tvAvailableQuantity"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="10dp"
-                android:lineSpacingExtra="5dp"
-                android:text="Mô tả sách"
-                android:textColor="#64736F"
-                android:textSize="15sp" />
-
-            <TextView
-                android:id="@+id/txtDetailStatus"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="20dp"
-                android:background="#E7F3EB"
-                android:padding="10dp"
-                android:text="Trạng thái"
-                android:textColor="#315C45"
-                android:textSize="14sp"
-                android:textStyle="bold" />
-
+                android:text="Available: 0"
+                android:textColor="#5FAE62"
+                android:textSize="16sp"
+                android:textStyle="bold"
+                android:layout_marginBottom="24dp" />
         </LinearLayout>
+    </ScrollView>
 
-    </LinearLayout>
+    <Button
+        android:id="@+id/btnReserve"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:backgroundTint="#5FAE62"
+        android:text="Reserve Book" />
 
-</ScrollView>
+    <Button
+        android:id="@+id/btnBorrow"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="12dp"
+        android:backgroundTint="#1F4E5F"
+        android:text="Borrow Book" />
+</LinearLayout>
