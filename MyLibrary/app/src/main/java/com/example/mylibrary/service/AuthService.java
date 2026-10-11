@@ -3,7 +3,7 @@ package com.example.mylibrary.service;
 import android.content.Context;
 import android.content.SharedPreferences;
 
-import com.example.mylibrary.model.Customer;
+import com.example.mylibrary.models.Customer;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
 import com.google.firebase.firestore.FirebaseFirestore;

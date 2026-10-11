@@ -2,7 +2,7 @@
 package com.example.mylibrary.service;
 
 import com.example.mylibrary.dao.BookDAO;
-import com.example.mylibrary.model.Book;
+import com.example.mylibrary.models.Book;
 
 import java.util.List;
 

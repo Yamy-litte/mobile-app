@@ -17,7 +17,7 @@ import android.widget.Toast;
 import androidx.appcompat.app.AppCompatActivity;
 
 import com.example.mylibrary.R;
-import com.example.mylibrary.model.Book;
+import com.example.mylibrary.models.Book;
 import com.example.mylibrary.service.BookService;
 
 import java.util.List;

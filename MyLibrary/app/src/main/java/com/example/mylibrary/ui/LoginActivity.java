@@ -47,7 +47,6 @@ public class LoginActivity extends AppCompatActivity {
         edtPassword = findViewById(R.id.edtPassword);
         btnLogin = findViewById(R.id.btnLogin);
         txtGoRegister = findViewById(R.id.txtGoRegister);
-        txtGoRegister = findViewById(R.id.txtGoRegister);
 
         if ("Admin".equals(selectedRole)) {
             txtGoRegister.setVisibility(View.GONE);
@@ -88,6 +87,7 @@ public class LoginActivity extends AppCompatActivity {
                     @Override
                     public void onSuccess(FirebaseUser user) {
                         if (user == null) {
+                            btnLogin.setEnabled(true);
                             Toast.makeText(
                                     LoginActivity.this,
                                     "Không lấy được thông tin tài khoản.",
@@ -107,6 +107,7 @@ public class LoginActivity extends AppCompatActivity {
                                     if (!document.exists()) {
                                         authService.logout();
 
+                                        btnLogin.setEnabled(true);
                                         Toast.makeText(
                                                 LoginActivity.this,
                                                 "Tài khoản không thuộc vai trò " + selectedRole + " đã chọn.",
@@ -117,7 +118,8 @@ public class LoginActivity extends AppCompatActivity {
                                     }
 
                                     if ("Customer".equals(selectedRole)) {
-                                        String customerName = document.getString("full_name");
+                                        String customerName = document.getString("fullName");
+                                        if (customerName == null) customerName = document.getString("full_name");
 
                                         Intent intent = new Intent(
                                                 LoginActivity.this,
@@ -136,10 +138,12 @@ public class LoginActivity extends AppCompatActivity {
                                                 Toast.LENGTH_SHORT
                                         ).show();
                                     }
+                                    btnLogin.setEnabled(true);
 
                                 })
                                 .addOnFailureListener(e -> {
                                     authService.logout();
+                                    btnLogin.setEnabled(true);
 
                                     Toast.makeText(
                                             LoginActivity.this,

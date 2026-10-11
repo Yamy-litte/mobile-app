@@ -10,7 +10,7 @@ import androidx.appcompat.app.AppCompatActivity;
 
 import com.bumptech.glide.Glide;
 import com.example.mylibrary.R;
-import com.example.mylibrary.model.Book;
+import com.example.mylibrary.models.Book;
 import com.example.mylibrary.models.Category;
 import com.example.mylibrary.models.Reservation;
 import com.example.mylibrary.repository.ReservationRepository;
@@ -79,8 +79,14 @@ public class BookDetailActivity extends AppCompatActivity {
 
     private void handleReservation() {
         if (currentBook == null) return;
-        String uid = FirebaseAuth.getInstance().getCurrentUser() != null ? 
-                FirebaseAuth.getInstance().getCurrentUser().getUid() : "GUEST";
+
+        if (FirebaseAuth.getInstance().getCurrentUser() == null) {
+            Toast.makeText(this, "Vui lòng đăng nhập để đặt trước sách.", Toast.LENGTH_SHORT).show();
+            startActivity(new android.content.Intent(this, LoginActivity.class));
+            return;
+        }
+
+        String uid = FirebaseAuth.getInstance().getCurrentUser().getUid();
         
         Reservation reservation = new Reservation();
         reservation.setCustomerId(uid);
