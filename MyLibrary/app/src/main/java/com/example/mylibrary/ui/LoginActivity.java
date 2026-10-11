@@ -132,11 +132,12 @@ public class LoginActivity extends AppCompatActivity {
                                         finish();
 
                                     } else {
-                                        Toast.makeText(
+                                        Intent intent = new Intent(
                                                 LoginActivity.this,
-                                                "Đăng nhập Admin thành công!",
-                                                Toast.LENGTH_SHORT
-                                        ).show();
+                                                AdminDashboardActivity.class
+                                        );
+                                        startActivity(intent);
+                                        finish();
                                     }
                                     btnLogin.setEnabled(true);
 
