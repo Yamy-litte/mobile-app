@@ -11,32 +11,29 @@
         android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
         android:theme="@style/Theme.MyLibrary">
-        <activity
-            android:name=".ui.RegisterActivity"
-            android:exported="false" />
-        <activity
-            android:name=".ui.LoginActivity"
-            android:exported="true" />
-        <activity
-            android:name=".ui.RoleSelectionActivity"
-            android:exported="false" />
+
+        <activity android:name=".ui.RegisterActivity" android:exported="false" />
+        <activity android:name=".ui.LoginActivity" android:exported="false" />
+        <activity android:name=".ui.RoleSelectionActivity" android:exported="false" />
+        <activity android:name=".ui.HomeActivity" android:exported="false" android:windowSoftInputMode="adjustResize" />
+        <activity android:name=".ui.BookDetailActivity" android:exported="false" android:windowSoftInputMode="adjustResize" />
+        <activity android:name=".ui.ProfileActivity" android:exported="false" />
+        <activity android:name=".ui.LibraryCardActivity" android:exported="false" />
+        <activity android:name=".ui.BorrowHistoryActivity" android:exported="false" />
+        <activity android:name=".ui.ReservationsActivity" android:exported="false" />
+        <activity android:name=".ui.AdminDashboardActivity" android:exported="false" />
+        <activity android:name=".ui.ManageBooksActivity" android:exported="false" />
+        <activity android:name=".ui.ManageReservationsActivity" android:exported="false" />
+        <activity android:name=".ui.ScanBorrowActivity" android:exported="false" />
+        <activity android:name=".ui.ScanReturnActivity" android:exported="false" />
+
         <activity
             android:name=".ui.WelcomeActivity"
             android:exported="true">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
-
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
-        <activity
-            android:name=".ui.HomeActivity"
-            android:exported="false"
-            android:windowSoftInputMode="adjustResize" />
-        <activity
-            android:name=".ui.BookDetailActivity"
-            android:exported="false"
-            android:windowSoftInputMode="adjustResize" />
     </application>
-
 </manifest>
