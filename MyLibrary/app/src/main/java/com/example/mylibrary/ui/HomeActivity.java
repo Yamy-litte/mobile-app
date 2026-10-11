@@ -16,8 +16,8 @@ import android.widget.EditText;
 import androidx.appcompat.app.AppCompatActivity;
 import android.content.Intent;
 import com.example.mylibrary.R;
-import com.example.mylibrary.model.Book;
-import com.example.mylibrary.model.Category;
+import com.example.mylibrary.models.Book;
+import com.example.mylibrary.models.Category;
 import com.example.mylibrary.service.BookService;
 import com.example.mylibrary.service.CategoryService;
 
