@@ -79,8 +79,14 @@ public class BookDetailActivity extends AppCompatActivity {
 
     private void handleReservation() {
         if (currentBook == null) return;
-        String uid = FirebaseAuth.getInstance().getCurrentUser() != null ? 
-                FirebaseAuth.getInstance().getCurrentUser().getUid() : "GUEST";
+
+        if (FirebaseAuth.getInstance().getCurrentUser() == null) {
+            Toast.makeText(this, "Vui lòng đăng nhập để đặt trước sách.", Toast.LENGTH_SHORT).show();
+            startActivity(new android.content.Intent(this, LoginActivity.class));
+            return;
+        }
+
+        String uid = FirebaseAuth.getInstance().getCurrentUser().getUid();
         
         Reservation reservation = new Reservation();
         reservation.setCustomerId(uid);
