@@ -49,8 +49,8 @@ public class AdminDashboardActivity extends AppCompatActivity {
         btnScanBorrow.setOnClickListener(v -> startActivity(new Intent(this, ScanBorrowActivity.class)));
         btnScanReturn.setOnClickListener(v -> startActivity(new Intent(this, ScanReturnActivity.class)));
         btnManageReservations.setOnClickListener(v -> startActivity(new Intent(this, ManageReservationsActivity.class)));
-        btnManageCustomers.setOnClickListener(v -> startActivity(new Intent(this, ManageCustomersActivity.class)));
-        btnManageStaff.setOnClickListener(v -> startActivity(new Intent(this, ManageStaffActivity.class)));
+        btnManageCustomers.setOnClickListener(v -> Toast.makeText(this, "Chức năng quản lý độc giả đang được hoàn thiện.", Toast.LENGTH_SHORT).show());
+        btnManageStaff.setOnClickListener(v -> Toast.makeText(this, "Chức năng quản lý nhân viên đang được hoàn thiện.", Toast.LENGTH_SHORT).show());
 
         btnLogoutAdmin.setOnClickListener(v -> {
             authService.logout();
