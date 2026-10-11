@@ -79,7 +79,8 @@ public class ProfileActivity extends AppCompatActivity {
                     .get()
                     .addOnSuccessListener(doc -> {
                         if (doc.exists()) {
-                            String name = doc.getString("full_name");
+                            String name = doc.getString("fullName");
+                            if (name == null) name = doc.getString("full_name");
                             if (name != null && !name.isEmpty()) {
                                 tvUserDisplayName.setText(name);
                             }
