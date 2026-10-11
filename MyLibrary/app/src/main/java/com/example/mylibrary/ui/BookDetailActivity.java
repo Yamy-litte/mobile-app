@@ -10,7 +10,7 @@ import androidx.appcompat.app.AppCompatActivity;
 
 import com.bumptech.glide.Glide;
 import com.example.mylibrary.R;
-import com.example.mylibrary.model.Book;
+import com.example.mylibrary.models.Book;
 import com.example.mylibrary.models.Category;
 import com.example.mylibrary.models.Reservation;
 import com.example.mylibrary.repository.ReservationRepository;
