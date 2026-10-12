@@ -16,11 +16,21 @@ import java.util.Map;
  * Stock is checked against SQLite whenever an item is added or its quantity changes.
  */
 public class CartManager {
+    private static CartManager instance;
+
     private final MenuDao menuDao;
     private final Map<Integer, CartItem> items = new LinkedHashMap<>();
 
-    public CartManager(Context context) {
+    private CartManager(Context context) {
         menuDao = new MenuDao(context);
+    }
+
+    /** Shares one cart instance between screens for the lifetime of the app process. */
+    public static synchronized CartManager getInstance(Context context) {
+        if (instance == null) {
+            instance = new CartManager(context.getApplicationContext());
+        }
+        return instance;
     }
 
     /**
