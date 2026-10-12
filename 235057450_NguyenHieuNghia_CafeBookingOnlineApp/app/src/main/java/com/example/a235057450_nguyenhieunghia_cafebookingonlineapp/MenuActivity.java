@@ -16,6 +16,7 @@ import android.view.ViewGroup;
 import androidx.appcompat.app.AppCompatActivity;
 import com.example.a235057450_nguyenhieunghia_cafebookingonlineapp.dao.CategoryDAO;
 import com.example.a235057450_nguyenhieunghia_cafebookingonlineapp.dao.MenuDAO;
+import com.example.a235057450_nguyenhieunghia_cafebookingonlineapp.adapters.MenuAdapter;
 import com.example.a235057450_nguyenhieunghia_cafebookingonlineapp.model.Category;
 import com.example.a235057450_nguyenhieunghia_cafebookingonlineapp.model.MenuItem;
 import java.text.NumberFormat;
@@ -104,31 +105,23 @@ public class MenuActivity extends AppCompatActivity {
                     && !description.toLowerCase(Locale.ROOT).contains(keyword)) continue;
 
             View card = inflater.inflate(R.layout.item_menu_card, menuContainer, false);
-            TextView itemName = card.findViewById(R.id.itemName);
-            TextView desc = card.findViewById(R.id.itemDescription);
-            TextView price = card.findViewById(R.id.itemPrice);
-            Button detailsButton = card.findViewById(R.id.detailsButton);
-            Button addToCart = card.findViewById(R.id.addToCartButton);
-            itemName.setText(name);
-            desc.setText(description);
-            desc.setVisibility(description.isEmpty() ? View.GONE : View.VISIBLE);
-            price.setText(currency.format(item.getPrice()) + " đ");
-            detailsButton.setOnClickListener(v -> {
-                Intent intent = new Intent(this, MenuDetailActivity.class);
-                intent.putExtra(MenuDetailActivity.EXTRA_MENU_ID, item.getMenuId());
-                startActivity(intent);
-            });
-            addToCart.setOnClickListener(v -> {
-                SharedPreferences cart = getSharedPreferences(CartActivity.PREFS, MODE_PRIVATE);
-                String key = "item_" + item.getMenuId();
-                int current = cart.getInt(key, 0);
-                if (current >= 99) {
-                    Toast.makeText(this, "Số lượng tối đa là 99.", Toast.LENGTH_SHORT).show();
-                    return;
-                }
-                cart.edit().putInt(key, current + 1).apply();
-                Toast.makeText(this, "Đã thêm " + name + " vào giỏ hàng.", Toast.LENGTH_SHORT).show();
-            });
+            MenuAdapter.bind(this, card, item, currency,
+                    v -> {
+                        Intent intent = new Intent(this, MenuDetailActivity.class);
+                        intent.putExtra(MenuDetailActivity.EXTRA_MENU_ID, item.getMenuId());
+                        startActivity(intent);
+                    },
+                    v -> {
+                        SharedPreferences cart = getSharedPreferences(CartActivity.PREFS, MODE_PRIVATE);
+                        String key = "item_" + item.getMenuId();
+                        int current = cart.getInt(key, 0);
+                        if (current >= 99) {
+                            Toast.makeText(this, "Số lượng tối đa là 99.", Toast.LENGTH_SHORT).show();
+                            return;
+                        }
+                        cart.edit().putInt(key, current + 1).apply();
+                        Toast.makeText(this, "Đã thêm " + name + " vào giỏ hàng.", Toast.LENGTH_SHORT).show();
+                    });
             menuContainer.addView(card);
             shown++;
         }
