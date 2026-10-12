@@ -47,6 +47,13 @@
         android:layout_marginTop="4dp"
         android:text="Lịch sử đơn hàng" />
 
+    <Button
+        android:id="@+id/buttonReviews"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="4dp"
+        android:text="Đánh giá của khách hàng" />
+
     <TextView
         android:id="@+id/textCartSummary"
         android:layout_width="match_parent"
