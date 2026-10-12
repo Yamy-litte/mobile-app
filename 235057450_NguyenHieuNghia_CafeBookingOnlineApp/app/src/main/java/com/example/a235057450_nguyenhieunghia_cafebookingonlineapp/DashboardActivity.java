@@ -39,6 +39,13 @@ public class DashboardActivity extends AppCompatActivity {
         LinearLayout.LayoutParams ip = params();
         ip.topMargin = 24;
         root.addView(info, ip);
+        Button menu = new Button(this);
+        menu.setText("Xem thực đơn");
+        LinearLayout.LayoutParams mp = params();
+        mp.topMargin = 20;
+        root.addView(menu, mp);
+        menu.setOnClickListener(v -> startActivity(new Intent(this, MenuActivity.class)));
+
         Button logout = new Button(this);
         logout.setText("Đăng xuất");
         LinearLayout.LayoutParams bp = params();
