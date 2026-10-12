@@ -241,6 +241,8 @@ public class OrderDetailActivity extends AppCompatActivity {
             String result;
             try {
                 result = billDao.cancelOrder(currentBillId, currentUserId);
+            } catch (RuntimeException ex) {
+                result = "ERROR";
             } finally {
                 billDao.close();
             }
