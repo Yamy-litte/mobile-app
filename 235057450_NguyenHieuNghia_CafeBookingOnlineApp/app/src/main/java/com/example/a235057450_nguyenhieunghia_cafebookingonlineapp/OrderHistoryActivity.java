@@ -4,10 +4,8 @@ import android.content.ContentValues;
 import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
 import android.os.Bundle;
-import android.view.Gravity;
 import android.widget.Button;
 import android.widget.LinearLayout;
-import android.widget.ScrollView;
 import android.widget.TextView;
 import android.widget.Toast;
 import androidx.appcompat.app.AppCompatActivity;
@@ -37,27 +35,10 @@ public class OrderHistoryActivity extends AppCompatActivity {
             finish();
             return;
         }
-        ScrollView scroll = new ScrollView(this);
-        LinearLayout root = new LinearLayout(this);
-        root.setOrientation(LinearLayout.VERTICAL);
-        root.setPadding(20, 24, 20, 24);
-        root.setBackgroundColor(0xFFFAF7F2);
-        scroll.addView(root);
-        TextView title = new TextView(this);
-        title.setText("Lịch sử đơn hàng");
-        title.setTextSize(25);
-        title.setTextColor(0xFF744B30);
-        title.setTypeface(null, 1);
-        title.setGravity(Gravity.CENTER);
-        root.addView(title, params());
-        list = new LinearLayout(this);
-        list.setOrientation(LinearLayout.VERTICAL);
-        root.addView(list, params());
-        Button back = new Button(this);
-        back.setText("Quay lại");
-        root.addView(back, params());
+        setContentView(R.layout.activity_order_history);
+        list = findViewById(R.id.orderList);
+        Button back = findViewById(R.id.orderHistoryBackButton);
         back.setOnClickListener(v -> finish());
-        setContentView(scroll);
     }
 
     @Override protected void onResume() {
