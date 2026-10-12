@@ -15,6 +15,10 @@
         android:theme="@style/Theme._235057450_NguyenHieuNghia_CafeBookingOnlineApp">
 
         <activity
+            android:name=".OrderHistoryActivity"
+            android:exported="false" />
+
+        <activity
             android:name=".CheckoutActivity"
             android:exported="false" />
 
