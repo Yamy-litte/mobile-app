@@ -5,9 +5,7 @@ import android.content.SharedPreferences;
 import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
 import android.os.Bundle;
-import android.view.Gravity;
 import android.widget.Button;
-import android.widget.LinearLayout;
 import android.widget.TextView;
 import android.widget.Toast;
 import androidx.appcompat.app.AppCompatActivity;
@@ -34,36 +32,13 @@ public class CheckoutActivity extends AppCompatActivity {
         super.onCreate(state);
         cart = getSharedPreferences(CartActivity.PREFS, MODE_PRIVATE);
         money.setMaximumFractionDigits(0);
-        buildScreen();
-        showSummary();
-    }
-
-    private void buildScreen() {
-        LinearLayout root = new LinearLayout(this);
-        root.setOrientation(LinearLayout.VERTICAL);
-        root.setPadding(24, 24, 24, 24);
-        root.setBackgroundColor(0xFFFAF7F2);
-        TextView title = new TextView(this);
-        title.setText("Xác nhận đơn hàng");
-        title.setTextSize(25);
-        title.setTextColor(0xFF744B30);
-        title.setTypeface(null, 1);
-        title.setGravity(Gravity.CENTER);
-        root.addView(title, params());
-        summary = new TextView(this);
-        summary.setTextSize(16);
-        LinearLayout.LayoutParams sp = params(); sp.topMargin = 20;
-        root.addView(summary, sp);
-        Button place = new Button(this);
-        place.setText("Xác nhận đặt hàng");
-        LinearLayout.LayoutParams pp = params(); pp.topMargin = 18;
-        root.addView(place, pp);
+        setContentView(R.layout.activity_checkout);
+        summary = findViewById(R.id.checkoutSummary);
+        Button place = findViewById(R.id.placeOrderButton);
+        Button back = findViewById(R.id.backToCartButton);
         place.setOnClickListener(v -> placeOrder(place));
-        Button back = new Button(this);
-        back.setText("Quay lại giỏ hàng");
-        root.addView(back, params());
         back.setOnClickListener(v -> finish());
-        setContentView(root);
+        showSummary();
     }
 
     private void showSummary() {
