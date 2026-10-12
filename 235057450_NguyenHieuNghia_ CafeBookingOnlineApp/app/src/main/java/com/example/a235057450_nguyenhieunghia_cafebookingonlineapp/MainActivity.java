@@ -42,6 +42,14 @@ public class MainActivity extends AppCompatActivity implements MenuAdapter.OnMen
         listMenu = findViewById(R.id.listMenu);
         textEmptyMenu = findViewById(R.id.textEmptyMenu);
         textCartSummary = findViewById(R.id.textCartSummary);
+        Button logout = findViewById(R.id.buttonLogout);
+        logout.setOnClickListener(v -> {
+            com.google.firebase.auth.FirebaseAuth.getInstance().signOut();
+            cartManager.clear();
+            startActivity(new android.content.Intent(this, AuthActivity.class));
+            finish();
+        });
+
         Button openCart = findViewById(R.id.buttonOpenCart);
         openCart.setOnClickListener(v ->
                 startActivity(new android.content.Intent(this, CartActivity.class)));
