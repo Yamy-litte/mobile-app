@@ -7,6 +7,7 @@ import android.graphics.drawable.GradientDrawable;
 import android.os.Bundle;
 import android.view.Gravity;
 import android.view.View;
+import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.TextView;
 import android.widget.Toast;
@@ -20,6 +21,7 @@ import com.example.mylibrary.models.Book;
 import com.example.mylibrary.models.Category;
 import com.example.mylibrary.service.BookService;
 import com.example.mylibrary.service.CategoryService;
+import com.bumptech.glide.Glide;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -410,8 +412,9 @@ public class HomeActivity extends AppCompatActivity {
 
     private View createPopularBookCard(Book book) {
         LinearLayout card = new LinearLayout(this);
-        card.setOrientation(LinearLayout.VERTICAL);
-        card.setPadding(dp(14), dp(14), dp(14), dp(14));
+        card.setOrientation(LinearLayout.HORIZONTAL);
+        card.setGravity(Gravity.CENTER_VERTICAL);
+        card.setPadding(dp(10), dp(10), dp(10), dp(10));
 
         GradientDrawable background = new GradientDrawable();
         background.setColor(Color.WHITE);
@@ -420,39 +423,37 @@ public class HomeActivity extends AppCompatActivity {
         card.setBackground(background);
 
         LinearLayout.LayoutParams cardParams =
-                new LinearLayout.LayoutParams(dp(230), dp(130));
-
+                new LinearLayout.LayoutParams(dp(290), dp(150));
         cardParams.setMargins(0, 0, dp(12), 0);
         card.setLayoutParams(cardParams);
 
+        ImageView cover = createBookCover(book.getCoverUrl(), dp(88), dp(126));
+        card.addView(cover);
+
+        LinearLayout info = new LinearLayout(this);
+        info.setOrientation(LinearLayout.VERTICAL);
+        info.setPadding(dp(10), 0, 0, 0);
+        info.setGravity(Gravity.CENTER_VERTICAL);
+        card.addView(info, new LinearLayout.LayoutParams(0,
+                LinearLayout.LayoutParams.MATCH_PARENT, 1f));
+
         TextView title = createTextView(
                 safeText(book.getTitle(), "Chưa có tên sách"),
-                16,
-                textColor,
-                true
-        );
-
+                15, textColor, true);
         TextView author = createTextView(
                 "Tác giả: " + safeText(book.getAuthor(), "Chưa cập nhật"),
-                13,
-                secondaryTextColor,
-                false
-        );
-
+                12, secondaryTextColor, false);
         TextView popularity = createTextView(
                 "Độ phổ biến: " + book.getPopularity(),
-                12,
-                greenColor,
-                true
-        );
+                12, greenColor, true);
 
-        card.addView(title);
+        info.addView(title);
+        addTopMargin(info, author, 7);
+        addTopMargin(info, popularity, 7);
+
         card.setClickable(true);
         card.setFocusable(true);
         card.setOnClickListener(v -> openBookDetail(book));
-        addTopMargin(card, author, 8);
-        addTopMargin(card, popularity, 8);
-
         return card;
     }
 
@@ -492,8 +493,9 @@ public class HomeActivity extends AppCompatActivity {
 
     private View createNewestBookRow(Book book) {
         LinearLayout row = new LinearLayout(this);
-        row.setOrientation(LinearLayout.VERTICAL);
-        row.setPadding(dp(14), dp(12), dp(14), dp(12));
+        row.setOrientation(LinearLayout.HORIZONTAL);
+        row.setGravity(Gravity.CENTER_VERTICAL);
+        row.setPadding(dp(12), dp(12), dp(12), dp(12));
 
         GradientDrawable background = new GradientDrawable();
         background.setColor(Color.WHITE);
@@ -501,36 +503,61 @@ public class HomeActivity extends AppCompatActivity {
         background.setStroke(dp(1), Color.rgb(230, 233, 231));
         row.setBackground(background);
 
-        LinearLayout.LayoutParams rowParams =
-                new LinearLayout.LayoutParams(
-                        LinearLayout.LayoutParams.MATCH_PARENT,
-                        LinearLayout.LayoutParams.WRAP_CONTENT
-                );
-
+        LinearLayout.LayoutParams rowParams = new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT);
         rowParams.setMargins(0, 0, 0, dp(10));
         row.setLayoutParams(rowParams);
 
+        ImageView cover = createBookCover(book.getCoverUrl(), dp(76), dp(104));
+        row.addView(cover);
+
+        LinearLayout info = new LinearLayout(this);
+        info.setOrientation(LinearLayout.VERTICAL);
+        info.setGravity(Gravity.CENTER_VERTICAL);
+        info.setPadding(dp(12), 0, 0, 0);
+        row.addView(info, new LinearLayout.LayoutParams(0,
+                LinearLayout.LayoutParams.WRAP_CONTENT, 1f));
+
         TextView title = createTextView(
                 safeText(book.getTitle(), "Chưa có tên sách"),
-                16,
-                textColor,
-                true
-        );
-
+                16, textColor, true);
         TextView author = createTextView(
                 "Tác giả: " + safeText(book.getAuthor(), "Chưa cập nhật"),
-                13,
-                secondaryTextColor,
-                false
-        );
+                13, secondaryTextColor, false);
+        TextView availability = createTextView(
+                "Còn " + book.getAvailableQuantity() + " cuốn",
+                12, greenColor, true);
 
-        row.addView(title);
+        info.addView(title);
+        addTopMargin(info, author, 6);
+        addTopMargin(info, availability, 6);
+
         row.setClickable(true);
         row.setFocusable(true);
         row.setOnClickListener(v -> openBookDetail(book));
-        addTopMargin(row, author, 6);
-
         return row;
+    }
+
+    private ImageView createBookCover(String coverUrl, int widthDp, int heightDp) {
+        ImageView imageView = new ImageView(this);
+        LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(widthDp, heightDp);
+        imageView.setLayoutParams(params);
+        imageView.setScaleType(ImageView.ScaleType.CENTER_CROP);
+        imageView.setBackgroundColor(Color.rgb(242, 244, 247));
+        imageView.setContentDescription("Ảnh bìa sách");
+
+        // Giữ placeholder nếu Firestore chưa có coverUrl hoặc URL không tải được.
+        imageView.setImageResource(android.R.drawable.ic_menu_gallery);
+        if (coverUrl != null && !coverUrl.trim().isEmpty()) {
+            Glide.with(this)
+                    .load(coverUrl.trim())
+                    .placeholder(android.R.drawable.ic_menu_gallery)
+                    .error(android.R.drawable.ic_menu_gallery)
+                    .centerCrop()
+                    .into(imageView);
+        }
+        return imageView;
     }
 
     // ==================== HÀM DÙNG CHUNG ====================
