@@ -46,6 +46,13 @@ public class DashboardActivity extends AppCompatActivity {
         root.addView(menu, mp);
         menu.setOnClickListener(v -> startActivity(new Intent(this, MenuActivity.class)));
 
+        Button history = new Button(this);
+        history.setText("Lịch sử đơn hàng");
+        LinearLayout.LayoutParams hp = params();
+        hp.topMargin = 10;
+        root.addView(history, hp);
+        history.setOnClickListener(v -> startActivity(new Intent(this, OrderHistoryActivity.class)));
+
         Button logout = new Button(this);
         logout.setText("Đăng xuất");
         LinearLayout.LayoutParams bp = params();
