@@ -21,6 +21,7 @@ import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.Locale;
 import java.util.Map;
+import android.widget.LinearLayout;
 
 public class CheckoutActivity extends AppCompatActivity {
     private SharedPreferences cart;
