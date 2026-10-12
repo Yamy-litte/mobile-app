@@ -8,6 +8,8 @@ import android.widget.Button;
 import android.widget.LinearLayout;
 import android.widget.TextView;
 import android.widget.Toast;
+import android.view.LayoutInflater;
+import android.view.View;
 import androidx.appcompat.app.AppCompatActivity;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
@@ -66,17 +68,11 @@ public class OrderHistoryActivity extends AppCompatActivity {
                 String date = orders.getString(orders.getColumnIndexOrThrow("DateOfBill"));
                 String status = orders.getString(orders.getColumnIndexOrThrow("Status"));
                 double total = orders.getDouble(orders.getColumnIndexOrThrow("TotalAmount"));
-                LinearLayout card = new LinearLayout(this);
-                card.setOrientation(LinearLayout.VERTICAL);
-                card.setPadding(14, 14, 14, 14);
-                card.setBackgroundColor(0xFFFFFFFF);
-                LinearLayout.LayoutParams cp = params(); cp.topMargin = 12;
-                list.addView(card, cp);
-                TextView info = new TextView(this);
+                View card = LayoutInflater.from(this).inflate(R.layout.item_order_card, list, false);
+                TextView info = card.findViewById(R.id.orderInfoText);
                 info.setText("Đơn #" + id + "\nNgày đặt: " + date + "\nTrạng thái: " + status
                         + "\nTổng tiền: " + money.format(total) + " đ");
-                info.setTextSize(16);
-                card.addView(info, params());
+                list.addView(card);
 
                 Cursor details = db.rawQuery(
                     "SELECT m.MenuName, d.Quantity, d.UnitPrice FROM BillDetail d " +
@@ -91,15 +87,12 @@ public class OrderHistoryActivity extends AppCompatActivity {
                                 .append(" đ\n");
                     }
                 } finally { details.close(); }
-                TextView detail = new TextView(this);
+                TextView detail = card.findViewById(R.id.orderDetailsText);
                 detail.setText(detailText.toString());
-                detail.setPadding(0, 8, 0, 8);
-                card.addView(detail, params());
 
+                Button cancel = card.findViewById(R.id.cancelOrderButton);
                 if ("Awaiting Confirmation".equals(status)) {
-                    Button cancel = new Button(this);
-                    cancel.setText("Hủy đơn hàng");
-                    card.addView(cancel, params());
+                    cancel.setVisibility(View.VISIBLE);
                     cancel.setOnClickListener(v -> cancelOrder(id));
                 }
             } while (orders.moveToNext());
