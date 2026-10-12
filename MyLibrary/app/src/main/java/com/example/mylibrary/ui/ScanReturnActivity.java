@@ -63,39 +63,63 @@ public class ScanReturnActivity extends AppCompatActivity {
             final double finalFineAmt = fineAmt;
             final String finalCondition = condition;
 
-            borrowRepository.returnBorrowRecord(recordId, System.currentTimeMillis(), finalCondition, new DataCallback<Void>() {
+            btnConfirmReturn.setEnabled(false);
+            borrowRepository.getBorrowRecordById(recordId, new DataCallback<com.example.mylibrary.models.BorrowRecord>() {
                 @Override
-                public void onSuccess(Void result) {
-                    if (finalFineAmt > 0) {
-                        Fine fine = new Fine();
-                        fine.setBorrowRecordId(recordId);
-                        fine.setFineAmount(finalFineAmt);
-                        fine.setFineReason("Tình trạng trả sách: " + finalCondition);
-                        fine.setStatus("UNPAID");
-                        fine.setCreatedAt(System.currentTimeMillis());
+                public void onSuccess(com.example.mylibrary.models.BorrowRecord record) {
+                    if (record == null || !("BORROWED".equalsIgnoreCase(record.getStatus())
+                            || "OVERDUE".equalsIgnoreCase(record.getStatus()))) {
+                        btnConfirmReturn.setEnabled(true);
+                        Toast.makeText(ScanReturnActivity.this,
+                                "Phiếu không tồn tại hoặc sách đã được trả trước đó.", Toast.LENGTH_LONG).show();
+                        return;
+                    }
 
-                        fineRepository.addFine(fine, new DataCallback<Fine>() {
-                            @Override
-                            public void onSuccess(Fine f) {
-                                Toast.makeText(ScanReturnActivity.this, "Trả sách thành công! Đã phát sinh phí phạt: " + finalFineAmt + "đ", Toast.LENGTH_LONG).show();
-                                finish();
-                            }
+                    borrowRepository.returnBorrowRecord(recordId, System.currentTimeMillis(), finalCondition, new DataCallback<Void>() {
+                        @Override
+                        public void onSuccess(Void result) {
+                            if (finalFineAmt > 0) {
+                                Fine fine = new Fine();
+                                fine.setBorrowRecordId(recordId);
+                                fine.setFineAmount(finalFineAmt);
+                                fine.setFineReason("Tình trạng trả sách: " + finalCondition);
+                                fine.setStatus("UNPAID");
+                                fine.setCreatedAt(System.currentTimeMillis());
 
-                            @Override
-                            public void onFailure(String errorMessage) {
+                                fineRepository.addFine(fine, new DataCallback<Fine>() {
+                                    @Override
+                                    public void onSuccess(Fine f) {
+                                        Toast.makeText(ScanReturnActivity.this, "Trả sách thành công! Đã phát sinh phí phạt: " + finalFineAmt + "đ", Toast.LENGTH_LONG).show();
+                                        finish();
+                                    }
+
+                                    @Override
+                                    public void onFailure(String errorMessage) {
+                                        btnConfirmReturn.setEnabled(true);
+                                        Toast.makeText(ScanReturnActivity.this,
+                                                "Sách đã được trả nhưng chưa lưu được khoản phạt: " + errorMessage,
+                                                Toast.LENGTH_LONG).show();
+                                    }
+                                });
+                            } else {
                                 Toast.makeText(ScanReturnActivity.this, "Trả sách thành công!", Toast.LENGTH_SHORT).show();
                                 finish();
                             }
-                        });
-                    } else {
-                        Toast.makeText(ScanReturnActivity.this, "Trả sách thành công!", Toast.LENGTH_SHORT).show();
-                        finish();
-                    }
+                        }
+
+                        @Override
+                        public void onFailure(String errorMessage) {
+                            btnConfirmReturn.setEnabled(true);
+                            Toast.makeText(ScanReturnActivity.this, "Lỗi trả sách: " + errorMessage, Toast.LENGTH_SHORT).show();
+                        }
+                    });
                 }
 
                 @Override
                 public void onFailure(String errorMessage) {
-                    Toast.makeText(ScanReturnActivity.this, "Lỗi trả sách: " + errorMessage, Toast.LENGTH_SHORT).show();
+                    btnConfirmReturn.setEnabled(true);
+                    Toast.makeText(ScanReturnActivity.this,
+                            "Không tìm thấy phiếu mượn: " + errorMessage, Toast.LENGTH_LONG).show();
                 }
             });
         });
