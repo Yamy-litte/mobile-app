@@ -12,7 +12,7 @@ import androidx.appcompat.app.AppCompatActivity;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
 import com.example.a235057450_nguyenhieunghia_cafebookingonlineapp.dao.UserDAO;
-import com.example.a235057450_nguyenhieunghia_cafebookingonlineapp.model.DatabaseHelper;
+import com.example.a235057450_nguyenhieunghia_cafebookingonlineapp.database.DatabaseHelper;
 import com.example.a235057450_nguyenhieunghia_cafebookingonlineapp.model.User;
 import java.text.NumberFormat;
 import java.util.Locale;
