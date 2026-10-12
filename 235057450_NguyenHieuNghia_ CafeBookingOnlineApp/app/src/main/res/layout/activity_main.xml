@@ -34,6 +34,13 @@
         android:singleLine="true" />
 
     <Button
+        android:id="@+id/buttonLogout"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="4dp"
+        android:text="Đăng xuất" />
+
+    <Button
         android:id="@+id/buttonOpenCart"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
