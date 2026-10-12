@@ -1,6 +1,8 @@
 package com.example.a235057450_nguyenhieunghia_cafebookingonlineapp;
 
 import android.os.Bundle;
+import android.content.Intent;
+import android.content.SharedPreferences;
 import android.text.Editable;
 import android.text.TextWatcher;
 import android.view.Gravity;
@@ -10,6 +12,7 @@ import android.widget.EditText;
 import android.widget.LinearLayout;
 import android.widget.ScrollView;
 import android.widget.TextView;
+import android.widget.Toast;
 import androidx.appcompat.app.AppCompatActivity;
 import com.example.a235057450_nguyenhieunghia_cafebookingonlineapp.dao.CategoryDAO;
 import com.example.a235057450_nguyenhieunghia_cafebookingonlineapp.dao.MenuDAO;
@@ -52,6 +55,13 @@ public class MenuActivity extends AppCompatActivity {
         title.setTypeface(null, 1);
         title.setGravity(Gravity.CENTER);
         root.addView(title, params());
+
+        Button cartButton = new Button(this);
+        cartButton.setText("Mở giỏ hàng");
+        LinearLayout.LayoutParams cartParams = params();
+        cartParams.topMargin = 8;
+        root.addView(cartButton, cartParams);
+        cartButton.setOnClickListener(v -> startActivity(new Intent(this, CartActivity.class)));
 
         searchInput = new EditText(this);
         searchInput.setSingleLine(true);
@@ -175,6 +185,19 @@ public class MenuActivity extends AppCompatActivity {
             LinearLayout.LayoutParams pp = params();
             pp.topMargin = 6;
             card.addView(price, pp);
+
+            Button addToCart = new Button(this);
+            addToCart.setText("Thêm vào giỏ");
+            LinearLayout.LayoutParams addParams = params();
+            addParams.topMargin = 8;
+            card.addView(addToCart, addParams);
+            addToCart.setOnClickListener(v -> {
+                SharedPreferences cart = getSharedPreferences(CartActivity.PREFS, MODE_PRIVATE);
+                String key = "item_" + item.getMenuId();
+                int current = cart.getInt(key, 0);
+                cart.edit().putInt(key, current + 1).apply();
+                Toast.makeText(this, "Đã thêm " + name + " vào giỏ hàng.", Toast.LENGTH_SHORT).show();
+            });
             shown++;
         }
         if (shown == 0) {
