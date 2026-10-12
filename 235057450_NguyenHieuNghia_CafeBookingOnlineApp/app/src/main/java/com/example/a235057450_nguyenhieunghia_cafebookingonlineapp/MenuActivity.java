@@ -5,14 +5,14 @@ import android.content.Intent;
 import android.content.SharedPreferences;
 import android.text.Editable;
 import android.text.TextWatcher;
-import android.view.Gravity;
-import android.view.View;
 import android.widget.Button;
 import android.widget.EditText;
 import android.widget.LinearLayout;
-import android.widget.ScrollView;
 import android.widget.TextView;
 import android.widget.Toast;
+import android.view.View;
+import android.view.LayoutInflater;
+import android.view.ViewGroup;
 import androidx.appcompat.app.AppCompatActivity;
 import com.example.a235057450_nguyenhieunghia_cafebookingonlineapp.dao.CategoryDAO;
 import com.example.a235057450_nguyenhieunghia_cafebookingonlineapp.dao.MenuDAO;
@@ -35,72 +35,12 @@ public class MenuActivity extends AppCompatActivity {
     @Override protected void onCreate(Bundle state) {
         super.onCreate(state);
         currency.setMaximumFractionDigits(0);
-        buildScreen();
-        loadData();
-    }
-
-    private void buildScreen() {
-        ScrollView scroll = new ScrollView(this);
-        scroll.setFillViewport(true);
-        LinearLayout root = new LinearLayout(this);
-        root.setOrientation(LinearLayout.VERTICAL);
-        root.setPadding(20, 24, 20, 24);
-        root.setBackgroundColor(0xFFFAF7F2);
-        scroll.addView(root);
-
-        TextView title = new TextView(this);
-        title.setText("Thực đơn");
-        title.setTextSize(26);
-        title.setTextColor(0xFF744B30);
-        title.setTypeface(null, 1);
-        title.setGravity(Gravity.CENTER);
-        root.addView(title, params());
-
-        Button cartButton = new Button(this);
-        cartButton.setText("Mở giỏ hàng");
-        LinearLayout.LayoutParams cartParams = params();
-        cartParams.topMargin = 8;
-        root.addView(cartButton, cartParams);
+        setContentView(R.layout.activity_menu);
+        categoryContainer = findViewById(R.id.categoryContainer);
+        menuContainer = findViewById(R.id.menuContainer);
+        searchInput = findViewById(R.id.searchInput);
+        Button cartButton = findViewById(R.id.cartButton);
         cartButton.setOnClickListener(v -> startActivity(new Intent(this, CartActivity.class)));
-
-        searchInput = new EditText(this);
-        searchInput.setSingleLine(true);
-        searchInput.setHint("Tìm món theo tên hoặc mô tả");
-        LinearLayout.LayoutParams searchParams = params();
-        searchParams.topMargin = 12;
-        root.addView(searchInput, searchParams);
-
-        TextView categoryTitle = new TextView(this);
-        categoryTitle.setText("Danh mục");
-        categoryTitle.setTextSize(18);
-        categoryTitle.setTypeface(null, 1);
-        LinearLayout.LayoutParams ct = params();
-        ct.topMargin = 12;
-        root.addView(categoryTitle, ct);
-
-        categoryContainer = new LinearLayout(this);
-        categoryContainer.setOrientation(LinearLayout.VERTICAL);
-        root.addView(categoryContainer, params());
-
-        TextView menuTitle = new TextView(this);
-        menuTitle.setText("Các món đang phục vụ");
-        menuTitle.setTextSize(18);
-        menuTitle.setTypeface(null, 1);
-        LinearLayout.LayoutParams mt = params();
-        mt.topMargin = 18;
-        root.addView(menuTitle, mt);
-
-        menuContainer = new LinearLayout(this);
-        menuContainer.setOrientation(LinearLayout.VERTICAL);
-        root.addView(menuContainer, params());
-
-        Button back = new Button(this);
-        back.setText("Quay lại");
-        LinearLayout.LayoutParams bp = params();
-        bp.topMargin = 16;
-        root.addView(back, bp);
-        back.setOnClickListener(v -> finish());
-
         searchInput.addTextChangedListener(new TextWatcher() {
             @Override public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
             @Override public void onTextChanged(CharSequence s, int start, int before, int count) {
@@ -109,7 +49,7 @@ public class MenuActivity extends AppCompatActivity {
             }
             @Override public void afterTextChanged(Editable s) {}
         });
-        setContentView(scroll);
+        loadData();
     }
 
     private void loadData() {
@@ -137,7 +77,13 @@ public class MenuActivity extends AppCompatActivity {
         Button button = new Button(this);
         button.setText((selectedCategoryId == categoryId ? "✓ " : "") + label);
         button.setAllCaps(false);
-        categoryContainer.addView(button, params());
+        button.setTextColor(getColor(selectedCategoryId == categoryId ? R.color.white : R.color.coffee_primary));
+        button.setBackgroundResource(selectedCategoryId == categoryId
+                ? R.drawable.bg_primary_button : R.drawable.bg_input);
+        LinearLayout.LayoutParams p = new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+        p.rightMargin = 8;
+        categoryContainer.addView(button, p);
         button.setOnClickListener(v -> {
             selectedCategoryId = categoryId;
             renderCategories();
@@ -149,6 +95,7 @@ public class MenuActivity extends AppCompatActivity {
         if (menuContainer == null) return;
         menuContainer.removeAllViews();
         int shown = 0;
+        LayoutInflater inflater = LayoutInflater.from(this);
         for (MenuItem item : allItems) {
             if (selectedCategoryId != -1L && item.getCategoryId() != selectedCategoryId) continue;
             String name = item.getMenuName() == null ? "" : item.getMenuName();
@@ -156,66 +103,41 @@ public class MenuActivity extends AppCompatActivity {
             if (!keyword.isEmpty() && !name.toLowerCase(Locale.ROOT).contains(keyword)
                     && !description.toLowerCase(Locale.ROOT).contains(keyword)) continue;
 
-            LinearLayout card = new LinearLayout(this);
-            card.setOrientation(LinearLayout.VERTICAL);
-            card.setPadding(14, 12, 14, 12);
-            card.setBackgroundColor(0xFFFFFFFF);
-            LinearLayout.LayoutParams cp = params();
-            cp.topMargin = 10;
-            menuContainer.addView(card, cp);
-
-            TextView itemName = new TextView(this);
+            View card = inflater.inflate(R.layout.item_menu_card, menuContainer, false);
+            TextView itemName = card.findViewById(R.id.itemName);
+            TextView desc = card.findViewById(R.id.itemDescription);
+            TextView price = card.findViewById(R.id.itemPrice);
+            Button detailsButton = card.findViewById(R.id.detailsButton);
+            Button addToCart = card.findViewById(R.id.addToCartButton);
             itemName.setText(name);
-            itemName.setTextSize(17);
-            itemName.setTextColor(0xFF744B30);
-            itemName.setTypeface(null, 1);
-            card.addView(itemName, params());
-
-            if (!description.isEmpty()) {
-                TextView desc = new TextView(this);
-                desc.setText(description);
-                desc.setTextSize(14);
-                card.addView(desc, params());
-            }
-
-            TextView price = new TextView(this);
+            desc.setText(description);
+            desc.setVisibility(description.isEmpty() ? View.GONE : View.VISIBLE);
             price.setText(currency.format(item.getPrice()) + " đ");
-            price.setTextSize(16);
-            price.setTypeface(null, 1);
-            LinearLayout.LayoutParams pp = params();
-            pp.topMargin = 6;
-            card.addView(price, pp);
-
-            Button detailsButton = new Button(this);
-            detailsButton.setText("Xem chi tiết");
-            LinearLayout.LayoutParams detailParams = params();
-            detailParams.topMargin = 8;
-            card.addView(detailsButton, detailParams);
             detailsButton.setOnClickListener(v -> {
                 Intent intent = new Intent(this, MenuDetailActivity.class);
                 intent.putExtra(MenuDetailActivity.EXTRA_MENU_ID, item.getMenuId());
                 startActivity(intent);
             });
-
-            Button addToCart = new Button(this);
-            addToCart.setText("Thêm vào giỏ");
-            LinearLayout.LayoutParams addParams = params();
-            addParams.topMargin = 8;
-            card.addView(addToCart, addParams);
             addToCart.setOnClickListener(v -> {
                 SharedPreferences cart = getSharedPreferences(CartActivity.PREFS, MODE_PRIVATE);
                 String key = "item_" + item.getMenuId();
                 int current = cart.getInt(key, 0);
+                if (current >= 99) {
+                    Toast.makeText(this, "Số lượng tối đa là 99.", Toast.LENGTH_SHORT).show();
+                    return;
+                }
                 cart.edit().putInt(key, current + 1).apply();
                 Toast.makeText(this, "Đã thêm " + name + " vào giỏ hàng.", Toast.LENGTH_SHORT).show();
             });
+            menuContainer.addView(card);
             shown++;
         }
         if (shown == 0) {
             TextView empty = new TextView(this);
             empty.setText("Không tìm thấy món phù hợp.");
-            empty.setPadding(4, 16, 4, 16);
-            menuContainer.addView(empty, params());
+            empty.setTextColor(getColor(R.color.coffee_muted));
+            empty.setPadding(8, 22, 8, 22);
+            menuContainer.addView(empty);
         }
     }
 
