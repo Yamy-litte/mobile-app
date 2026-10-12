@@ -18,6 +18,10 @@ import com.example.mylibrary.service.BookService;
 import com.example.mylibrary.service.CategoryService;
 import com.example.mylibrary.dao.DataCallback;
 import com.google.firebase.auth.FirebaseAuth;
+import com.google.firebase.auth.FirebaseUser;
+import com.google.firebase.firestore.FirebaseFirestore;
+import java.util.HashMap;
+import java.util.Map;
 
 import java.util.List;
 
@@ -159,7 +163,52 @@ public class BookDetailActivity extends AppCompatActivity {
     }
 
     private void handleBorrowRequest() {
-        Toast.makeText(this, "Yêu cầu mượn đã gửi! Vui lòng đến quầy quét mã.", Toast.LENGTH_LONG).show();
+        FirebaseUser user = FirebaseAuth.getInstance().getCurrentUser();
+
+        if (user == null) {
+            Toast.makeText(this, "Vui lòng đăng nhập để gửi yêu cầu mượn sách.", Toast.LENGTH_LONG).show();
+            startActivity(new android.content.Intent(this, LoginActivity.class));
+            return;
+        }
+
+        if (currentBook == null) {
+            Toast.makeText(this, "Thông tin sách chưa tải xong.", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        if (currentBook.getAvailableQuantity() <= 0) {
+            Toast.makeText(this, "Sách hiện không còn bản có thể mượn. Bạn có thể đặt trước.", Toast.LENGTH_LONG).show();
+            return;
+        }
+
+        btnBorrowBook.setEnabled(false);
+
+        // Khách gửi yêu cầu trên ứng dụng; nhân viên xác nhận và quét mã bản sao tại quầy.
+        // Không tạo BorrowRecord ở đây vì sách chỉ được tính là đang mượn sau khi nhân viên bàn giao.
+        Map<String, Object> request = new HashMap<>();
+        request.put("userId", user.getUid());
+        request.put("bookId", currentBook.getId());
+        request.put("bookTitle", currentBook.getTitle());
+        request.put("status", "PENDING");
+        request.put("requestedAt", System.currentTimeMillis());
+
+        FirebaseFirestore.getInstance()
+                .collection("borrowRequests")
+                .add(request)
+                .addOnSuccessListener(document -> {
+                    if (isFinishing() || isDestroyed()) return;
+                    btnBorrowBook.setEnabled(true);
+                    Toast.makeText(this,
+                            "Đã gửi yêu cầu mượn sách. Vui lòng chờ thư viện xác nhận.",
+                            Toast.LENGTH_LONG).show();
+                })
+                .addOnFailureListener(error -> {
+                    if (isFinishing() || isDestroyed()) return;
+                    btnBorrowBook.setEnabled(true);
+                    Toast.makeText(this,
+                            "Gửi yêu cầu mượn thất bại: " + error.getMessage(),
+                            Toast.LENGTH_LONG).show();
+                });
     }
 
     private void loadBookDetail(String bookId) {
