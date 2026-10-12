@@ -5,7 +5,7 @@ import android.content.Context;
 import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
 
-import com.example.a235057450_nguyenhieunghia_cafebookingonlineapp.model.DatabaseHelper;
+import com.example.a235057450_nguyenhieunghia_cafebookingonlineapp.database.DatabaseHelper;
 import com.example.a235057450_nguyenhieunghia_cafebookingonlineapp.model.MenuItem;
 
 import java.util.ArrayList;
