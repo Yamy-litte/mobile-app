@@ -6,6 +6,7 @@ import android.text.TextWatcher;
 import android.view.View;
 import android.widget.Button;
 import android.widget.EditText;
+import android.widget.RatingBar;
 import android.widget.ListView;
 import android.widget.TextView;
 import android.widget.Toast;
@@ -16,7 +17,13 @@ import androidx.appcompat.app.AppCompatActivity;
 import com.example.a235057450_nguyenhieunghia_cafebookingonlineapp.adapter.MenuAdapter;
 import com.example.a235057450_nguyenhieunghia_cafebookingonlineapp.cart.CartManager;
 import com.example.a235057450_nguyenhieunghia_cafebookingonlineapp.dao.MenuDao;
+import com.example.a235057450_nguyenhieunghia_cafebookingonlineapp.dao.DishReviewDao;
+import com.example.a235057450_nguyenhieunghia_cafebookingonlineapp.dao.UserDao;
 import com.example.a235057450_nguyenhieunghia_cafebookingonlineapp.model.Menu;
+import com.example.a235057450_nguyenhieunghia_cafebookingonlineapp.model.DishReview;
+import com.example.a235057450_nguyenhieunghia_cafebookingonlineapp.model.User;
+import com.google.firebase.auth.FirebaseAuth;
+import com.google.firebase.auth.FirebaseUser;
 
 import java.text.NumberFormat;
 import java.util.List;
@@ -115,15 +122,36 @@ public class MainActivity extends AppCompatActivity implements MenuAdapter.OnMen
     @Override
     public void onViewDetails(Menu menu) {
         if (menu == null) return;
-        String details = "Tên món: " + menu.getMenuName()
-                + "\nGiá: " + formatMoney(menu.getPrice()) + " VND"
-                + "\nSố lượng còn: " + menu.getStockQuantity()
-                + "\nMã danh mục: " + menu.getCategoryId();
+        StringBuilder details = new StringBuilder("Tên món: ")
+                .append(menu.getMenuName())
+                .append("\nGiá: ").append(formatMoney(menu.getPrice())).append(" VND")
+                .append("\nSố lượng còn: ").append(menu.getStockQuantity())
+                .append("\nMã danh mục: ").append(menu.getCategoryId());
+
+        DishReviewDao reviewDao = new DishReviewDao(getApplicationContext());
+        List<DishReview> reviews;
+        try {
+            reviews = reviewDao.getRecentForMenu(menu.getMenuId());
+        } finally {
+            reviewDao.close();
+        }
+        details.append("\n\nĐánh giá món gần đây:");
+        if (reviews.isEmpty()) {
+            details.append("\nChưa có đánh giá.");
+        } else {
+            for (DishReview review : reviews) {
+                details.append("\n").append(stars(review.getRating())).append("  ")
+                        .append(displayName(review.getCustomerEmail())).append(": ")
+                        .append(review.getComment());
+            }
+        }
+
         new AlertDialog.Builder(this)
                 .setTitle("Chi tiết món")
-                .setMessage(details)
+                .setMessage(details.toString())
                 .setPositiveButton("Đóng", null)
                 .setNeutralButton("Thêm giỏ", (dialog, which) -> addToCart(menu))
+                .setNegativeButton("Đánh giá món", (dialog, which) -> showDishReviewDialog(menu))
                 .show();
     }
 
@@ -131,6 +159,105 @@ public class MainActivity extends AppCompatActivity implements MenuAdapter.OnMen
     public void onAddToCart(Menu menu) {
         if (menu == null) return;
         addToCart(menu);
+    }
+
+    private void showDishReviewDialog(Menu menu) {
+        FirebaseUser firebaseUser = FirebaseAuth.getInstance().getCurrentUser();
+        if (firebaseUser == null || !firebaseUser.isEmailVerified()
+                || firebaseUser.getEmail() == null) {
+            Toast.makeText(this, "Đăng nhập bằng email đã xác minh để đánh giá món.",
+                    Toast.LENGTH_LONG).show();
+            startActivity(new android.content.Intent(this, AuthActivity.class));
+            return;
+        }
+
+        UserDao userDao = new UserDao(getApplicationContext());
+        User user;
+        try {
+            user = userDao.getByEmail(firebaseUser.getEmail());
+            if (user == null) {
+                long id = userDao.saveProfile(firebaseUser.getEmail(), "Customer");
+                user = id > 0 ? userDao.getById((int) id) : null;
+            }
+        } finally {
+            userDao.close();
+        }
+        if (user == null || !"Customer".equals(user.getRole())) {
+            Toast.makeText(this, "Chỉ tài khoản khách hàng mới được đánh giá món.",
+                    Toast.LENGTH_LONG).show();
+            return;
+        }
+
+        DishReviewDao reviewDao = new DishReviewDao(getApplicationContext());
+        DishReview existing;
+        try {
+            existing = reviewDao.getForMenu(menu.getMenuId(), user.getUserId());
+        } finally {
+            reviewDao.close();
+        }
+
+        android.widget.LinearLayout form = new android.widget.LinearLayout(this);
+        form.setOrientation(android.widget.LinearLayout.VERTICAL);
+        int padding = (int) (20 * getResources().getDisplayMetrics().density);
+        form.setPadding(padding, padding / 2, padding, 0);
+
+        TextView prompt = new TextView(this);
+        prompt.setText("Đánh giá " + menu.getMenuName());
+        prompt.setTextSize(15);
+        form.addView(prompt);
+
+        RatingBar ratingBar = new RatingBar(this);
+        ratingBar.setNumStars(5);
+        ratingBar.setStepSize(1f);
+        ratingBar.setRating(existing == null ? 5f : existing.getRating());
+        form.addView(ratingBar);
+
+        EditText commentInput = new EditText(this);
+        commentInput.setHint("Nhận xét món ăn (tối đa 1000 ký tự)");
+        commentInput.setMinLines(3);
+        commentInput.setGravity(android.view.Gravity.TOP);
+        commentInput.setInputType(android.text.InputType.TYPE_CLASS_TEXT
+                | android.text.InputType.TYPE_TEXT_FLAG_MULTI_LINE
+                | android.text.InputType.TYPE_TEXT_FLAG_CAP_SENTENCES);
+        if (existing != null) commentInput.setText(existing.getComment());
+        form.addView(commentInput);
+
+        new AlertDialog.Builder(this)
+                .setTitle(existing == null ? "Đánh giá món" : "Sửa đánh giá món")
+                .setView(form)
+                .setNegativeButton("Hủy", null)
+                .setPositiveButton("Lưu đánh giá", (dialog, which) -> {
+                    String comment = commentInput.getText().toString().trim();
+                    if (comment.isEmpty() || comment.length() > 1000) {
+                        Toast.makeText(this, "Nhận xét không được để trống và tối đa 1000 ký tự.",
+                                Toast.LENGTH_LONG).show();
+                        return;
+                    }
+                    DishReviewDao saveDao = new DishReviewDao(getApplicationContext());
+                    boolean saved;
+                    try {
+                        saved = saveDao.saveForMenu(menu.getMenuId(), user.getUserId(),
+                                Math.round(ratingBar.getRating()), comment);
+                    } finally {
+                        saveDao.close();
+                    }
+                    Toast.makeText(this, saved ? "Đã lưu đánh giá món."
+                                    : "Không thể lưu đánh giá món.",
+                            Toast.LENGTH_LONG).show();
+                })
+                .show();
+    }
+
+    private String stars(int rating) {
+        StringBuilder value = new StringBuilder();
+        for (int i = 1; i <= 5; i++) value.append(i <= rating ? "★" : "☆");
+        return value.toString();
+    }
+
+    private String displayName(String email) {
+        if (email == null || email.trim().isEmpty()) return "Khách hàng";
+        int at = email.indexOf('@');
+        return at > 0 ? email.substring(0, at) : email;
     }
 
     private void addToCart(Menu menu) {
