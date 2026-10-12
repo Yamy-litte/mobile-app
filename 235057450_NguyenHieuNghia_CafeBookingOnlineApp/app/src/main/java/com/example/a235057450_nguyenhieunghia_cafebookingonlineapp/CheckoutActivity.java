@@ -18,7 +18,8 @@ import com.example.a235057450_nguyenhieunghia_cafebookingonlineapp.model.Databas
 import com.example.a235057450_nguyenhieunghia_cafebookingonlineapp.model.MenuItem;
 import com.example.a235057450_nguyenhieunghia_cafebookingonlineapp.model.User;
 import java.text.NumberFormat;
-import java.time.LocalDateTime;
+import java.text.SimpleDateFormat;
+import java.util.Date;
 import java.util.Locale;
 import java.util.Map;
 
@@ -116,7 +117,7 @@ public class CheckoutActivity extends AppCompatActivity {
         try {
             ContentValues bill = new ContentValues();
             bill.put("UserId", user.getUserId());
-            bill.put("DateOfBill", LocalDateTime.now().toString());
+            bill.put("DateOfBill", new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss", Locale.US).format(new Date()));
             bill.put("Status", "Awaiting Confirmation");
             bill.put("TotalAmount", total);
             billId = db.insertOrThrow("Bill", null, bill);
