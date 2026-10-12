@@ -48,6 +48,11 @@ public class OrderHistoryActivity extends AppCompatActivity {
             intent.putExtra(OrderDetailActivity.EXTRA_BILL_ID, bill.getBillId());
             startActivity(intent);
         });
+    }
+
+    @Override
+    protected void onResume() {
+        super.onResume();
         loadOrders();
     }
 
