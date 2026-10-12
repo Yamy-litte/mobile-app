@@ -14,6 +14,9 @@
         android:supportsRtl="true"
         android:theme="@style/Theme._235057450_NguyenHieuNghia_CafeBookingOnlineApp">
         <activity
+            android:name=".ReviewsActivity"
+            android:exported="false" />
+        <activity
             android:name=".OrderDetailActivity"
             android:exported="false" />
         <activity
