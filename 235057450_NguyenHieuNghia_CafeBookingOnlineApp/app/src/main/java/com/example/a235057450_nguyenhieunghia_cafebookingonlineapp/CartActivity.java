@@ -5,6 +5,8 @@ import android.content.SharedPreferences;
 import android.os.Bundle;
 import android.widget.Button;
 import android.widget.LinearLayout;
+import android.view.LayoutInflater;
+import android.view.View;
 import android.widget.TextView;
 import android.widget.Toast;
 import androidx.appcompat.app.AppCompatActivity;
@@ -64,30 +66,24 @@ public class CartActivity extends AppCompatActivity {
             if (item == null) continue;
             double subtotal = item.getPrice() * qty;
             total += subtotal;
-            LinearLayout row = new LinearLayout(this);
-            row.setOrientation(LinearLayout.VERTICAL);
-            row.setPadding(12, 12, 12, 12);
-            row.setBackgroundColor(0xFFFFFFFF);
-            LinearLayout.LayoutParams rp = params();
-            rp.topMargin = 10;
-            itemsBox.addView(row, rp);
-            TextView label = new TextView(this);
-            label.setText(item.getMenuName() + "\n" + money.format(item.getPrice()) + " đ x " + qty
-                    + " = " + money.format(subtotal) + " đ");
-            label.setTextSize(16);
-            row.addView(label, params());
-            LinearLayout controls = new LinearLayout(this);
-            controls.setOrientation(LinearLayout.HORIZONTAL);
-            row.addView(controls, params());
-            Button minus = new Button(this); minus.setText("−");
-            Button plus = new Button(this); plus.setText("+");
-            Button remove = new Button(this); remove.setText("Xóa");
-            controls.addView(minus, new LinearLayout.LayoutParams(0, -2, 1));
-            controls.addView(plus, new LinearLayout.LayoutParams(0, -2, 1));
-            controls.addView(remove, new LinearLayout.LayoutParams(0, -2, 1));
+            View row = LayoutInflater.from(this).inflate(R.layout.item_cart_row, itemsBox, false);
+            TextView name = row.findViewById(R.id.cartItemName);
+            TextView price = row.findViewById(R.id.cartItemPrice);
+            TextView quantity = row.findViewById(R.id.cartQuantityText);
+            Button minus = row.findViewById(R.id.cartMinusButton);
+            Button plus = row.findViewById(R.id.cartPlusButton);
+            Button remove = row.findViewById(R.id.cartRemoveButton);
+            name.setText(item.getMenuName());
+            price.setText(money.format(item.getPrice()) + " đ / phần · Thành tiền: "
+                    + money.format(subtotal) + " đ");
+            quantity.setText("SL: " + qty);
+            itemsBox.addView(row);
             minus.setOnClickListener(v -> changeQty(id, qty - 1));
-            plus.setOnClickListener(v -> changeQty(id, qty + 1));
-            remove.setOnClickListener(v -> { cart.edit().remove(entry.getKey()).apply(); renderCart(); });
+            plus.setOnClickListener(v -> changeQty(id, Math.min(99, qty + 1)));
+            remove.setOnClickListener(v -> {
+                cart.edit().remove(entry.getKey()).apply();
+                renderCart();
+            });
         }
         dao.close();
         if (itemsBox.getChildCount() == 0) {
