@@ -49,6 +49,13 @@
     </ScrollView>
 
     <Button
+        android:id="@+id/buttonCancelOrder"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Hủy đơn hàng"
+        android:visibility="gone" />
+
+    <Button
         android:id="@+id/buttonOrderDetailBack"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
