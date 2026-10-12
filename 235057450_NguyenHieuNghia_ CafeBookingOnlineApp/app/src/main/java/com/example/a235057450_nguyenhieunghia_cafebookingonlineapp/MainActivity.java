@@ -187,11 +187,12 @@ public class MainActivity extends AppCompatActivity implements MenuAdapter.OnMen
                     Toast.LENGTH_LONG).show();
             return;
         }
+        final int reviewUserId = user.getUserId();
 
         DishReviewDao reviewDao = new DishReviewDao(getApplicationContext());
         DishReview existing;
         try {
-            existing = reviewDao.getForMenu(menu.getMenuId(), user.getUserId());
+            existing = reviewDao.getForMenu(menu.getMenuId(), reviewUserId);
         } finally {
             reviewDao.close();
         }
@@ -236,7 +237,7 @@ public class MainActivity extends AppCompatActivity implements MenuAdapter.OnMen
                     DishReviewDao saveDao = new DishReviewDao(getApplicationContext());
                     boolean saved;
                     try {
-                        saved = saveDao.saveForMenu(menu.getMenuId(), user.getUserId(),
+                        saved = saveDao.saveForMenu(menu.getMenuId(), reviewUserId,
                                 Math.round(ratingBar.getRating()), comment);
                     } finally {
                         saveDao.close();
