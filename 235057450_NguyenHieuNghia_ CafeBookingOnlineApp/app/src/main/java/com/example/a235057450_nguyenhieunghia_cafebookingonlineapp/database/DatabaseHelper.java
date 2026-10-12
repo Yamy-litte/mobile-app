@@ -94,7 +94,7 @@ public class DatabaseHelper extends SQLiteOpenHelper {
         insertMenu(db, "Milk Tea", "milk_tea", 2, 40000, 15);
         insertMenu(db, "Croissant", "croissant", 3, 28000, 10);
 
-        insertBill(db, 1, "2026-10-12", "awaiting confirmation", 98000);
+        insertBill(db, 1, "2026-10-12", "awaiting confirmation", 63000);
         insertBill(db, 2, "2026-10-12", "confirmed", 40000);
         insertBill(db, 1, "2026-10-11", "completed", 70000);
 
