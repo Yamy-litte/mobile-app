@@ -1,0 +1,62 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:layout_marginTop="10dp"
+    android:background="@drawable/bg_input"
+    android:orientation="vertical"
+    android:padding="14dp">
+    <TextView
+        android:id="@+id/cartItemName"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:textColor="@color/coffee_text"
+        android:textSize="17sp"
+        android:textStyle="bold" />
+    <TextView
+        android:id="@+id/cartItemPrice"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="4dp"
+        android:textColor="@color/coffee_muted"
+        android:textSize="14sp" />
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="8dp"
+        android:gravity="center_vertical"
+        android:orientation="horizontal">
+        <Button
+            android:id="@+id/cartMinusButton"
+            android:layout_width="44dp"
+            android:layout_height="42dp"
+            android:background="@drawable/bg_input"
+            android:text="−"
+            android:textColor="@color/coffee_primary" />
+        <TextView
+            android:id="@+id/cartQuantityText"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:gravity="center"
+            android:textColor="@color/coffee_text"
+            android:textSize="16sp"
+            android:textStyle="bold" />
+        <Button
+            android:id="@+id/cartPlusButton"
+            android:layout_width="44dp"
+            android:layout_height="42dp"
+            android:background="@drawable/bg_input"
+            android:text="+"
+            android:textColor="@color/coffee_primary" />
+        <Button
+            android:id="@+id/cartRemoveButton"
+            android:layout_width="wrap_content"
+            android:layout_height="42dp"
+            android:layout_marginStart="8dp"
+            android:background="@drawable/bg_primary_button"
+            android:text="Xóa"
+            android:textAllCaps="false"
+            android:textColor="@color/white" />
+    </LinearLayout>
+</LinearLayout>
