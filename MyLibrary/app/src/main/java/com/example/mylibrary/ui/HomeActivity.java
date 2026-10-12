@@ -8,6 +8,7 @@ import android.os.Bundle;
 import android.view.Gravity;
 import android.view.View;
 import android.widget.ImageView;
+import android.widget.Button;
 import android.widget.LinearLayout;
 import android.widget.TextView;
 import android.widget.Toast;
@@ -33,6 +34,10 @@ public class HomeActivity extends AppCompatActivity {
     private LinearLayout layoutPopularBooks;
     private LinearLayout layoutNewBooks;
     private EditText edtSearchBook;
+    private Button btnNavHome;
+    private Button btnNavBorrow;
+    private Button btnNavCard;
+    private Button btnNavProfile;
     private String searchKeyword = "";
     private boolean isCategoryFilterActive = false;
     private CategoryService categoryService;
@@ -51,6 +56,10 @@ public class HomeActivity extends AppCompatActivity {
         setContentView(R.layout.activity_home);
 
         edtSearchBook = findViewById(R.id.edtSearchBook);
+        btnNavHome = findViewById(R.id.btnNavHome);
+        btnNavBorrow = findViewById(R.id.btnNavBorrow);
+        btnNavCard = findViewById(R.id.btnNavCard);
+        btnNavProfile = findViewById(R.id.btnNavProfile);
         txtGreeting = findViewById(R.id.txtGreeting);
         layoutCategories = findViewById(R.id.layoutCategories);
         layoutPopularBooks = findViewById(R.id.layoutPopularBooks);
@@ -71,7 +80,29 @@ public class HomeActivity extends AppCompatActivity {
         loadPopularBooks();
         loadNewestBooks();
         setupSearch();
+        setupBottomNavigation();
     }
+    // ====================== THANH ĐIỀU HƯỚNG ======================
+
+    private void setupBottomNavigation() {
+        // Trang chủ hiện tại, tránh mở thêm nhiều HomeActivity.
+        btnNavHome.setOnClickListener(v -> {
+            // Đã ở trang chủ nên không cần chuyển Activity.
+        });
+
+        btnNavBorrow.setOnClickListener(v ->
+                startActivity(new Intent(HomeActivity.this, BorrowHistoryActivity.class))
+        );
+
+        btnNavCard.setOnClickListener(v ->
+                startActivity(new Intent(HomeActivity.this, LibraryCardActivity.class))
+        );
+
+        btnNavProfile.setOnClickListener(v ->
+                startActivity(new Intent(HomeActivity.this, ProfileActivity.class))
+        );
+    }
+
     //===================== DETAIL BOOK ====================
 
     private void openBookDetail(Book book) {
