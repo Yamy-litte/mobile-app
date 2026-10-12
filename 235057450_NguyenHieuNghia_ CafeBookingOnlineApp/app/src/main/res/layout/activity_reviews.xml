@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:background="#F6F3EF"
+    android:padding="16dp">
+
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Đánh giá của khách hàng"
+        android:textColor="#6F3E25"
+        android:textSize="24sp"
+        android:textStyle="bold"
+        android:paddingBottom="12dp" />
+
+    <ScrollView
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1">
+
+        <LinearLayout
+            android:id="@+id/layoutReviews"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical" />
+    </ScrollView>
+
+    <TextView
+        android:id="@+id/textReviewsEmpty"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Chưa có đánh giá nào."
+        android:textColor="#666666"
+        android:gravity="center"
+        android:padding="16dp"
+        android:visibility="gone" />
+
+    <Button
+        android:id="@+id/buttonReviewsBack"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Quay lại" />
+</LinearLayout>
