@@ -186,6 +186,17 @@ public class MenuActivity extends AppCompatActivity {
             pp.topMargin = 6;
             card.addView(price, pp);
 
+            Button detailsButton = new Button(this);
+            detailsButton.setText("Xem chi tiết");
+            LinearLayout.LayoutParams detailParams = params();
+            detailParams.topMargin = 8;
+            card.addView(detailsButton, detailParams);
+            detailsButton.setOnClickListener(v -> {
+                Intent intent = new Intent(this, MenuDetailActivity.class);
+                intent.putExtra(MenuDetailActivity.EXTRA_MENU_ID, item.getMenuId());
+                startActivity(intent);
+            });
+
             Button addToCart = new Button(this);
             addToCart.setText("Thêm vào giỏ");
             LinearLayout.LayoutParams addParams = params();
