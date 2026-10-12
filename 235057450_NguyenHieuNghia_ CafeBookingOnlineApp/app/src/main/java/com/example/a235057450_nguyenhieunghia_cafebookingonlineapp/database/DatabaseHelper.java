@@ -163,6 +163,48 @@ public class DatabaseHelper extends SQLiteOpenHelper {
         insertDishReview(db, 1, 3, 5, "Bánh mềm, ăn kèm cà phê rất hợp.", "2026-10-11 11:00:00");
     }
 
+    /**
+     * Version 1 seeded example orders without reserving their stock.
+     * Reconcile only the three fixed demo bills during the one-time v1 migration.
+     */
+    private void reconcileLegacySampleInventory(SQLiteDatabase db) {
+        for (int billId = 1; billId <= 3; billId++) {
+            String status = null;
+            try (android.database.Cursor billCursor = db.query(
+                    TABLE_BILLS, new String[]{"Status"}, "BillId = ?",
+                    new String[]{String.valueOf(billId)}, null, null, null, "1")) {
+                if (billCursor.moveToFirst()) status = billCursor.getString(0);
+            }
+            if (status == null || "cancelled".equalsIgnoreCase(status)) continue;
+
+            if (billId == 3) {
+                try (android.database.Cursor details = db.query(
+                        TABLE_BILL_DETAILS, new String[]{"BillDetailId"},
+                        "BillId = ?", new String[]{"3"}, null, null, null, "1")) {
+                    if (!details.moveToFirst()) {
+                        insertBillDetail(db, 1, 3, 2, 35000);
+                    }
+                }
+            }
+
+            java.util.List<int[]> items = new java.util.ArrayList<>();
+            try (android.database.Cursor details = db.query(
+                    TABLE_BILL_DETAILS, new String[]{"MenuId", "Quantity"},
+                    "BillId = ?", new String[]{String.valueOf(billId)},
+                    null, null, null)) {
+                while (details.moveToNext()) {
+                    items.add(new int[]{details.getInt(0), details.getInt(1)});
+                }
+            }
+            for (int[] item : items) {
+                db.execSQL("UPDATE " + TABLE_MENU +
+                                " SET StockQuantity = CASE WHEN StockQuantity >= ? " +
+                                "THEN StockQuantity - ? ELSE 0 END WHERE MenuId = ?",
+                        new Object[]{item[1], item[1], item[0]});
+            }
+        }
+    }
+
     private void insertUser(SQLiteDatabase db, String email, String role) {
         ContentValues values = new ContentValues();
         values.put("Email", email);
@@ -211,6 +253,7 @@ public class DatabaseHelper extends SQLiteOpenHelper {
     public void onUpgrade(SQLiteDatabase db, int oldVersion, int newVersion) {
         if (oldVersion < 2) {
             createReviewsTable(db);
+            reconcileLegacySampleInventory(db);
         }
         if (oldVersion < 3) {
             createDishReviewsTable(db);
