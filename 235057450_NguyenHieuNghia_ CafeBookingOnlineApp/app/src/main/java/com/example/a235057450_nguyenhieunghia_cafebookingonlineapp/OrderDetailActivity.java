@@ -4,6 +4,8 @@ import android.content.Intent;
 import android.os.Bundle;
 import android.view.View;
 import android.widget.Button;
+import android.widget.EditText;
+import android.widget.RatingBar;
 import android.widget.LinearLayout;
 import android.widget.TextView;
 import android.widget.Toast;
@@ -14,6 +16,8 @@ import androidx.appcompat.app.AppCompatActivity;
 import com.example.a235057450_nguyenhieunghia_cafebookingonlineapp.dao.BillDao;
 import com.example.a235057450_nguyenhieunghia_cafebookingonlineapp.dao.BillDetailDao;
 import com.example.a235057450_nguyenhieunghia_cafebookingonlineapp.dao.UserDao;
+import com.example.a235057450_nguyenhieunghia_cafebookingonlineapp.dao.ReviewDao;
+import com.example.a235057450_nguyenhieunghia_cafebookingonlineapp.model.Review;
 import com.example.a235057450_nguyenhieunghia_cafebookingonlineapp.model.Bill;
 import com.example.a235057450_nguyenhieunghia_cafebookingonlineapp.model.OrderLineItem;
 import com.example.a235057450_nguyenhieunghia_cafebookingonlineapp.model.User;
@@ -32,6 +36,7 @@ public class OrderDetailActivity extends AppCompatActivity {
     private TextView textOrderInfo;
     private LinearLayout layoutOrderLines;
     private Button cancelOrderButton;
+    private Button reviewOrderButton;
     private int currentBillId;
     private int currentUserId;
     private String currentStatus;
@@ -47,6 +52,9 @@ public class OrderDetailActivity extends AppCompatActivity {
         cancelOrderButton = findViewById(R.id.buttonCancelOrder);
         cancelOrderButton.setVisibility(View.GONE);
         cancelOrderButton.setOnClickListener(v -> confirmCancelOrder());
+        reviewOrderButton = findViewById(R.id.buttonReviewOrder);
+        reviewOrderButton.setVisibility(View.GONE);
+        reviewOrderButton.setOnClickListener(v -> showReviewDialog());
 
         int billId = getIntent().getIntExtra(EXTRA_BILL_ID, -1);
         currentBillId = billId;
@@ -115,6 +123,8 @@ public class OrderDetailActivity extends AppCompatActivity {
                 cancelOrderButton.setVisibility(
                         "awaiting confirmation".equalsIgnoreCase(currentStatus)
                                 ? View.VISIBLE : View.GONE);
+                reviewOrderButton.setVisibility(
+                        "cancelled".equalsIgnoreCase(currentStatus) ? View.GONE : View.VISIBLE);
                 layoutOrderLines.removeAllViews();
                 for (OrderLineItem line : resultLines) {
                     TextView row = new TextView(this);
@@ -138,6 +148,77 @@ public class OrderDetailActivity extends AppCompatActivity {
                 }
             });
         });
+    }
+
+    private void showReviewDialog() {
+        if (currentBillId <= 0 || currentUserId <= 0) {
+            Toast.makeText(this, "Chưa tải xong thông tin đơn hàng.", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        ReviewDao dao = new ReviewDao(getApplicationContext());
+        Review existing;
+        try {
+            existing = dao.getForBill(currentBillId, currentUserId);
+        } finally {
+            dao.close();
+        }
+
+        LinearLayout form = new LinearLayout(this);
+        form.setOrientation(LinearLayout.VERTICAL);
+        int padding = (int) (20 * getResources().getDisplayMetrics().density);
+        form.setPadding(padding, padding / 2, padding, 0);
+
+        TextView prompt = new TextView(this);
+        prompt.setText("Bạn đánh giá trải nghiệm đơn hàng này thế nào?");
+        prompt.setTextSize(15);
+        form.addView(prompt);
+
+        RatingBar ratingBar = new RatingBar(this);
+        ratingBar.setNumStars(5);
+        ratingBar.setStepSize(1f);
+        ratingBar.setRating(existing == null ? 5f : existing.getRating());
+        form.addView(ratingBar);
+
+        EditText commentInput = new EditText(this);
+        commentInput.setHint("Viết nhận xét (tối đa 1000 ký tự)");
+        commentInput.setMinLines(3);
+        commentInput.setGravity(android.view.Gravity.TOP);
+        commentInput.setInputType(android.text.InputType.TYPE_CLASS_TEXT
+                | android.text.InputType.TYPE_TEXT_FLAG_MULTI_LINE
+                | android.text.InputType.TYPE_TEXT_FLAG_CAP_SENTENCES);
+        if (existing != null) commentInput.setText(existing.getComment());
+        form.addView(commentInput);
+
+        new AlertDialog.Builder(this)
+                .setTitle(existing == null ? "Đánh giá đơn hàng #" + currentBillId
+                        : "Sửa đánh giá đơn hàng #" + currentBillId)
+                .setView(form)
+                .setNegativeButton("Để sau", null)
+                .setPositiveButton("Lưu đánh giá", (dialog, which) -> {
+                    String comment = commentInput.getText().toString().trim();
+                    if (comment.isEmpty() || comment.length() > 1000) {
+                        Toast.makeText(this, "Nhận xét không được để trống và tối đa 1000 ký tự.",
+                                Toast.LENGTH_LONG).show();
+                        return;
+                    }
+                    ReviewDao saveDao = new ReviewDao(getApplicationContext());
+                    boolean saved;
+                    try {
+                        saved = saveDao.saveForBill(currentBillId, currentUserId,
+                                Math.round(ratingBar.getRating()), comment);
+                    } finally {
+                        saveDao.close();
+                    }
+                    if (saved) {
+                        reviewOrderButton.setText("Sửa đánh giá");
+                        Toast.makeText(this, "Đã lưu đánh giá.", Toast.LENGTH_SHORT).show();
+                    } else {
+                        Toast.makeText(this, "Không thể lưu đánh giá cho đơn hàng này.",
+                                Toast.LENGTH_LONG).show();
+                    }
+                })
+                .show();
     }
 
     private void confirmCancelOrder() {
