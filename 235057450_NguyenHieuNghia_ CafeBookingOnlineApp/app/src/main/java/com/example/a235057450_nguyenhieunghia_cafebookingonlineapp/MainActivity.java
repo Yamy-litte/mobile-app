@@ -79,7 +79,17 @@ public class MainActivity extends AppCompatActivity implements MenuAdapter.OnMen
     @Override
     protected void onResume() {
         super.onResume();
-        if (cartManager != null && textCartSummary != null) updateCartSummary();
+
+        // Reload from SQLite whenever this screen becomes visible again.
+        // Checkout/cancellation may have changed StockQuantity while this
+        // Activity was in the background; otherwise ListView keeps stale Menu objects.
+        if (menuDao != null && menuAdapter != null && editSearchMenu != null) {
+            loadMenus(editSearchMenu.getText().toString());
+        }
+
+        if (cartManager != null && textCartSummary != null) {
+            updateCartSummary();
+        }
     }
 
     private void loadMenus(String keyword) {
