@@ -144,6 +144,69 @@ public class BillDao {
         }
     }
 
+    /**
+     * Cancels only orders that are still awaiting confirmation.
+     * Restores the reserved menu stock in the same transaction.
+     * Returns: CANCELLED, NOT_CANCELLABLE, NOT_FOUND, or ERROR.
+     */
+    public String cancelOrder(int billId, int userId) {
+        if (billId <= 0 || userId <= 0) return "ERROR";
+        SQLiteDatabase db = databaseHelper.getWritableDatabase();
+        boolean transactionStarted = false;
+        try {
+            db.beginTransaction();
+            transactionStarted = true;
+
+            String status;
+            try (Cursor cursor = db.query(
+                    DatabaseHelper.TABLE_BILLS,
+                    new String[]{"Status"},
+                    "BillId = ? AND UserId = ?",
+                    new String[]{String.valueOf(billId), String.valueOf(userId)},
+                    null, null, null, "1")) {
+                if (!cursor.moveToFirst()) return "NOT_FOUND";
+                status = cursor.getString(cursor.getColumnIndexOrThrow("Status"));
+            }
+
+            if (!STATUS_AWAITING_CONFIRMATION.equalsIgnoreCase(status)) {
+                return "NOT_CANCELLABLE";
+            }
+
+            try (Cursor cursor = db.query(
+                    DatabaseHelper.TABLE_BILL_DETAILS,
+                    new String[]{"MenuId", "Quantity"},
+                    "BillId = ?",
+                    new String[]{String.valueOf(billId)},
+                    null, null, null)) {
+                while (cursor.moveToNext()) {
+                    int menuId = cursor.getInt(cursor.getColumnIndexOrThrow("MenuId"));
+                    int quantity = cursor.getInt(cursor.getColumnIndexOrThrow("Quantity"));
+                    // Restore stock reserved by this order.
+                    db.execSQL("UPDATE " + DatabaseHelper.TABLE_MENU +
+                                    " SET StockQuantity = StockQuantity + ? WHERE MenuId = ?",
+                            new Object[]{quantity, menuId});
+                }
+            }
+
+            ContentValues billValues = new ContentValues();
+            billValues.put("Status", "cancelled");
+            int changed = db.update(
+                    DatabaseHelper.TABLE_BILLS,
+                    billValues,
+                    "BillId = ? AND UserId = ? AND Status = ?",
+                    new String[]{String.valueOf(billId), String.valueOf(userId),
+                            STATUS_AWAITING_CONFIRMATION});
+            if (changed != 1) return "NOT_CANCELLABLE";
+
+            db.setTransactionSuccessful();
+            return "CANCELLED";
+        } catch (SQLiteException | IllegalArgumentException ex) {
+            return "ERROR";
+        } finally {
+            if (transactionStarted) db.endTransaction();
+        }
+    }
+
     public Bill getBillById(int billId, int userId) {
         SQLiteDatabase db = databaseHelper.getReadableDatabase();
         try (Cursor cursor = db.query(
