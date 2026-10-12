@@ -105,6 +105,7 @@ public class CartActivity extends AppCompatActivity implements CartAdapter.Liste
             UserDao userDao = new UserDao(getApplicationContext());
             BillDao billDao = new BillDao(getApplicationContext());
             long billId = -1;
+            double orderTotal = calculateSnapshotTotal(cartSnapshot);
             try {
                 User localUser = userDao.getByEmail(email);
                 long localUserId = localUser == null
@@ -112,6 +113,11 @@ public class CartActivity extends AppCompatActivity implements CartAdapter.Liste
                         : localUser.getUserId();
                 if (localUserId > 0) {
                     billId = billDao.checkout((int) localUserId, billDetails);
+                    if (billId > 0) {
+                        com.example.a235057450_nguyenhieunghia_cafebookingonlineapp.model.Bill savedBill =
+                                billDao.getBillById((int) billId, (int) localUserId);
+                        if (savedBill != null) orderTotal = savedBill.getTotalAmount();
+                    }
                 }
             } finally {
                 userDao.close();
@@ -119,6 +125,7 @@ public class CartActivity extends AppCompatActivity implements CartAdapter.Liste
             }
 
             final long resultBillId = billId;
+            final double resultTotal = orderTotal;
             runOnUiThread(() -> {
                 if (isFinishing() || isDestroyed()) return;
                 checkoutButton.setEnabled(true);
@@ -131,7 +138,7 @@ public class CartActivity extends AppCompatActivity implements CartAdapter.Liste
                             .setTitle("Đặt hàng thành công")
                             .setMessage("Mã hóa đơn: #" + resultBillId
                                     + "\nTrạng thái: awaiting confirmation"
-                                    + "\nTổng tiền: " + formatMoney(calculateSnapshotTotal(cartSnapshot)) + " VND"
+                                    + "\nTổng tiền: " + formatMoney(resultTotal) + " VND"
                                     + "\n\nĐơn hàng đang chờ nhà hàng xác nhận.")
                             .setPositiveButton("Tiếp tục mua hàng", (dialog, which) -> {
                                 Intent intent = new Intent(this, MainActivity.class);
