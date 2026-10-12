@@ -6,7 +6,7 @@ import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
 
 import com.example.a235057450_nguyenhieunghia_cafebookingonlineapp.model.BillDetail;
-import com.example.a235057450_nguyenhieunghia_cafebookingonlineapp.model.DatabaseHelper;
+import com.example.a235057450_nguyenhieunghia_cafebookingonlineapp.database.DatabaseHelper;
 
 import java.util.ArrayList;
 import java.util.List;
