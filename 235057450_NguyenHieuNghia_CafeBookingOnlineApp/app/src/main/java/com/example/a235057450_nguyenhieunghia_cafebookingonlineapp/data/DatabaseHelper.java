@@ -166,6 +166,20 @@ public class DatabaseHelper extends SQLiteOpenHelper {
         return result;
     }
 
+    public List<MenuItem> getAllMenuItems() {
+        List<MenuItem> result = new ArrayList<>();
+        SQLiteDatabase db = getReadableDatabase();
+        try (Cursor c = db.query(TABLE_MENU,
+                new String[]{"MenuId", "CategoryId", "MenuName", "Description", "ImageUrl", "Price", "IsAvailable"},
+                null, null, null, null, "MenuName ASC")) {
+            while (c.moveToNext()) {
+                result.add(new MenuItem(c.getLong(0), c.getLong(1), c.getString(2),
+                        c.getString(3), c.getString(4), c.getDouble(5), c.getInt(6) == 1));
+            }
+        }
+        return result;
+    }
+
     public List<MenuItem> getMenuByCategory(long categoryId) {
         List<MenuItem> result = new ArrayList<>();
         SQLiteDatabase db = getReadableDatabase();
