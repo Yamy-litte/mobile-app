@@ -178,12 +178,14 @@ public class DatabaseHelper extends SQLiteOpenHelper {
             if (status == null || "cancelled".equalsIgnoreCase(status)) continue;
 
             if (billId == 3) {
+                boolean hasDetails;
                 try (android.database.Cursor details = db.query(
                         TABLE_BILL_DETAILS, new String[]{"BillDetailId"},
                         "BillId = ?", new String[]{"3"}, null, null, null, "1")) {
-                    if (!details.moveToFirst()) {
-                        insertBillDetail(db, 1, 3, 2, 35000);
-                    }
+                    hasDetails = details.moveToFirst();
+                }
+                if (!hasDetails) {
+                    insertBillDetail(db, 1, 3, 2, 35000);
                 }
             }
 
