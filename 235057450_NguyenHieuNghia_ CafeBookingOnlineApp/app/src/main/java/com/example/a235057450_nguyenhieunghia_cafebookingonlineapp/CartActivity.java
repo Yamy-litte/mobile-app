@@ -119,6 +119,8 @@ public class CartActivity extends AppCompatActivity implements CartAdapter.Liste
                         if (savedBill != null) orderTotal = savedBill.getTotalAmount();
                     }
                 }
+            } catch (RuntimeException ex) {
+                billId = -1;
             } finally {
                 userDao.close();
                 billDao.close();
