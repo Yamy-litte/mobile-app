@@ -2,6 +2,7 @@ package com.example.a235057450_nguyenhieunghia_cafebookingonlineapp;
 
 import android.content.ContentValues;
 import android.content.SharedPreferences;
+import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
 import android.os.Bundle;
 import android.view.Gravity;
@@ -12,10 +13,8 @@ import android.widget.Toast;
 import androidx.appcompat.app.AppCompatActivity;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
-import com.example.a235057450_nguyenhieunghia_cafebookingonlineapp.dao.MenuDAO;
 import com.example.a235057450_nguyenhieunghia_cafebookingonlineapp.dao.UserDAO;
 import com.example.a235057450_nguyenhieunghia_cafebookingonlineapp.model.DatabaseHelper;
-import com.example.a235057450_nguyenhieunghia_cafebookingonlineapp.model.MenuItem;
 import com.example.a235057450_nguyenhieunghia_cafebookingonlineapp.model.User;
 import java.text.NumberFormat;
 import java.text.SimpleDateFormat;
@@ -110,7 +109,6 @@ public class CheckoutActivity extends AppCompatActivity {
         button.setEnabled(false);
         DatabaseHelper helper = new DatabaseHelper(this);
         SQLiteDatabase db = helper.getWritableDatabase();
-        MenuDAO menuDAO = new MenuDAO(this);
         boolean success = false;
         long billId = -1;
         db.beginTransaction();
@@ -128,11 +126,25 @@ public class CheckoutActivity extends AppCompatActivity {
                 long menuId = Long.parseLong(entry.getKey().substring(5));
                 int qty = Integer.parseInt(String.valueOf(entry.getValue()));
                 if (qty <= 0) continue;
-                MenuItem item = menuDAO.getById(menuId);
-                if (item == null || !item.isAvailable()) {
-                    throw new IllegalStateException("Một món đã ngừng phục vụ. Vui lòng kiểm tra giỏ hàng.");
+                // Read through the same SQLiteDatabase connection used by this transaction.
+                // Opening another SQLiteOpenHelper here can contend for the database lock.
+                String menuName;
+                double price;
+                int available;
+                try (Cursor cursor = db.query(DatabaseHelper.TABLE_MENU,
+                        new String[]{"MenuName", "Price", "IsAvailable"},
+                        "MenuId = ?", new String[]{String.valueOf(menuId)},
+                        null, null, null)) {
+                    if (!cursor.moveToFirst()) {
+                        throw new IllegalStateException("Không tìm thấy món trong thực đơn (ID " + menuId + ").");
+                    }
+                    menuName = cursor.getString(cursor.getColumnIndexOrThrow("MenuName"));
+                    price = cursor.getDouble(cursor.getColumnIndexOrThrow("Price"));
+                    available = cursor.getInt(cursor.getColumnIndexOrThrow("IsAvailable"));
                 }
-                double price = item.getPrice();
+                if (available != 1) {
+                    throw new IllegalStateException("Món \"" + menuName + "\" đã ngừng phục vụ. Vui lòng kiểm tra giỏ hàng.");
+                }
                 verifiedTotal += price * qty;
                 ContentValues detail = new ContentValues();
                 detail.put("BillId", billId);
@@ -151,7 +163,6 @@ public class CheckoutActivity extends AppCompatActivity {
             Toast.makeText(this, "Đặt hàng thất bại: " + ex.getMessage(), Toast.LENGTH_LONG).show();
         } finally {
             db.endTransaction();
-            menuDAO.close();
             helper.close();
             button.setEnabled(true);
         }
