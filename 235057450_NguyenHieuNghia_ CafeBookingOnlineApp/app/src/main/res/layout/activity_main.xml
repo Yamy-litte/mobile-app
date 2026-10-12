@@ -40,6 +40,13 @@
         android:layout_marginTop="8dp"
         android:text="Mở giỏ hàng" />
 
+    <Button
+        android:id="@+id/buttonOrderHistory"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="4dp"
+        android:text="Lịch sử đơn hàng" />
+
     <TextView
         android:id="@+id/textCartSummary"
         android:layout_width="match_parent"
