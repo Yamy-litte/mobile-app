@@ -7,8 +7,6 @@ import android.database.sqlite.SQLiteDatabase;
 import android.database.sqlite.SQLiteOpenHelper;
 
 import com.example.a235057450_nguyenhieunghia_cafebookingonlineapp.model.Bill;
-import com.example.a235057450_nguyenhieunghia_cafebookingonlineapp.model.Category;
-import com.example.a235057450_nguyenhieunghia_cafebookingonlineapp.model.MenuItem;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -151,48 +149,6 @@ public class DatabaseHelper extends SQLiteOpenHelper {
         v.put("BillDetailId", id); v.put("BillId", billId); v.put("MenuId", menuId);
         v.put("Quantity", quantity); v.put("UnitPrice", unitPrice);
         db.insertOrThrow(TABLE_BILL_DETAIL, null, v);
-    }
-
-    public List<Category> getAllCategories() {
-        List<Category> result = new ArrayList<>();
-        SQLiteDatabase db = getReadableDatabase();
-        try (Cursor c = db.query(TABLE_CATEGORY,
-                new String[]{"CategoryId", "CategoryName", "Description"},
-                null, null, null, null, "CategoryName ASC")) {
-            while (c.moveToNext()) {
-                result.add(new Category(c.getLong(0), c.getString(1), c.getString(2)));
-            }
-        }
-        return result;
-    }
-
-    public List<MenuItem> getAllMenuItems() {
-        List<MenuItem> result = new ArrayList<>();
-        SQLiteDatabase db = getReadableDatabase();
-        try (Cursor c = db.query(TABLE_MENU,
-                new String[]{"MenuId", "CategoryId", "MenuName", "Description", "ImageUrl", "Price", "IsAvailable"},
-                null, null, null, null, "MenuName ASC")) {
-            while (c.moveToNext()) {
-                result.add(new MenuItem(c.getLong(0), c.getLong(1), c.getString(2),
-                        c.getString(3), c.getString(4), c.getDouble(5), c.getInt(6) == 1));
-            }
-        }
-        return result;
-    }
-
-    public List<MenuItem> getMenuByCategory(long categoryId) {
-        List<MenuItem> result = new ArrayList<>();
-        SQLiteDatabase db = getReadableDatabase();
-        try (Cursor c = db.query(TABLE_MENU,
-                new String[]{"MenuId", "CategoryId", "MenuName", "Description", "ImageUrl", "Price", "IsAvailable"},
-                "CategoryId = ?", new String[]{String.valueOf(categoryId)},
-                null, null, "MenuName ASC")) {
-            while (c.moveToNext()) {
-                result.add(new MenuItem(c.getLong(0), c.getLong(1), c.getString(2),
-                        c.getString(3), c.getString(4), c.getDouble(5), c.getInt(6) == 1));
-            }
-        }
-        return result;
     }
 
     public List<Bill> getBillsForUser(long userId) {
