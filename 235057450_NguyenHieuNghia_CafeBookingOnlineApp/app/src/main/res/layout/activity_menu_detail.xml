@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android" android:layout_width="match_parent" android:layout_height="match_parent" android:background="@color/coffee_cream" android:fillViewport="true">
+ <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical" android:padding="22dp">
+  <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="BREW &amp; BEAN  ☕" android:textColor="@color/coffee_primary" android:textSize="13sp" android:textStyle="bold"/>
+  <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="12dp" android:text="Chi tiết món" android:textColor="@color/coffee_text" android:textSize="26sp" android:textStyle="bold"/>
+  <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="18dp" android:padding="18dp" android:orientation="vertical" android:background="@drawable/bg_input">
+   <TextView android:id="@+id/detailName" android:layout_width="match_parent" android:layout_height="wrap_content" android:textColor="@color/coffee_text" android:textSize="23sp" android:textStyle="bold"/>
+   <TextView android:id="@+id/detailCategory" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="10dp" android:textColor="@color/coffee_muted" android:textSize="14sp"/>
+   <TextView android:id="@+id/detailPrice" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="14dp" android:textColor="@color/coffee_primary" android:textSize="22sp" android:textStyle="bold"/>
+   <TextView android:id="@+id/detailDescription" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="14dp" android:textColor="@color/coffee_text" android:textSize="16sp" android:lineSpacingExtra="4dp"/>
+   <TextView android:id="@+id/detailAvailability" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="14dp" android:textColor="@color/coffee_muted" android:textSize="14sp"/>
+  </LinearLayout>
+  <Button android:id="@+id/detailAddButton" style="@style/CoffeePrimaryButton" android:layout_marginTop="20dp" android:text="Thêm vào giỏ hàng"/>
+  <Button android:id="@+id/detailBackButton" style="@style/CoffeeSecondaryButton" android:text="Quay lại thực đơn"/>
+ </LinearLayout>
+</ScrollView>
