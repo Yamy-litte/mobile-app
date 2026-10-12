@@ -172,6 +172,7 @@ public class BillDao {
                 return "NOT_CANCELLABLE";
             }
 
+            java.util.List<int[]> reservedItems = new java.util.ArrayList<>();
             try (Cursor cursor = db.query(
                     DatabaseHelper.TABLE_BILL_DETAILS,
                     new String[]{"MenuId", "Quantity"},
@@ -179,13 +180,17 @@ public class BillDao {
                     new String[]{String.valueOf(billId)},
                     null, null, null)) {
                 while (cursor.moveToNext()) {
-                    int menuId = cursor.getInt(cursor.getColumnIndexOrThrow("MenuId"));
-                    int quantity = cursor.getInt(cursor.getColumnIndexOrThrow("Quantity"));
-                    // Restore stock reserved by this order.
-                    db.execSQL("UPDATE " + DatabaseHelper.TABLE_MENU +
-                                    " SET StockQuantity = StockQuantity + ? WHERE MenuId = ?",
-                            new Object[]{quantity, menuId});
+                    reservedItems.add(new int[]{
+                            cursor.getInt(cursor.getColumnIndexOrThrow("MenuId")),
+                            cursor.getInt(cursor.getColumnIndexOrThrow("Quantity"))
+                    });
                 }
+            }
+            // Close the cursor before modifying the menu table.
+            for (int[] item : reservedItems) {
+                db.execSQL("UPDATE " + DatabaseHelper.TABLE_MENU +
+                                " SET StockQuantity = StockQuantity + ? WHERE MenuId = ?",
+                        new Object[]{item[1], item[0]});
             }
 
             ContentValues billValues = new ContentValues();
