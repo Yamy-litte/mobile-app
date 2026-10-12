@@ -80,6 +80,7 @@ public class DatabaseHelper extends SQLiteOpenHelper {
                 ")");
 
         insertDemoData(db);
+        insertAdditionalMenuData(db);
     }
 
     private void insertDemoData(SQLiteDatabase db) {
@@ -191,6 +192,60 @@ public class DatabaseHelper extends SQLiteOpenHelper {
 
     @Override
     public void onUpgrade(SQLiteDatabase db, int oldVersion, int newVersion) {
-        // Add explicit migration steps here when DATABASE_VERSION increases.
+        if (oldVersion < 2) {
+            insertAdditionalMenuData(db);
+        }
+    }
+
+    private void insertAdditionalMenuData(SQLiteDatabase db) {
+        insert(db, TABLE_CATEGORY, values("CategoryName", "Bakery", "Description", "Fresh baked treats"));
+        insert(db, TABLE_CATEGORY, values("CategoryName", "Ice Blended", "Description", "Blended coffee and fruit drinks"));
+        insert(db, TABLE_CATEGORY, values("CategoryName", "Snacks", "Description", "Light bites and desserts"));
+
+        insertMenu(db, 1, "Espresso", "A short, rich espresso shot", 25000);
+        insertMenu(db, 1, "Americano", "Espresso with hot water", 30000);
+        insertMenu(db, 1, "Cappuccino", "Espresso with steamed milk foam", 42000);
+        insertMenu(db, 1, "Cafe Latte", "Smooth espresso with milk", 45000);
+        insertMenu(db, 1, "Caramel Macchiato", "Espresso, milk and caramel", 50000);
+        insertMenu(db, 1, "Coconut Coffee", "Vietnamese coffee with coconut cream", 48000);
+        insertMenu(db, 1, "Salt Coffee", "Creamy Vietnamese salted coffee", 45000);
+        insertMenu(db, 1, "Mocha", "Chocolate espresso with milk", 48000);
+        insertMenu(db, 2, "Milk Tea", "Classic black tea with milk", 38000);
+        insertMenu(db, 2, "Matcha Latte", "Japanese matcha with creamy milk", 45000);
+        insertMenu(db, 2, "Jasmine Tea", "Fragrant jasmine tea", 28000);
+        insertMenu(db, 2, "Lychee Tea", "Iced tea with lychee", 40000);
+        insertMenu(db, 2, "Lemon Honey Tea", "Tea with lemon and honey", 35000);
+        insertMenu(db, 2, "Ginger Tea", "Warm ginger tea", 30000);
+        insertMenu(db, 3, "Orange Juice", "Freshly squeezed orange juice", 40000);
+        insertMenu(db, 3, "Watermelon Juice", "Fresh watermelon juice", 38000);
+        insertMenu(db, 3, "Mango Smoothie", "Mango blended with yogurt", 45000);
+        insertMenu(db, 3, "Strawberry Smoothie", "Strawberry blended drink", 48000);
+        insertMenu(db, 3, "Passion Fruit Soda", "Sparkling passion fruit drink", 35000);
+        insertMenu(db, 3, "Mineral Water", "Bottled drinking water", 15000);
+        insertMenu(db, 4, "Butter Croissant", "Flaky butter pastry", 32000);
+        insertMenu(db, 4, "Chocolate Muffin", "Soft muffin with chocolate chips", 30000);
+        insertMenu(db, 4, "Blueberry Muffin", "Muffin with blueberries", 32000);
+        insertMenu(db, 4, "Cheese Danish", "Pastry filled with cheese", 35000);
+        insertMenu(db, 4, "Chocolate Donut", "Donut topped with chocolate", 25000);
+        insertMenu(db, 5, "Caramel Frappe", "Blended coffee with caramel", 50000);
+        insertMenu(db, 5, "Mocha Frappe", "Blended mocha with chocolate", 52000);
+        insertMenu(db, 5, "Matcha Frappe", "Iced blended matcha drink", 50000);
+        insertMenu(db, 5, "Oreo Frappe", "Cookies and cream blended drink", 52000);
+        insertMenu(db, 5, "Mango Ice Blend", "Blended mango over ice", 48000);
+        insertMenu(db, 6, "French Fries", "Crispy golden potato fries", 35000);
+        insertMenu(db, 6, "Chicken Nuggets", "Crispy chicken bites", 45000);
+        insertMenu(db, 6, "Club Sandwich", "Toasted sandwich with chicken and vegetables", 55000);
+        insertMenu(db, 6, "Cheesecake", "Creamy slice of cheesecake", 48000);
+        insertMenu(db, 6, "Tiramisu", "Coffee-flavoured Italian dessert", 50000);
+    }
+
+    private void insertMenu(SQLiteDatabase db, long categoryId, String name, String description, double price) {
+        insert(db, TABLE_MENU, values(
+                "CategoryId", categoryId,
+                "MenuName", name,
+                "Description", description,
+                "ImageUrl", "",
+                "Price", price,
+                "IsAvailable", 1));
     }
 }
