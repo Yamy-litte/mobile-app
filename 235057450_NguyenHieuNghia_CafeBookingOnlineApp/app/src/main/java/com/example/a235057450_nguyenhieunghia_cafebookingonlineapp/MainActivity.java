@@ -3,6 +3,7 @@ package com.example.a235057450_nguyenhieunghia_cafebookingonlineapp;
 import android.content.Intent;
 import android.os.Bundle;
 import android.text.InputType;
+import android.text.method.PasswordTransformationMethod;
 import android.util.Patterns;
 import android.view.Gravity;
 import android.widget.Button;
@@ -56,6 +57,8 @@ public class MainActivity extends AppCompatActivity {
 
         emailInput = field(root, "Email", InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_VARIATION_EMAIL_ADDRESS);
         passwordInput = field(root, "Mật khẩu", InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_VARIATION_PASSWORD);
+        // Explicitly mask password characters as asterisks/dots while typing.
+        passwordInput.setTransformationMethod(PasswordTransformationMethod.getInstance());
 
         loginButton = new Button(this);
         loginButton.setText("Đăng nhập");
