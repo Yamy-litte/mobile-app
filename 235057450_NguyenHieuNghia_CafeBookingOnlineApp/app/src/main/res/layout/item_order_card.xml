@@ -21,6 +21,13 @@
         android:textColor="@color/coffee_muted"
         android:textSize="14sp" />
     <Button
+        android:id="@+id/viewOrderDetailsButton"
+        style="@style/CoffeePrimaryButton"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="8dp"
+        android:text="Xem chi tiết" />
+    <Button
         android:id="@+id/cancelOrderButton"
         style="@style/CoffeeSecondaryButton"
         android:layout_width="match_parent"
