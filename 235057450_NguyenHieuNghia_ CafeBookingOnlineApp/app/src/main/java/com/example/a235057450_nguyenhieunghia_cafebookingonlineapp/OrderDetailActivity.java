@@ -246,19 +246,20 @@ public class OrderDetailActivity extends AppCompatActivity {
             } finally {
                 billDao.close();
             }
+            final String cancelResult = result;
             runOnUiThread(() -> {
                 if (isFinishing() || isDestroyed()) return;
                 cancelOrderButton.setEnabled(true);
-                if ("CANCELLED".equals(result)) {
+                if ("CANCELLED".equals(cancelResult)) {
                     Toast.makeText(this, "Đã hủy đơn hàng. Tồn kho đã được hoàn lại.",
                             Toast.LENGTH_LONG).show();
                     finish();
-                } else if ("NOT_CANCELLABLE".equals(result)) {
+                } else if ("NOT_CANCELLABLE".equals(cancelResult)) {
                     Toast.makeText(this,
                             "Chỉ đơn đang chờ xác nhận mới được hủy.",
                             Toast.LENGTH_LONG).show();
                     loadOrder(currentBillId);
-                } else if ("NOT_FOUND".equals(result)) {
+                } else if ("NOT_FOUND".equals(cancelResult)) {
                     Toast.makeText(this, "Không tìm thấy đơn hàng của bạn.",
                             Toast.LENGTH_LONG).show();
                     finish();
