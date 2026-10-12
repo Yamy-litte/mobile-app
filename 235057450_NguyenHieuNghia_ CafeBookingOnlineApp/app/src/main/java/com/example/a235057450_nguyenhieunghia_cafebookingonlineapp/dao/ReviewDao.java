@@ -78,12 +78,12 @@ public class ReviewDao {
         SQLiteDatabase db = helper.getReadableDatabase();
         String sql = "SELECT r.ReviewId, r.BillId, u.Email, r.Rating, r.Comment, " +
                 "r.CreatedAt, b.TotalAmount, " +
-                "COALESCE((SELECT group_concat(x.MenuName || ' x' || x.Quantity, ', ') " +
-                "FROM (SELECT m.MenuName AS MenuName, d.Quantity AS Quantity " +
+                "COALESCE((SELECT group_concat(m.MenuName || ' x' || d.Quantity, ', ') " +
                 "FROM BillDetails d INNER JOIN MenuItems m ON m.MenuId = d.MenuId " +
-                "WHERE d.BillId = b.BillId ORDER BY d.BillDetailId) x), 'Order') AS MenuSummary " +
+                "WHERE d.BillId = b.BillId), 'Order') AS MenuSummary " +
                 "FROM Reviews r INNER JOIN Users u ON u.UserId = r.UserId " +
                 "INNER JOIN Bills b ON b.BillId = r.BillId " +
+                "WHERE lower(b.Status) != 'cancelled' " +
                 "ORDER BY r.CreatedAt DESC, r.ReviewId DESC";
         try (Cursor c = db.rawQuery(sql, null)) {
             while (c.moveToNext()) {
