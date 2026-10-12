@@ -13,7 +13,7 @@ import android.database.sqlite.SQLiteOpenHelper;
 public class DatabaseHelper extends SQLiteOpenHelper {
 
     private static final String DATABASE_NAME = "cafe_booking.db";
-    private static final int DATABASE_VERSION = 1;
+    private static final int DATABASE_VERSION = 2;
 
     public static final String TABLE_USERS = "Users";
     public static final String TABLE_CATEGORIES = "Categories";
@@ -77,7 +77,32 @@ public class DatabaseHelper extends SQLiteOpenHelper {
                 "ON UPDATE CASCADE ON DELETE CASCADE" +
                 ")");
 
+        createReviewsTable(db);
         insertSampleData(db);
+    }
+
+    private void createReviewsTable(SQLiteDatabase db) {
+        db.execSQL("CREATE TABLE IF NOT EXISTS Reviews (" +
+                "ReviewId INTEGER PRIMARY KEY AUTOINCREMENT, " +
+                "UserId INTEGER NOT NULL, " +
+                "BillId INTEGER NOT NULL UNIQUE, " +
+                "Rating INTEGER NOT NULL CHECK (Rating BETWEEN 1 AND 5), " +
+                "Comment TEXT NOT NULL CHECK (length(trim(Comment)) > 0), " +
+                "CreatedAt TEXT NOT NULL, " +
+                "FOREIGN KEY (UserId) REFERENCES " + TABLE_USERS + "(UserId) ON DELETE CASCADE, " +
+                "FOREIGN KEY (BillId) REFERENCES " + TABLE_BILLS + "(BillId) ON DELETE CASCADE" +
+                ")");
+    }
+
+    private void insertReview(SQLiteDatabase db, int userId, int billId, int rating,
+                              String comment, String createdAt) {
+        ContentValues values = new ContentValues();
+        values.put("UserId", userId);
+        values.put("BillId", billId);
+        values.put("Rating", rating);
+        values.put("Comment", comment);
+        values.put("CreatedAt", createdAt);
+        db.insertOrThrow("Reviews", null, values);
     }
 
     private void insertSampleData(SQLiteDatabase db) {
@@ -90,9 +115,9 @@ public class DatabaseHelper extends SQLiteOpenHelper {
         insertCategory(db, "Tea");
         insertCategory(db, "Pastries");
 
-        insertMenu(db, "Americano", "americano", 1, 35000, 20);
-        insertMenu(db, "Milk Tea", "milk_tea", 2, 40000, 15);
-        insertMenu(db, "Croissant", "croissant", 3, 28000, 10);
+        insertMenu(db, "Americano", "americano", 1, 35000, 17);
+        insertMenu(db, "Milk Tea", "milk_tea", 2, 40000, 14);
+        insertMenu(db, "Croissant", "croissant", 3, 28000, 9);
 
         insertBill(db, 1, "2026-10-12", "awaiting confirmation", 63000);
         insertBill(db, 2, "2026-10-12", "confirmed", 40000);
@@ -101,6 +126,11 @@ public class DatabaseHelper extends SQLiteOpenHelper {
         insertBillDetail(db, 1, 1, 1, 35000);
         insertBillDetail(db, 3, 1, 1, 28000);
         insertBillDetail(db, 2, 2, 1, 40000);
+        insertBillDetail(db, 1, 3, 2, 35000);
+
+        insertReview(db, 1, 1, 5, "Cà phê ngon, giao diện đặt món dễ dùng.", "2026-10-12 09:00:00");
+        insertReview(db, 2, 2, 4, "Trà sữa ổn, sẽ đặt lại.", "2026-10-12 10:00:00");
+        insertReview(db, 1, 3, 5, "Đồ uống ngon, giá hợp lý.", "2026-10-11 12:00:00");
     }
 
     private void insertUser(SQLiteDatabase db, String email, String role) {
@@ -149,7 +179,9 @@ public class DatabaseHelper extends SQLiteOpenHelper {
 
     @Override
     public void onUpgrade(SQLiteDatabase db, int oldVersion, int newVersion) {
-        // Add migration steps here when the schema version changes.
-        // Avoid dropping tables so existing user data is not deleted.
+        if (oldVersion < 2) {
+            createReviewsTable(db);
+        }
+        // Preserve existing user/order data during upgrades.
     }
 }
