@@ -14,6 +14,10 @@
         android:supportsRtl="true"
         android:theme="@style/Theme._235057450_NguyenHieuNghia_CafeBookingOnlineApp">
         <activity
+            android:name=".RegisterActivity"
+            android:exported="false"
+            android:windowSoftInputMode="adjustResize" />
+        <activity
             android:name=".ReviewsActivity"
             android:exported="false" />
         <activity
