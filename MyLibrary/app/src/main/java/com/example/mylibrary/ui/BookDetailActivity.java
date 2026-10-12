@@ -87,7 +87,47 @@ public class BookDetailActivity extends AppCompatActivity {
         }
 
         String uid = FirebaseAuth.getInstance().getCurrentUser().getUid();
-        
+        btnReserveBook.setEnabled(false);
+
+        // Check existing reservations before creating another active request for the same book.
+        reservationRepository.getReservationsByCustomerId(uid, new DataCallback<List<Reservation>>() {
+            @Override
+            public void onSuccess(List<Reservation> reservations) {
+                if (isFinishing() || isDestroyed()) return;
+
+                if (reservations != null) {
+                    for (Reservation existing : reservations) {
+                        if (existing == null) continue;
+                        boolean sameBook = currentBook.getId() != null
+                                && currentBook.getId().equals(existing.getBookId());
+                        String status = existing.getStatus();
+                        boolean active = "PENDING".equalsIgnoreCase(status)
+                                || "APPROVED".equalsIgnoreCase(status);
+                        if (sameBook && active) {
+                            btnReserveBook.setEnabled(true);
+                            Toast.makeText(BookDetailActivity.this,
+                                    "Bạn đã có yêu cầu đặt trước đang hoạt động cho sách này.",
+                                    Toast.LENGTH_LONG).show();
+                            return;
+                        }
+                    }
+                }
+
+                createReservation(uid);
+            }
+
+            @Override
+            public void onFailure(String errorMessage) {
+                if (isFinishing() || isDestroyed()) return;
+                btnReserveBook.setEnabled(true);
+                Toast.makeText(BookDetailActivity.this,
+                        "Không thể kiểm tra yêu cầu đặt trước: " + errorMessage,
+                        Toast.LENGTH_LONG).show();
+            }
+        });
+    }
+
+    private void createReservation(String uid) {
         Reservation reservation = new Reservation();
         reservation.setCustomerId(uid);
         reservation.setBookId(currentBook.getId());
@@ -96,18 +136,24 @@ public class BookDetailActivity extends AppCompatActivity {
         reservation.setExpectedPickupDate(System.currentTimeMillis() + (3 * 24 * 60 * 60 * 1000L));
         reservation.setExpirationDate(System.currentTimeMillis() + (3 * 24 * 60 * 60 * 1000L));
         reservation.setPickupLocation("Quầy dịch vụ Tầng 2");
-        reservation.setReservationCode("RES-" + (int)(Math.random() * 90000 + 10000));
+        reservation.setReservationCode("RES-" + java.util.UUID.randomUUID().toString().substring(0, 8).toUpperCase(java.util.Locale.ROOT));
         reservation.setStatus("PENDING");
 
         reservationRepository.addReservation(reservation, new DataCallback<Reservation>() {
             @Override
             public void onSuccess(Reservation result) {
-                Toast.makeText(BookDetailActivity.this, "Đặt trước sách thành công! Mã: " + result.getReservationCode(), Toast.LENGTH_LONG).show();
+                btnReserveBook.setEnabled(true);
+                Toast.makeText(BookDetailActivity.this,
+                        "Đặt trước sách thành công! Mã: " + result.getReservationCode(),
+                        Toast.LENGTH_LONG).show();
             }
 
             @Override
             public void onFailure(String errorMessage) {
-                Toast.makeText(BookDetailActivity.this, "Đặt trước thất bại: " + errorMessage, Toast.LENGTH_SHORT).show();
+                btnReserveBook.setEnabled(true);
+                Toast.makeText(BookDetailActivity.this,
+                        "Đặt trước thất bại: " + errorMessage,
+                        Toast.LENGTH_LONG).show();
             }
         });
     }
