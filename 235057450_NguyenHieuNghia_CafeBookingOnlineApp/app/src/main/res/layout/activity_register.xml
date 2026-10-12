@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent" android:layout_height="match_parent"
+    android:background="@color/coffee_cream" android:fillViewport="true">
+    <LinearLayout
+        android:id="@+id/registerRoot"
+        android:layout_width="match_parent" android:layout_height="wrap_content"
+        android:orientation="vertical" android:padding="26dp">
+        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+            android:text="☕  BREW &amp; BEAN" android:textColor="@color/coffee_primary"
+            android:textSize="25sp" android:textStyle="bold" android:layout_marginTop="24dp"/>
+        <TextView android:layout_width="match_parent" android:layout_height="wrap_content"
+            android:text="Tạo tài khoản mới" android:textColor="@color/coffee_text"
+            android:textSize="25sp" android:textStyle="bold" android:layout_marginTop="34dp"/>
+        <TextView android:layout_width="match_parent" android:layout_height="wrap_content"
+            android:text="Tham gia cùng chúng tôi để đặt món nhanh chóng."
+            android:textColor="@color/coffee_muted" android:layout_marginTop="6dp"/>
+        <EditText android:id="@+id/nameInput" style="@style/CoffeeInput" android:hint="Họ và tên"
+            android:inputType="textCapWords"/>
+        <EditText android:id="@+id/emailInput" style="@style/CoffeeInput" android:hint="Địa chỉ email"
+            android:inputType="textEmailAddress"/>
+        <EditText android:id="@+id/passwordInput" style="@style/CoffeeInput" android:hint="Mật khẩu (ít nhất 6 ký tự)"
+            android:inputType="textPassword"/>
+        <EditText android:id="@+id/confirmInput" style="@style/CoffeeInput" android:hint="Nhập lại mật khẩu"
+            android:inputType="textPassword"/>
+        <Button android:id="@+id/registerSubmitButton" style="@style/CoffeePrimaryButton"
+            android:text="Tạo tài khoản"/>
+        <Button android:id="@+id/backToLoginButton" style="@style/CoffeeSecondaryButton"
+            android:text="Quay lại đăng nhập"/>
+    </LinearLayout>
+</ScrollView>
