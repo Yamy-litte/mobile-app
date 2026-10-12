@@ -30,7 +30,8 @@ public class AuthActivity extends AppCompatActivity {
         editPassword = findViewById(R.id.editAuthPassword);
         textAuthStatus = findViewById(R.id.textAuthStatus);
 
-        findViewById(R.id.buttonRegister).setOnClickListener(v -> register());
+        findViewById(R.id.buttonRegister).setOnClickListener(v ->
+                startActivity(new Intent(this, RegisterActivity.class)));
         findViewById(R.id.buttonLogin).setOnClickListener(v -> login());
         findViewById(R.id.buttonResetPassword).setOnClickListener(v -> resetPassword());
     }
@@ -64,34 +65,6 @@ public class AuthActivity extends AppCompatActivity {
             return false;
         }
         return true;
-    }
-
-    private void register() {
-        if (!validateInput()) return;
-        setBusy(true);
-        auth.createUserWithEmailAndPassword(emailInput(), passwordInput())
-                .addOnCompleteListener(this, task -> {
-                    if (!task.isSuccessful()) {
-                        setBusy(false);
-                        showError(task.getException(), "Không thể tạo tài khoản.");
-                        return;
-                    }
-                    FirebaseUser user = auth.getCurrentUser();
-                    if (user == null) {
-                        setBusy(false);
-                        showMessage("Tạo tài khoản thất bại. Vui lòng thử lại.");
-                        return;
-                    }
-                    user.sendEmailVerification().addOnCompleteListener(this, verifyTask -> {
-                        setBusy(false);
-                        if (verifyTask.isSuccessful()) {
-                            showMessage("Đã gửi liên kết xác minh đến email. Hãy xác minh rồi đăng nhập.");
-                        } else {
-                            showError(verifyTask.getException(), "Không gửi được email xác minh.");
-                        }
-                        auth.signOut();
-                    });
-                });
     }
 
     private void login() {
@@ -146,7 +119,6 @@ public class AuthActivity extends AppCompatActivity {
     }
 
     private void setBusy(boolean busy) {
-        findViewById(R.id.buttonRegister).setEnabled(!busy);
         findViewById(R.id.buttonLogin).setEnabled(!busy);
         findViewById(R.id.buttonResetPassword).setEnabled(!busy);
         textAuthStatus.setText(busy ? "Đang xử lý..." : "");
