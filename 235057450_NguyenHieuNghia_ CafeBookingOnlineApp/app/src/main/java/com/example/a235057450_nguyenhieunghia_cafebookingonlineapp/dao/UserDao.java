@@ -91,6 +91,21 @@ public class UserDao {
             }
 
             if (existingId > 0) {
+                String existingRole = null;
+                try (Cursor cursor = db.query(
+                        DatabaseHelper.TABLE_USERS,
+                        new String[]{"Role"},
+                        "UserId = ?",
+                        new String[]{String.valueOf(existingId)},
+                        null, null, null, "1")) {
+                    if (cursor.moveToFirst()) {
+                        existingRole = cursor.getString(0);
+                    }
+                }
+                // Never allow a login/register flow to overwrite an existing role.
+                if (!role.equals(existingRole)) {
+                    return -1;
+                }
                 db.update(DatabaseHelper.TABLE_USERS, values,
                         "UserId = ?", new String[]{String.valueOf(existingId)});
                 return existingId;
