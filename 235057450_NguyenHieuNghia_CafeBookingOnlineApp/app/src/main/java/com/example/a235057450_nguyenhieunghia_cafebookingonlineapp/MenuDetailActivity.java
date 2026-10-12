@@ -1,6 +1,5 @@
 package com.example.a235057450_nguyenhieunghia_cafebookingonlineapp;
 
-import android.content.Intent;
 import android.content.SharedPreferences;
 import android.os.Bundle;
 import android.widget.Button;
@@ -75,8 +74,4 @@ public class MenuDetailActivity extends AppCompatActivity {
         }
     }
 
-    private LinearLayout.LayoutParams params() {
-        return new LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT,
-                LinearLayout.LayoutParams.WRAP_CONTENT);
-    }
 }
