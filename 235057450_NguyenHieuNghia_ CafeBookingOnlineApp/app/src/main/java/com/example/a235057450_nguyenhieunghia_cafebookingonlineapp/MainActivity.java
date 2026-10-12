@@ -4,6 +4,7 @@ import android.os.Bundle;
 import android.text.Editable;
 import android.text.TextWatcher;
 import android.view.View;
+import android.widget.Button;
 import android.widget.EditText;
 import android.widget.ListView;
 import android.widget.TextView;
@@ -41,6 +42,9 @@ public class MainActivity extends AppCompatActivity implements MenuAdapter.OnMen
         listMenu = findViewById(R.id.listMenu);
         textEmptyMenu = findViewById(R.id.textEmptyMenu);
         textCartSummary = findViewById(R.id.textCartSummary);
+        Button openCart = findViewById(R.id.buttonOpenCart);
+        openCart.setOnClickListener(v ->
+                startActivity(new android.content.Intent(this, CartActivity.class)));
 
         menuAdapter = new MenuAdapter(this, this);
         listMenu.setAdapter(menuAdapter);
@@ -61,6 +65,12 @@ public class MainActivity extends AppCompatActivity implements MenuAdapter.OnMen
             @Override
             public void afterTextChanged(Editable s) { }
         });
+    }
+
+    @Override
+    protected void onResume() {
+        super.onResume();
+        if (cartManager != null && textCartSummary != null) updateCartSummary();
     }
 
     private void loadMenus(String keyword) {
