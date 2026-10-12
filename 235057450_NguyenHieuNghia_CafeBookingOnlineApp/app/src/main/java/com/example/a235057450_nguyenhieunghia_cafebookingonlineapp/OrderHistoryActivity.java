@@ -72,7 +72,13 @@ public class OrderHistoryActivity extends AppCompatActivity {
                 TextView info = card.findViewById(R.id.orderInfoText);
                 info.setText("Đơn #" + id + "\nNgày đặt: " + date + "\nTrạng thái: " + status
                         + "\nTổng tiền: " + money.format(total) + " đ");
-                Button viewDetails = card.findViewById(R.id.viewOrderDetailsButton);\n                viewDetails.setOnClickListener(v -> {\n                    android.content.Intent intent = new android.content.Intent(this, OrderDetailActivity.class);\n                    intent.putExtra("BILL_ID", id);\n                    startActivity(intent);\n                });\n                list.addView(card);
+                Button viewDetails = card.findViewById(R.id.viewOrderDetailsButton);\n                viewDetails.setOnClickListener(v -> {\n                    android.content.Intent intent = new android.content.Intent(this, OrderDetailActivity.class);\n                    intent.putExtra("BILL_ID", id);\n                    startActivity(intent);\n                });\n                Button viewDetails = card.findViewById(R.id.viewOrderDetailsButton);
+                viewDetails.setOnClickListener(v -> {
+                    android.content.Intent intent = new android.content.Intent(this, OrderDetailActivity.class);
+                    intent.putExtra("BILL_ID", id);
+                    startActivity(intent);
+                });
+                list.addView(card);
 
                 Cursor details = db.rawQuery(
                     "SELECT m.MenuName, d.Quantity, d.UnitPrice FROM BillDetail d " +
