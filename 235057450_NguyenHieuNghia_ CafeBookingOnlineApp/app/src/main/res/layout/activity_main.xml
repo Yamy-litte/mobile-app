@@ -33,6 +33,13 @@
         android:padding="12dp"
         android:singleLine="true" />
 
+    <Button
+        android:id="@+id/buttonOpenCart"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="8dp"
+        android:text="Mở giỏ hàng" />
+
     <TextView
         android:id="@+id/textCartSummary"
         android:layout_width="match_parent"
