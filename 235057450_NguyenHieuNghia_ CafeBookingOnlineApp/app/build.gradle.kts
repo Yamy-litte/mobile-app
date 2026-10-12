@@ -6,13 +6,13 @@ plugins {
 android {
     namespace = "com.example.a235057450_nguyenhieunghia_cafebookingonlineapp"
     compileSdk {
-        version = release(37)
+        version = release(36)
     }
 
     defaultConfig {
         applicationId = "com.example.a235057450_nguyenhieunghia_cafebookingonlineapp"
         minSdk = 24
-        targetSdk = 37
+        targetSdk = 36
         versionCode = 1
         versionName = "1.0"
 
