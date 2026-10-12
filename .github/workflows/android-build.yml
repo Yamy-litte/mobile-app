@@ -1,0 +1,40 @@
+name: Android build and database tests
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "21"
+
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Install Android platform
+        run: sdkmanager "platforms;android-37"
+
+      - name: Build debug APK and unit tests
+        working-directory: "235057450_NguyenHieuNghia_ CafeBookingOnlineApp"
+        run: ./gradlew --no-daemon :app:assembleDebug :app:testDebugUnitTest
+
+      - name: Run stock and checkout integration tests
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 35
+          arch: x86_64
+          target: default
+          working-directory: "235057450_NguyenHieuNghia_ CafeBookingOnlineApp"
+          script: ./gradlew --no-daemon :app:connectedDebugAndroidTest
