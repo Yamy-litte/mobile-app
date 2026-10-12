@@ -2,14 +2,9 @@ package com.example.a235057450_nguyenhieunghia_cafebookingonlineapp;
 
 import android.content.Intent;
 import android.os.Bundle;
-import android.text.InputType;
-import android.text.method.PasswordTransformationMethod;
 import android.util.Patterns;
-import android.view.Gravity;
 import android.widget.Button;
 import android.widget.EditText;
-import android.widget.LinearLayout;
-import android.widget.TextView;
 import android.widget.Toast;
 
 import androidx.appcompat.app.AppCompatActivity;
@@ -22,6 +17,7 @@ import com.example.a235057450_nguyenhieunghia_cafebookingonlineapp.model.User;
 public class MainActivity extends AppCompatActivity {
     private FirebaseAuth auth;
     private EditText emailInput, passwordInput;
+    private TextView resetButton, registerButton;
     private Button loginButton;
 
     @Override
@@ -33,51 +29,15 @@ public class MainActivity extends AppCompatActivity {
             return;
         }
 
-        LinearLayout root = new LinearLayout(this);
-        root.setOrientation(LinearLayout.VERTICAL);
-        root.setGravity(Gravity.CENTER);
-        root.setPadding(28, 24, 28, 24);
-        root.setBackgroundColor(0xFFFAF7F2);
-
-        TextView title = new TextView(this);
-        title.setText("Café Booking Online");
-        title.setTextSize(26);
-        title.setTextColor(0xFF744B30);
-        title.setGravity(Gravity.CENTER);
-        title.setTypeface(null, 1);
-        root.addView(title, params());
-
-        TextView subtitle = new TextView(this);
-        subtitle.setText("Đăng nhập tài khoản");
-        subtitle.setTextSize(16);
-        subtitle.setGravity(Gravity.CENTER);
-        LinearLayout.LayoutParams sp = params();
-        sp.topMargin = 16;
-        root.addView(subtitle, sp);
-
-        emailInput = field(root, "Email", InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_VARIATION_EMAIL_ADDRESS);
-        passwordInput = field(root, "Mật khẩu", InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_VARIATION_PASSWORD);
-        // Explicitly mask password characters as asterisks/dots while typing.
-        passwordInput.setTransformationMethod(PasswordTransformationMethod.getInstance());
-
-        loginButton = new Button(this);
-        loginButton.setText("Đăng nhập");
-        LinearLayout.LayoutParams lp = params();
-        lp.topMargin = 12;
-        root.addView(loginButton, lp);
+        setContentView(R.layout.activity_login);
+        emailInput = findViewById(R.id.emailInput);
+        passwordInput = findViewById(R.id.passwordInput);
+        loginButton = findViewById(R.id.loginButton);
+        registerButton = findViewById(R.id.registerButton);
+        resetButton = findViewById(R.id.resetButton);
         loginButton.setOnClickListener(v -> login());
-
-        Button register = new Button(this);
-        register.setText("Tạo tài khoản mới");
-        root.addView(register, params());
-        register.setOnClickListener(v -> startActivity(new Intent(this, RegisterActivity.class)));
-
-        Button reset = new Button(this);
-        reset.setText("Quên mật khẩu");
-        root.addView(reset, params());
-        reset.setOnClickListener(v -> sendPasswordReset());
-
-        setContentView(root);
+        registerButton.setOnClickListener(v -> startActivity(new Intent(this, RegisterActivity.class)));
+        resetButton.setOnClickListener(v -> sendPasswordReset());
     }
 
     private void login() {
@@ -136,19 +96,4 @@ public class MainActivity extends AppCompatActivity {
         finish();
     }
 
-    private EditText field(LinearLayout root, String hint, int inputType) {
-        EditText editText = new EditText(this);
-        editText.setHint(hint);
-        editText.setInputType(inputType);
-        editText.setSingleLine(true);
-        LinearLayout.LayoutParams p = params();
-        p.topMargin = 8;
-        root.addView(editText, p);
-        return editText;
-    }
-
-    private LinearLayout.LayoutParams params() {
-        return new LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT,
-                LinearLayout.LayoutParams.WRAP_CONTENT);
-    }
 }
