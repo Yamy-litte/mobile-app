@@ -9,6 +9,8 @@ import androidx.test.platform.app.InstrumentationRegistry;
 
 import com.example.a235057450_nguyenhieunghia_cafebookingonlineapp.dao.BillDao;
 import com.example.a235057450_nguyenhieunghia_cafebookingonlineapp.dao.MenuDao;
+import com.example.a235057450_nguyenhieunghia_cafebookingonlineapp.dao.ReviewDao;
+import com.example.a235057450_nguyenhieunghia_cafebookingonlineapp.dao.DishReviewDao;
 import com.example.a235057450_nguyenhieunghia_cafebookingonlineapp.database.DatabaseHelper;
 import com.example.a235057450_nguyenhieunghia_cafebookingonlineapp.model.BillDetail;
 import com.example.a235057450_nguyenhieunghia_cafebookingonlineapp.model.Menu;
@@ -66,6 +68,30 @@ public class OrderStockInstrumentedTest {
 
         assertEquals(-1L, billDao.checkout(1, Collections.singletonList(line)));
         assertEquals(before, menuDao.getMenuById(1).getStockQuantity());
+    }
+
+    @Test
+    public void orderAndDishReviewsCanBeReadAndSaved() {
+        ReviewDao reviewDao = new ReviewDao(testContext);
+        DishReviewDao dishReviewDao = new DishReviewDao(testContext);
+        try {
+            assertEquals(3, reviewDao.getAllReviews().size());
+            assertTrue(dishReviewDao.getRecentForMenu(1).size() > 0);
+
+            BillDetail line = new BillDetail();
+            line.setMenuId(1);
+            line.setQuantity(1);
+            long billId = billDao.checkout(1, Collections.singletonList(line));
+            assertTrue(billId > 0);
+            assertTrue(reviewDao.saveForBill((int) billId, 1, 5, "Kiểm thử đánh giá đơn hàng."));
+            assertEquals(4, reviewDao.getAllReviews().size());
+
+            assertTrue(dishReviewDao.saveForMenu(2, 1, 4, "Kiểm thử đánh giá món."));
+            assertEquals(4, dishReviewDao.getForMenu(2, 1).getRating());
+        } finally {
+            reviewDao.close();
+            dishReviewDao.close();
+        }
     }
 
     @After
