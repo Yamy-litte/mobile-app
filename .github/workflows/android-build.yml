@@ -30,7 +30,7 @@ jobs:
 
       - name: Build debug APK and unit tests
         working-directory: "235057450_NguyenHieuNghia_ CafeBookingOnlineApp"
-        run: ./gradlew --no-daemon :app:assembleDebug :app:testDebugUnitTest
+        run: bash ./gradlew --no-daemon :app:assembleDebug :app:testDebugUnitTest
 
       - name: Run stock and checkout integration tests
         uses: reactivecircus/android-emulator-runner@v2
@@ -39,4 +39,4 @@ jobs:
           arch: x86_64
           target: default
           working-directory: "235057450_NguyenHieuNghia_ CafeBookingOnlineApp"
-          script: ./gradlew --no-daemon :app:connectedDebugAndroidTest
+          script: bash ./gradlew --no-daemon :app:connectedDebugAndroidTest
