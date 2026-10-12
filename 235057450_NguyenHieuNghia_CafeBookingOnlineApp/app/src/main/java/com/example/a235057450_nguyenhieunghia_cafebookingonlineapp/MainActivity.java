@@ -17,6 +17,8 @@ import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
 
 import com.example.a235057450_nguyenhieunghia_cafebookingonlineapp.data.DatabaseHelper;
+import com.example.a235057450_nguyenhieunghia_cafebookingonlineapp.data.dao.CategoryDAO;
+import com.example.a235057450_nguyenhieunghia_cafebookingonlineapp.data.dao.MenuDAO;
 import com.example.a235057450_nguyenhieunghia_cafebookingonlineapp.model.Category;
 import com.example.a235057450_nguyenhieunghia_cafebookingonlineapp.model.MenuItem;
 
@@ -33,6 +35,8 @@ public class MainActivity extends AppCompatActivity {
     private static final int COLOR_TEXT = Color.rgb(48, 39, 32);
 
     private DatabaseHelper databaseHelper;
+    private CategoryDAO categoryDAO;
+    private MenuDAO menuDAO;
     private LinearLayout categoryContainer;
     private LinearLayout menuContainer;
     private TextView cartButton;
@@ -45,6 +49,8 @@ public class MainActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
         databaseHelper = new DatabaseHelper(this);
+        categoryDAO = new CategoryDAO(databaseHelper);
+        menuDAO = new MenuDAO(databaseHelper);
 
         categoryContainer = findViewById(R.id.categoryContainer);
         menuContainer = findViewById(R.id.menuContainer);
@@ -57,7 +63,7 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void loadCategories() {
-        categories = databaseHelper.getAllCategories();
+        categories = categoryDAO.getAllCategories();
         categoryContainer.removeAllViews();
         addCategoryButton("All", -1);
         for (Category category : categories) {
@@ -89,8 +95,8 @@ public class MainActivity extends AppCompatActivity {
     private void renderMenu() {
         menuContainer.removeAllViews();
         List<MenuItem> items = selectedCategoryId == -1
-                ? databaseHelper.getAllMenuItems()
-                : databaseHelper.getMenuByCategory(selectedCategoryId);
+                ? menuDAO.getAllMenuItems()
+                : menuDAO.getMenuByCategory(selectedCategoryId);
 
         if (items.isEmpty()) {
             TextView empty = new TextView(this);
