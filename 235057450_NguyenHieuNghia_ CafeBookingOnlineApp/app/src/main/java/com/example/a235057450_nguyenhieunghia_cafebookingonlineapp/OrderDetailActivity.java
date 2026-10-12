@@ -8,6 +8,7 @@ import android.widget.LinearLayout;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
 
 import com.example.a235057450_nguyenhieunghia_cafebookingonlineapp.dao.BillDao;
@@ -30,6 +31,10 @@ public class OrderDetailActivity extends AppCompatActivity {
     private final ExecutorService executor = Executors.newSingleThreadExecutor();
     private TextView textOrderInfo;
     private LinearLayout layoutOrderLines;
+    private Button cancelOrderButton;
+    private int currentBillId;
+    private int currentUserId;
+    private String currentStatus;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -39,8 +44,12 @@ public class OrderDetailActivity extends AppCompatActivity {
         layoutOrderLines = findViewById(R.id.layoutOrderLines);
         Button back = findViewById(R.id.buttonOrderDetailBack);
         back.setOnClickListener(v -> finish());
+        cancelOrderButton = findViewById(R.id.buttonCancelOrder);
+        cancelOrderButton.setVisibility(View.GONE);
+        cancelOrderButton.setOnClickListener(v -> confirmCancelOrder());
 
         int billId = getIntent().getIntExtra(EXTRA_BILL_ID, -1);
+        currentBillId = billId;
         if (billId <= 0) {
             Toast.makeText(this, "Mã đơn hàng không hợp lệ.", Toast.LENGTH_SHORT).show();
             finish();
@@ -71,6 +80,7 @@ public class OrderDetailActivity extends AppCompatActivity {
                 if (user == null || !"Customer".equals(user.getRole())) {
                     error = "Không tìm thấy hồ sơ khách hàng.";
                 } else {
+                    currentUserId = user.getUserId();
                     bill = billDao.getBillById(billId, user.getUserId());
                     if (bill == null) {
                         error = "Không tìm thấy đơn hàng hoặc bạn không có quyền xem đơn này.";
@@ -97,10 +107,14 @@ public class OrderDetailActivity extends AppCompatActivity {
                 }
 
                 NumberFormat money = NumberFormat.getNumberInstance(new Locale("vi", "VN"));
+                currentStatus = resultBill.getStatus();
                 textOrderInfo.setText("Đơn hàng #" + resultBill.getBillId()
                         + "\nNgày đặt: " + resultBill.getDateOfBill()
                         + "\nTrạng thái: " + resultBill.getStatus()
                         + "\nTổng tiền: " + money.format(resultBill.getTotalAmount()) + " VND");
+                cancelOrderButton.setVisibility(
+                        "awaiting confirmation".equalsIgnoreCase(currentStatus)
+                                ? View.VISIBLE : View.GONE);
                 layoutOrderLines.removeAllViews();
                 for (OrderLineItem line : resultLines) {
                     TextView row = new TextView(this);
@@ -121,6 +135,53 @@ public class OrderDetailActivity extends AppCompatActivity {
                     empty.setText("Đơn hàng chưa có món chi tiết.");
                     empty.setPadding(12, 16, 12, 16);
                     layoutOrderLines.addView(empty);
+                }
+            });
+        });
+    }
+
+    private void confirmCancelOrder() {
+        if (!"awaiting confirmation".equalsIgnoreCase(currentStatus)) {
+            Toast.makeText(this, "Đơn hàng này không thể hủy.", Toast.LENGTH_SHORT).show();
+            return;
+        }
+        new AlertDialog.Builder(this)
+                .setTitle("Hủy đơn hàng")
+                .setMessage("Bạn có chắc muốn hủy đơn hàng #" + currentBillId + "?")
+                .setNegativeButton("Không", null)
+                .setPositiveButton("Hủy đơn", (dialog, which) -> cancelOrder())
+                .show();
+    }
+
+    private void cancelOrder() {
+        cancelOrderButton.setEnabled(false);
+        executor.execute(() -> {
+            BillDao billDao = new BillDao(getApplicationContext());
+            String result;
+            try {
+                result = billDao.cancelOrder(currentBillId, currentUserId);
+            } finally {
+                billDao.close();
+            }
+            runOnUiThread(() -> {
+                if (isFinishing() || isDestroyed()) return;
+                cancelOrderButton.setEnabled(true);
+                if ("CANCELLED".equals(result)) {
+                    Toast.makeText(this, "Đã hủy đơn hàng. Tồn kho đã được hoàn lại.",
+                            Toast.LENGTH_LONG).show();
+                    finish();
+                } else if ("NOT_CANCELLABLE".equals(result)) {
+                    Toast.makeText(this,
+                            "Chỉ đơn đang chờ xác nhận mới được hủy.",
+                            Toast.LENGTH_LONG).show();
+                    loadOrder(currentBillId);
+                } else if ("NOT_FOUND".equals(result)) {
+                    Toast.makeText(this, "Không tìm thấy đơn hàng của bạn.",
+                            Toast.LENGTH_LONG).show();
+                    finish();
+                } else {
+                    Toast.makeText(this, "Hủy đơn thất bại. Vui lòng thử lại.",
+                            Toast.LENGTH_LONG).show();
                 }
             });
         });
