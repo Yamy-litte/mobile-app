@@ -58,7 +58,7 @@
             android:id="@+id/buttonRegister"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="Đăng ký" />
+            android:text="Tạo tài khoản mới" />
 
         <Button
             android:id="@+id/buttonResetPassword"
