@@ -46,6 +46,15 @@ public class MainActivity extends AppCompatActivity implements MenuAdapter.OnMen
         openCart.setOnClickListener(v ->
                 startActivity(new android.content.Intent(this, CartActivity.class)));
 
+        Button openOrderHistory = findViewById(R.id.buttonOrderHistory);
+        openOrderHistory.setOnClickListener(v -> {
+            if (com.google.firebase.auth.FirebaseAuth.getInstance().getCurrentUser() == null) {
+                startActivity(new android.content.Intent(this, AuthActivity.class));
+            } else {
+                startActivity(new android.content.Intent(this, OrderHistoryActivity.class));
+            }
+        });
+
         menuAdapter = new MenuAdapter(this, this);
         listMenu.setAdapter(menuAdapter);
         listMenu.setEmptyView(textEmptyMenu);
