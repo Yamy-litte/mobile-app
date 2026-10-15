@@ -47,6 +47,7 @@ public class AdminHomeActivity extends AppCompatActivity {
         }
         adminId = admin.getId();
         setContentView(R.layout.activity_admin_home);
+        AdminTabNavigation.bind(this);
         emptyText = findViewById(R.id.textAdminRequestsEmpty);
         countText = findViewById(R.id.textAdminRequestCount);
         ListView list = findViewById(R.id.listAdminRequests);
