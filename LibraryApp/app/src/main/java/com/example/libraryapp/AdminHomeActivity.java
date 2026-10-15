@@ -68,14 +68,13 @@ public class AdminHomeActivity extends AppCompatActivity {
 
     private void loadRequests() {
         requests.clear();
-        String sql = "SELECT r.id, r.customer_id, b.title, c.full_name, c.email, r.reservation_date, r.status " +
+        String sql = "SELECT r.id, r.customer_id, r.book_id, b.title, c.full_name, c.email, r.reservation_date, r.status " +
                 "FROM reservations r JOIN books b ON b.id=r.book_id " +
                 "JOIN customers c ON c.id=r.customer_id " +
                 "WHERE LOWER(r.status)='pending' ORDER BY r.id DESC";
         try (Cursor c = dbHelper.getReadableDatabase().rawQuery(sql, null)) {
             while (c.moveToNext()) {
-                requests.add(new RequestItem(c.getInt(0), c.getInt(1), c.getString(2), c.getString(3),
-                        c.getString(4), c.getString(5), c.getString(6)));
+                requests.add(new RequestItem(c.getInt(0), c.getInt(1), c.getInt(2), c.getString(3), c.getString(4),\n                        c.getString(5), c.getString(6), c.getString(7)));
             }
         }
         adapter.notifyDataSetChanged();
@@ -199,12 +198,7 @@ public class AdminHomeActivity extends AppCompatActivity {
     }
 
     private static class RequestItem {
-        final int id, customerId;
-        final String bookTitle, customerName, email, date, status;
-        RequestItem(int id, int customerId, String bookTitle, String customerName, String email, String date, String status) {
-            this.id = id; this.customerId = customerId; this.bookTitle = bookTitle; this.customerName = customerName;
-            this.email = email; this.date = date; this.status = status;
-        }
+        final int id, customerId, bookId;\n        final String bookTitle, customerName, email, date, status;\n        RequestItem(int id, int customerId, int bookId, String bookTitle, String customerName, String email, String date, String status) {\n            this.id = id; this.customerId = customerId; this.bookId = bookId; this.bookTitle = bookTitle; this.customerName = customerName;\n            this.email = email; this.date = date; this.status = status;\n        }
     }
 
     private class RequestAdapter extends BaseAdapter {
