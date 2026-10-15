@@ -41,6 +41,8 @@
             <TextView android:id="@+id/textDetailPublisher" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="8dp" android:text="Nhà xuất bản" android:textSize="14sp" android:textColor="@color/mylibrary_ink"/>
             <TextView android:id="@+id/textDetailLocation" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="6dp" android:text="Vị trí kệ" android:textSize="14sp" android:textColor="@color/mylibrary_ink"/>
             <TextView android:id="@+id/textDetailQuantity" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="6dp" android:text="Số lượng còn" android:textSize="14sp" android:textStyle="bold" android:textColor="@color/mylibrary_teal"/>
+            <Button android:id="@+id/btnRequestBorrow" android:layout_width="match_parent" android:layout_height="50dp" android:layout_marginTop="14dp"
+                android:text="Gửi yêu cầu mượn sách" android:textAllCaps="false" android:textColor="@color/white" android:backgroundTint="@color/mylibrary_teal"/>
             <Button android:id="@+id/btnDetailBack" android:layout_width="match_parent" android:layout_height="48dp" android:layout_marginTop="22dp"
                 android:text="Quay lại danh sách sách" android:textAllCaps="false" android:textColor="@color/white" android:backgroundTint="@color/mylibrary_teal"/>
         </LinearLayout>
