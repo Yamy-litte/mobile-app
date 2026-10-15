@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android" android:layout_width="match_parent"
+ android:layout_height="match_parent" android:orientation="vertical" android:gravity="center" android:padding="32dp" android:background="@color/mylibrary_cream">
+ <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:text="MyLibrary" android:textSize="30sp"
+  android:textStyle="bold" android:textColor="@color/mylibrary_teal" android:gravity="center"/>
+ <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="18dp" android:gravity="center"
+  android:text="Đăng nhập thành công. Trang chủ sẽ được triển khai theo Figma." android:textSize="17sp" android:textColor="@color/mylibrary_ink"/>
+ <Button android:id="@+id/btnLogout" android:layout_width="match_parent" android:layout_height="54dp" android:layout_marginTop="28dp"
+  android:text="Đăng xuất" android:textAllCaps="false" android:backgroundTint="@color/mylibrary_teal" android:textColor="@color/white"/>
+</LinearLayout>
