@@ -13,7 +13,7 @@ import android.database.sqlite.SQLiteOpenHelper;
  */
 public class LibraryDbHelper extends SQLiteOpenHelper {
     public static final String DATABASE_NAME = "mylibrary.db";
-    public static final int DATABASE_VERSION = 1;
+    public static final int DATABASE_VERSION = 2;
 
     public static final String TABLE_ADMIN = "admin";
     public static final String TABLE_CUSTOMERS = "customers";
@@ -42,16 +42,16 @@ public class LibraryDbHelper extends SQLiteOpenHelper {
     public void onCreate(SQLiteDatabase db) {
         db.execSQL("CREATE TABLE " + TABLE_ADMIN + " (" +
                 "id INTEGER PRIMARY KEY AUTOINCREMENT, " +
+                "firebase_uid TEXT NOT NULL UNIQUE, " +
                 "email TEXT NOT NULL UNIQUE, " +
-                "password_hash TEXT NOT NULL, " +
                 "full_name TEXT NOT NULL, " +
                 "status TEXT NOT NULL DEFAULT 'active', " +
                 "created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP)");
 
         db.execSQL("CREATE TABLE " + TABLE_CUSTOMERS + " (" +
                 "id INTEGER PRIMARY KEY AUTOINCREMENT, " +
+                "firebase_uid TEXT NOT NULL UNIQUE, " +
                 "email TEXT NOT NULL UNIQUE, " +
-                "password_hash TEXT NOT NULL, " +
                 "full_name TEXT NOT NULL, " +
                 "phone_number TEXT, " +
                 "avatar_url TEXT, " +
@@ -169,10 +169,14 @@ public class LibraryDbHelper extends SQLiteOpenHelper {
 
     @Override
     public void onUpgrade(SQLiteDatabase db, int oldVersion, int newVersion) {
-        // Add version-specific ALTER TABLE migrations here. Never drop user data
-        // as a default upgrade strategy.
+        // Existing v1 databases get Firebase UID columns. Legacy password columns are not
+        // read or written. Clear app data/reinstall during development to recreate
+        // the clean v2 schema without legacy password_hash columns.
         if (oldVersion < 2) {
-            // Version 1 is the initial schema. No migration is needed yet.
+            db.execSQL("ALTER TABLE " + TABLE_ADMIN + " ADD COLUMN firebase_uid TEXT");
+            db.execSQL("CREATE UNIQUE INDEX IF NOT EXISTS idx_admin_firebase_uid ON " + TABLE_ADMIN + "(firebase_uid)");
+            db.execSQL("ALTER TABLE " + TABLE_CUSTOMERS + " ADD COLUMN firebase_uid TEXT");
+            db.execSQL("CREATE UNIQUE INDEX IF NOT EXISTS idx_customers_firebase_uid ON " + TABLE_CUSTOMERS + "(firebase_uid)");
         }
     }
 }
