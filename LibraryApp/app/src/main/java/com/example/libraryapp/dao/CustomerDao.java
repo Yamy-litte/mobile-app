@@ -69,8 +69,8 @@ public class CustomerDao {
         values.put("phone_number", customer.getPhoneNumber());
         values.put("avatar_url", customer.getAvatarUrl());
         values.put("status", customer.getStatus() == null ? "active" : customer.getStatus());
-        values.put("created_at", customer.getCreatedAt());
-        values.put("updated_at", customer.getUpdatedAt());
+        if (!isBlank(customer.getCreatedAt())) values.put("created_at", customer.getCreatedAt());
+        if (!isBlank(customer.getUpdatedAt())) values.put("updated_at", customer.getUpdatedAt());
         return values;
     }
 
