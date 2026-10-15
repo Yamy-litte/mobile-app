@@ -54,13 +54,28 @@ public class ReaderHomeActivity extends AppCompatActivity {
             startActivity(intent);
             finish();
         });
+        findViewById(R.id.tabHome).setOnClickListener(v -> {
+            searchInput.setText("");
+            categorySpinner.setSelection(0);
+        });
+        findViewById(R.id.tabSearch).setOnClickListener(v -> {
+            searchInput.requestFocus();
+            searchInput.setSelection(searchInput.getText().length());
+            ((android.view.inputmethod.InputMethodManager) getSystemService(INPUT_METHOD_SERVICE))
+                    .showSoftInput(searchInput, android.view.inputmethod.InputMethodManager.SHOW_IMPLICIT);
+        });
+        findViewById(R.id.tabReservations).setOnClickListener(v ->
+                Toast.makeText(this, "Màn hình Đặt trước sẽ được kết nối ở bước tiếp theo.", Toast.LENGTH_SHORT).show());
+        findViewById(R.id.tabMyBooks).setOnClickListener(v ->
+                Toast.makeText(this, "Màn hình Sách đã mượn sẽ được kết nối ở bước tiếp theo.", Toast.LENGTH_SHORT).show());
+        findViewById(R.id.tabProfile).setOnClickListener(v ->
+                Toast.makeText(this, "Màn hình Cá nhân sẽ được kết nối ở bước tiếp theo.", Toast.LENGTH_SHORT).show());
 
         ArrayAdapter<String> categoryAdapter = new ArrayAdapter<>(this, android.R.layout.simple_spinner_item, categories);
         categoryAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
         categorySpinner.setAdapter(categoryAdapter);
         bookAdapter = new ReaderBookAdapter(this, visibleBooks);
         bookList.setAdapter(bookAdapter);
-
         SampleDataSeeder.seed(this);
         bookDao = new BookDao(this);
         allBooks.addAll(bookDao.getAll());
