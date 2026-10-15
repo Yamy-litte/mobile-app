@@ -76,4 +76,26 @@
         android:dividerHeight="8dp"
         android:clipToPadding="false"
         android:background="@color/mylibrary_cream"/>
+    <LinearLayout android:id="@+id/adminBottomBar" android:layout_width="match_parent" android:layout_height="72dp" android:orientation="horizontal" android:gravity="center" android:background="@android:color/white" android:elevation="10dp" android:paddingStart="4dp" android:paddingEnd="4dp">
+        <LinearLayout android:id="@+id/adminTabHome" android:layout_width="0dp" android:layout_height="match_parent" android:layout_weight="1" android:gravity="center" android:orientation="vertical" android:clickable="true" android:focusable="true">
+            <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="⌂" android:textSize="27sp" android:textColor="@color/mylibrary_muted"/>
+            <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Trang chủ" android:textSize="12sp" android:textColor="@color/mylibrary_muted"/>
+        </LinearLayout>
+        <LinearLayout android:id="@+id/adminTabBooks" android:layout_width="0dp" android:layout_height="match_parent" android:layout_weight="1" android:gravity="center" android:orientation="vertical" android:clickable="true" android:focusable="true">
+            <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="▤" android:textSize="27sp" android:textColor="@color/mylibrary_muted"/>
+            <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Kho sách" android:textSize="12sp" android:textColor="@color/mylibrary_muted"/>
+        </LinearLayout>
+        <LinearLayout android:id="@+id/adminTabScan" android:layout_width="0dp" android:layout_height="match_parent" android:layout_weight="1" android:gravity="center" android:orientation="vertical" android:clickable="true" android:focusable="true">
+            <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="▦" android:textSize="27sp" android:textColor="@color/mylibrary_muted"/>
+            <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Quét mã" android:textSize="12sp" android:textColor="@color/mylibrary_muted"/>
+        </LinearLayout>
+        <LinearLayout android:id="@+id/adminTabLoans" android:layout_width="0dp" android:layout_height="match_parent" android:layout_weight="1" android:gravity="center" android:orientation="vertical" android:clickable="true" android:focusable="true">
+            <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="▣" android:textSize="27sp" android:textColor="@color/mylibrary_teal"/>
+            <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Phiếu mượn" android:textSize="12sp" android:textStyle="bold" android:textColor="@color/mylibrary_teal"/>
+        </LinearLayout>
+        <LinearLayout android:id="@+id/adminTabAccount" android:layout_width="0dp" android:layout_height="match_parent" android:layout_weight="1" android:gravity="center" android:orientation="vertical" android:clickable="true" android:focusable="true">
+            <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="♙" android:textSize="27sp" android:textColor="@color/mylibrary_muted"/>
+            <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Tài khoản" android:textSize="12sp" android:textColor="@color/mylibrary_muted"/>
+        </LinearLayout>
+    </LinearLayout>
 </LinearLayout>
