@@ -1,66 +1,32 @@
 package com.example.libraryapp;
 
-import android.graphics.Color;
-import android.graphics.Typeface;
 import android.os.Bundle;
-import android.text.InputType;
-import android.view.Gravity;
-import android.widget.Button;
 import android.widget.CheckBox;
 import android.widget.EditText;
-import android.widget.LinearLayout;
-import android.widget.TextView;
 import android.widget.Toast;
-
 import androidx.appcompat.app.AppCompatActivity;
-
 import com.example.libraryapp.auth.FirebaseAuthManager;
 import com.example.libraryapp.dao.CustomerDao;
 import com.example.libraryapp.model.Customer;
 
 public class RegisterActivity extends AppCompatActivity {
-    private static final int CREAM=Color.rgb(255,249,240), TEAL=Color.rgb(28,96,88), INK=Color.rgb(36,57,53);
-    private EditText nameInput,emailInput,phoneInput,passwordInput,confirmInput;
+    private EditText nameInput, emailInput, phoneInput, passwordInput, confirmInput;
     private CheckBox terms;
     private FirebaseAuthManager auth;
 
     @Override protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        auth=new FirebaseAuthManager();
-        getWindow().getDecorView().setBackgroundColor(CREAM);
-        LinearLayout root=new LinearLayout(this);
-        root.setOrientation(LinearLayout.VERTICAL);
-        root.setPadding(dp(24),dp(22),dp(24),dp(22));
-
-        TextView title=text("‹  Tạo tài khoản mới",24,INK,true);
-        root.addView(title,new LinearLayout.LayoutParams(-1,dp(54)));
-        title.setOnClickListener(v->finish());
-
-        nameInput=addField(root,"Họ và tên","Nhập họ và tên",InputType.TYPE_CLASS_TEXT|InputType.TYPE_TEXT_FLAG_CAP_WORDS);
-        emailInput=addField(root,"Email thư viện","Nhập email",InputType.TYPE_CLASS_TEXT|InputType.TYPE_TEXT_VARIATION_EMAIL_ADDRESS);
-        phoneInput=addField(root,"Số điện thoại","Nhập số điện thoại",InputType.TYPE_CLASS_PHONE);
-        passwordInput=addField(root,"Mật khẩu","Tối thiểu 6 ký tự",InputType.TYPE_CLASS_TEXT|InputType.TYPE_TEXT_VARIATION_PASSWORD);
-        confirmInput=addField(root,"Xác nhận mật khẩu","Nhập lại mật khẩu",InputType.TYPE_CLASS_TEXT|InputType.TYPE_TEXT_VARIATION_PASSWORD);
-
-        terms=new CheckBox(this);
-        terms.setText("Tôi đồng ý với Điều khoản sử dụng và Quy định mượn trả sách của thư viện MyLibrary");
-        terms.setTextColor(0xFF78827F);
-        terms.setButtonTintList(android.content.res.ColorStateList.valueOf(TEAL));
-        terms.setPadding(0,dp(12),0,dp(12));
-        root.addView(terms);
-
-        android.widget.Space spacer=new android.widget.Space(this);
-        root.addView(spacer,new LinearLayout.LayoutParams(1,0,1));
-        Button submit=new Button(this);
-        submit.setText("Đăng ký tài khoản"); submit.setAllCaps(false); submit.setTextColor(Color.WHITE);
-        submit.setBackgroundTintList(android.content.res.ColorStateList.valueOf(TEAL));
-        root.addView(submit,new LinearLayout.LayoutParams(-1,dp(54)));
-        submit.setOnClickListener(v->register());
-
-        TextView login=text("Đã có tài khoản?  Đăng nhập",14,INK,false);
-        login.setGravity(Gravity.CENTER); login.setPadding(0,dp(14),0,dp(8));
-        root.addView(login); login.setOnClickListener(v->finish());
-        setContentView(root);
+        setContentView(R.layout.activity_register);
+        auth = new FirebaseAuthManager();
+        nameInput = findViewById(R.id.editName);
+        emailInput = findViewById(R.id.editEmail);
+        phoneInput = findViewById(R.id.editPhone);
+        passwordInput = findViewById(R.id.editPassword);
+        confirmInput = findViewById(R.id.editConfirmPassword);
+        terms = findViewById(R.id.checkTerms);
+        findViewById(R.id.btnBack).setOnClickListener(v -> finish());
+        findViewById(R.id.btnLogin).setOnClickListener(v -> finish());
+        findViewById(R.id.btnRegister).setOnClickListener(v -> register());
     }
 
     private void register() {
@@ -93,12 +59,4 @@ public class RegisterActivity extends AppCompatActivity {
         });
     }
 
-    private EditText addField(LinearLayout root,String label,String hint,int type) {
-        TextView l=text(label,15,INK,true); l.setPadding(0,dp(10),0,dp(5)); root.addView(l);
-        EditText e=new EditText(this); e.setHint(hint); e.setTextSize(15); e.setSingleLine(true); e.setInputType(type);
-        e.setPadding(dp(15),0,dp(15),0); e.setBackgroundTintList(android.content.res.ColorStateList.valueOf(0xFFE5E8E5));
-        root.addView(e,new LinearLayout.LayoutParams(-1,dp(48))); return e;
-    }
-    private TextView text(String s,int size,int color,boolean bold) { TextView t=new TextView(this);t.setText(s);t.setTextSize(size);t.setTextColor(color);if(bold)t.setTypeface(Typeface.DEFAULT,Typeface.BOLD);return t; }
-    private int dp(int n){return (int)(n*getResources().getDisplayMetrics().density+0.5f);}
 }
