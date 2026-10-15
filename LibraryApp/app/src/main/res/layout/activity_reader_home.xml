@@ -51,27 +51,21 @@
         <LinearLayout android:id="@+id/tabHome" android:layout_width="0dp" android:layout_height="match_parent" android:layout_weight="1"
             android:gravity="center" android:orientation="vertical" android:clickable="true" android:focusable="true" android:background="?attr/selectableItemBackground">
             <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="⌂" android:textSize="22sp" android:textColor="@color/mylibrary_teal"/>
-            <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Trang chủ" android:textSize="10sp" android:textStyle="bold" android:textColor="@color/mylibrary_teal"/>
+            <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Trang chủ" android:textSize="11sp" android:textStyle="bold" android:textColor="@color/mylibrary_teal"/>
         </LinearLayout>
-        <LinearLayout android:id="@+id/tabSearch" android:layout_width="0dp" android:layout_height="match_parent" android:layout_weight="1"
+        <LinearLayout android:id="@+id/tabBorrowedBooks" android:layout_width="0dp" android:layout_height="match_parent" android:layout_weight="1"
             android:gravity="center" android:orientation="vertical" android:clickable="true" android:focusable="true" android:background="?attr/selectableItemBackground">
-            <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="⌕" android:textSize="22sp" android:textColor="@color/mylibrary_muted"/>
-            <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Tìm sách" android:textSize="10sp" android:textColor="@color/mylibrary_muted"/>
+            <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="▤" android:textSize="21sp" android:textColor="@color/mylibrary_muted"/>
+            <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Mượn sách" android:textSize="11sp" android:textColor="@color/mylibrary_muted"/>
         </LinearLayout>
-        <LinearLayout android:id="@+id/tabReservations" android:layout_width="0dp" android:layout_height="match_parent" android:layout_weight="1"
+        <LinearLayout android:id="@+id/tabNotifications" android:layout_width="0dp" android:layout_height="match_parent" android:layout_weight="1"
             android:gravity="center" android:orientation="vertical" android:clickable="true" android:focusable="true" android:background="?attr/selectableItemBackground">
-            <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="▣" android:textSize="20sp" android:textColor="@color/mylibrary_muted"/>
-            <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Đặt trước" android:textSize="10sp" android:textColor="@color/mylibrary_muted"/>
+            <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="♧" android:textSize="21sp" android:textColor="@color/mylibrary_muted"/>
+            <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Thông báo" android:textSize="11sp" android:textColor="@color/mylibrary_muted"/>
         </LinearLayout>
-        <LinearLayout android:id="@+id/tabMyBooks" android:layout_width="0dp" android:layout_height="match_parent" android:layout_weight="1"
-            android:gravity="center" android:orientation="vertical" android:clickable="true" android:focusable="true" android:background="?attr/selectableItemBackground">
-            <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="▤" android:textSize="20sp" android:textColor="@color/mylibrary_muted"/>
-            <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Sách mượn" android:textSize="10sp" android:textColor="@color/mylibrary_muted"/>
-        </LinearLayout>
-        <LinearLayout android:id="@+id/tabProfile" android:layout_width="0dp" android:layout_height="match_parent" android:layout_weight="1"
+        <LinearLayout android:id="@+id/tabAccount" android:layout_width="0dp" android:layout_height="match_parent" android:layout_weight="1"
             android:gravity="center" android:orientation="vertical" android:clickable="true" android:focusable="true" android:background="?attr/selectableItemBackground">
             <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="●" android:textSize="18sp" android:textColor="@color/mylibrary_muted"/>
-            <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Cá nhân" android:textSize="10sp" android:textColor="@color/mylibrary_muted"/>
+            <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Tài khoản" android:textSize="11sp" android:textColor="@color/mylibrary_muted"/>
         </LinearLayout>
     </LinearLayout>
-</LinearLayout>
