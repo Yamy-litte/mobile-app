@@ -89,13 +89,4 @@ public class LoginActivity extends AppCompatActivity {
         if (message.contains("network")) return "Không có kết nối mạng. Vui lòng thử lại.";
         return message;
     }
-    private TextView label(String value) { TextView t=text(value,15,INK,true); t.setPadding(0,dp(18),0,dp(8)); return t; }
-    private EditText field(String hint,int type) {
-        EditText e=new EditText(this); e.setSingleLine(true); e.setHint(hint); e.setTextSize(15); e.setInputType(type);
-        e.setPadding(dp(16),0,dp(16),0); e.setBackgroundTintList(android.content.res.ColorStateList.valueOf(0xFFE5E8E5)); return e;
-    }
-    private Button button(String value) { Button b=new Button(this); b.setText(value); b.setAllCaps(false); b.setTextSize(16); b.setTextColor(Color.WHITE); b.setBackgroundTintList(android.content.res.ColorStateList.valueOf(TEAL)); return b; }
-    private TextView text(String value,int size,int color,boolean bold) { TextView t=new TextView(this); t.setText(value); t.setTextSize(size); t.setTextColor(color); if(bold)t.setTypeface(Typeface.DEFAULT,Typeface.BOLD); return t; }
-    private LinearLayout.LayoutParams params(int h,int l,int t,int r,int b) { LinearLayout.LayoutParams p=new LinearLayout.LayoutParams(-1,dp(h)); p.setMargins(dp(l),dp(t),dp(r),dp(b)); return p; }
-    private int dp(int n) { return (int)(n*getResources().getDisplayMetrics().density+0.5f); }
 }
