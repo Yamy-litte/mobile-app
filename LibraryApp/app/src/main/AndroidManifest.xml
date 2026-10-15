@@ -21,6 +21,7 @@
         <activity android:name=".ReaderAccountActivity" android:exported="false" />
         <activity android:name=".ReaderNotificationsActivity" android:exported="false" />
         <activity android:name=".ReaderBorrowedBooksActivity" android:exported="false" />
+        <activity android:name=".ReaderBookDetailActivity" android:exported="false" />
         <activity android:name=".ReaderHomeActivity" android:exported="false" />
         <activity
             android:name=".MainActivity"
