@@ -13,6 +13,7 @@
         android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
         android:theme="@style/Theme.LibraryApp">
+        <activity android:name=".AdminHomeActivity" android:exported="false" />
         <activity android:name=".RoleSelectionActivity" android:exported="false" />
         <activity
             android:name=".LoginActivity" android:exported="false" />
