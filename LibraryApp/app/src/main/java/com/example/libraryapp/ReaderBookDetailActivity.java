@@ -10,9 +10,17 @@ import com.example.libraryapp.auth.FirebaseAuthManager;
 import com.example.libraryapp.dao.BookDao;
 import com.example.libraryapp.dao.CategoryDao;
 import com.example.libraryapp.dao.LocationDao;
+import com.example.libraryapp.dao.CustomerDao;
+import com.example.libraryapp.dao.ReservationDao;
 import com.example.libraryapp.model.Book;
 import com.example.libraryapp.model.Category;
 import com.example.libraryapp.model.Location;
+import com.example.libraryapp.model.Customer;
+import com.example.libraryapp.model.Reservation;
+import java.text.SimpleDateFormat;
+import java.util.Date;
+import java.util.List;
+import java.util.Locale;
 
 public class ReaderBookDetailActivity extends AppCompatActivity {
     private BookDao bookDao;
@@ -51,7 +59,52 @@ public class ReaderBookDetailActivity extends AppCompatActivity {
                         safe(location.getFloor(), "?") + ", kệ " + safe(location.getShelfNumber(), "?");
         setText(R.id.textDetailLocation, locationText);
         setText(R.id.textDetailQuantity, "Còn " + book.getAvailableQuantity() + "/" + book.getTotalQuantity() + " cuốn");
+        findViewById(R.id.btnRequestBorrow).setOnClickListener(v -> submitBorrowRequest(auth.getCurrentUid(), book));
         findViewById(R.id.btnDetailBack).setOnClickListener(v -> finish());
+    }
+
+
+    private void submitBorrowRequest(String firebaseUid, Book book) {
+        if (book.getAvailableQuantity() <= 0) {
+            Toast.makeText(this, "Sách hiện đã hết bản có thể mượn.", Toast.LENGTH_LONG).show();
+            return;
+        }
+        CustomerDao customerDao = new CustomerDao(this);
+        Customer customer = customerDao.getByFirebaseUid(firebaseUid);
+        customerDao.close();
+        if (customer == null) {
+            Toast.makeText(this, "Không tìm thấy hồ sơ độc giả. Vui lòng đăng nhập lại.", Toast.LENGTH_LONG).show();
+            return;
+        }
+
+        ReservationDao reservationDao = new ReservationDao(this);
+        List<Reservation> requests = reservationDao.getByCustomerId(customer.getId());
+        for (Reservation existing : requests) {
+            String status = existing.getStatus() == null ? "" : existing.getStatus().trim().toLowerCase(Locale.ROOT);
+            if (existing.getBookId() == book.getId() &&
+                    ("pending".equals(status) || "approved".equals(status) || "confirmed".equals(status))) {
+                reservationDao.close();
+                Toast.makeText(this, "Bạn đã có yêu cầu mượn sách này đang được xử lý.", Toast.LENGTH_LONG).show();
+                return;
+            }
+        }
+
+        String now = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault()).format(new Date());
+        Reservation request = new Reservation();
+        request.setCustomerId(customer.getId());
+        request.setBookId(book.getId());
+        request.setBookCopyId(0);
+        request.setReservationDate(now);
+        request.setStatus("pending");
+        request.setExpirationDate(null);
+        long requestId = reservationDao.insert(request);
+        reservationDao.close();
+
+        if (requestId > 0) {
+            Toast.makeText(this, "Đã gửi yêu cầu mượn. Vui lòng chờ Admin xác nhận.", Toast.LENGTH_LONG).show();
+        } else {
+            Toast.makeText(this, "Chưa gửi được yêu cầu. Vui lòng thử lại.", Toast.LENGTH_LONG).show();
+        }
     }
 
     private void setText(int id, String value) { ((TextView)findViewById(id)).setText(value); }
