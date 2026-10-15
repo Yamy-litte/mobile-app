@@ -63,7 +63,7 @@ public class LoginActivity extends AppCompatActivity {
                 }
                 Toast.makeText(this, "Đăng nhập thành công.", Toast.LENGTH_SHORT).show();
             }
-            Intent intent = new Intent(this, ReaderHomeActivity.class);
+            Intent intent = new Intent(this, "admin".equals(role) ? AdminHomeActivity.class : ReaderHomeActivity.class);
             intent.putExtra("account_role", role);
             startActivity(intent);
             finish();
