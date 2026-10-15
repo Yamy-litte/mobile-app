@@ -62,6 +62,21 @@ public class ReaderBorrowedBooksActivity extends AppCompatActivity {
                         "\nTrạng thái: " + statusText + (returnDate == null || returnDate.trim().isEmpty() ? "" : "\nNgày trả: " + returnDate));
             }
         }
+
+        String requestSql = "SELECT b.title, r.reservation_date, r.status FROM reservations r " +
+                "JOIN books b ON b.id=r.book_id WHERE r.customer_id=? ORDER BY r.reservation_date DESC";
+        try (Cursor requestCursor = db.rawQuery(requestSql, new String[]{String.valueOf(customerId)})) {
+            while (requestCursor.moveToNext()) {
+                String title = requestCursor.getString(0);
+                String date = requestCursor.getString(1);
+                String status = requestCursor.getString(2);
+                String label = "pending".equalsIgnoreCase(status) ? "Chờ Admin xác nhận" : status;
+                if ("approved".equalsIgnoreCase(status) || "confirmed".equalsIgnoreCase(status)) label = "Đã duyệt";
+                else if ("rejected".equalsIgnoreCase(status)) label = "Bị từ chối";
+                else if ("cancelled".equalsIgnoreCase(status) || "canceled".equalsIgnoreCase(status)) label = "Đã hủy";
+                rows.add(title + "\nYêu cầu mượn: " + safe(date) + "\nTrạng thái yêu cầu: " + label);
+            }
+        }
     }
     private String safe(String s) { return s == null || s.trim().isEmpty() ? "Chưa cập nhật" : s; }
     private void goToLogin() {
