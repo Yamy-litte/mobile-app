@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+ android:layout_width="match_parent" android:layout_height="match_parent" android:orientation="vertical"
+ android:padding="24dp" android:background="@color/mylibrary_cream">
+ <Space android:layout_width="match_parent" android:layout_height="30dp"/>
+ <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:text="▣"
+  android:textSize="44sp" android:textColor="@color/mylibrary_teal" android:gravity="center"/>
+ <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:text="MyLibrary"
+  android:textSize="30sp" android:textStyle="bold" android:textColor="@color/mylibrary_teal" android:gravity="center"/>
+ <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:text="Hệ thống thư viện hiện đại UEF"
+  android:textSize="15sp" android:textColor="@color/mylibrary_muted" android:gravity="center" android:layout_marginBottom="28dp"/>
+ <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:text="Email thư viện" android:textColor="@color/mylibrary_ink" android:textStyle="bold"/>
+ <EditText android:id="@+id/editEmail" android:layout_width="match_parent" android:layout_height="54dp" android:layout_marginTop="8dp"
+  android:paddingHorizontal="16dp" android:background="@drawable/bg_input" android:hint="Nhập email" android:singleLine="true"
+  android:inputType="textEmailAddress"/>
+ <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="20dp"
+  android:text="Mật khẩu" android:textColor="@color/mylibrary_ink" android:textStyle="bold"/>
+ <EditText android:id="@+id/editPassword" android:layout_width="match_parent" android:layout_height="54dp" android:layout_marginTop="8dp"
+  android:paddingHorizontal="16dp" android:background="@drawable/bg_input" android:hint="Nhập mật khẩu" android:singleLine="true"
+  android:inputType="textPassword"/>
+ <LinearLayout android:layout_width="match_parent" android:layout_height="48dp" android:gravity="center_vertical">
+  <CheckBox android:id="@+id/checkRemember" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1"
+   android:text="Ghi nhớ đăng nhập" android:textColor="@color/mylibrary_muted" android:buttonTint="@color/mylibrary_teal"/>
+  <TextView android:id="@+id/btnForgot" android:layout_width="wrap_content" android:layout_height="wrap_content"
+   android:text="Quên mật khẩu?" android:textColor="#FFB76C4C" android:textStyle="bold"/>
+ </LinearLayout>
+ <Space android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1"/>
+ <Button android:id="@+id/btnLogin" android:layout_width="match_parent" android:layout_height="54dp"
+  android:text="Đăng nhập" android:textAllCaps="false" android:textColor="@color/white" android:backgroundTint="@color/mylibrary_teal"/>
+ <TextView android:id="@+id/btnRegister" android:layout_width="match_parent" android:layout_height="54dp"
+  android:gravity="center" android:text="Bạn chưa có tài khoản? Đăng ký ngay" android:textColor="@color/mylibrary_ink"/>
+</LinearLayout>
