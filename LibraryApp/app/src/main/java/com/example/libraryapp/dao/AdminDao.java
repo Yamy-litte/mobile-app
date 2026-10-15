@@ -41,7 +41,10 @@ public class AdminDao {
     }
     private ContentValues values(Admin x) {
         ContentValues v = new ContentValues(); v.put("firebase_uid", x.getFirebaseUid()); v.put("email", x.getEmail());
-        v.put("full_name", x.getFullName()); v.put("status", x.getStatus() == null ? "active" : x.getStatus()); v.put("created_at", x.getCreatedAt()); return v;
+        v.put("full_name", x.getFullName()); v.put("status", x.getStatus() == null ? "active" : x.getStatus());
+        // Let SQLite apply DEFAULT CURRENT_TIMESTAMP when no creation time is supplied.
+        if (!blank(x.getCreatedAt())) v.put("created_at", x.getCreatedAt());
+        return v;
     }
     private Admin read(Cursor c) { return new Admin(c.getInt(c.getColumnIndexOrThrow("id")), c.getString(c.getColumnIndexOrThrow("firebase_uid")), c.getString(c.getColumnIndexOrThrow("email")), c.getString(c.getColumnIndexOrThrow("full_name")), c.getString(c.getColumnIndexOrThrow("status")), c.getString(c.getColumnIndexOrThrow("created_at"))); }
     private boolean blank(String s) { return s == null || s.trim().isEmpty(); }
