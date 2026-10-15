@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:padding="14dp"
+    android:background="@android:color/white">
+    <TextView
+        android:id="@+id/textAdminRequestTitle"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:textColor="@color/mylibrary_ink"
+        android:textSize="17sp"
+        android:textStyle="bold"/>
+    <TextView
+        android:id="@+id/textAdminRequestDetails"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="6dp"
+        android:textColor="@color/mylibrary_muted"
+        android:textSize="14sp"/>
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="10dp"
+        android:orientation="horizontal">
+        <Button
+            android:id="@+id/btnApproveRequest"
+            android:layout_width="0dp"
+            android:layout_height="44dp"
+            android:layout_weight="1"
+            android:text="Duyệt"
+            android:textAllCaps="false"
+            android:backgroundTint="@color/mylibrary_teal"
+            android:textColor="@android:color/white"/>
+        <Button
+            android:id="@+id/btnRejectRequest"
+            android:layout_width="0dp"
+            android:layout_height="44dp"
+            android:layout_weight="1"
+            android:layout_marginStart="8dp"
+            android:text="Từ chối"
+            android:textAllCaps="false"/>
+    </LinearLayout>
+</LinearLayout>
