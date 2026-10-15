@@ -77,7 +77,6 @@ public class RoleSelectionActivity extends AppCompatActivity {
         rb.setPadding(dp(14), dp(14), dp(12), dp(14));
         rb.setMinHeight(dp(94));
         rb.setBackgroundTintList(android.content.res.ColorStateList.valueOf(Color.WHITE));
-        roleGroup.addView(rb);
         if (checked) rb.setChecked(true);
         return rb;
     }
