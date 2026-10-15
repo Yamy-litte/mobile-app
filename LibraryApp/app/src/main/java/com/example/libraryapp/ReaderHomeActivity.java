@@ -81,9 +81,9 @@ public class ReaderHomeActivity extends AppCompatActivity {
         });
         bookList.setOnItemClickListener((parent, view, position, id) -> {
             Book book = visibleBooks.get(position);
-            Toast.makeText(this, book.getTitle() + "\nTác giả: " + book.getAuthor()
-                    + "\nCòn " + book.getAvailableQuantity() + "/" + book.getTotalQuantity() + " cuốn",
-                    Toast.LENGTH_LONG).show();
+            Intent detailIntent = new Intent(this, ReaderBookDetailActivity.class);
+            detailIntent.putExtra("book_id", book.getId());
+            startActivity(detailIntent);
         });
     }
 
