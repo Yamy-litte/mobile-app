@@ -54,16 +54,11 @@ public class ReaderHomeActivity extends AppCompatActivity {
             startActivity(intent);
             finish();
         });
+        ReaderTabNavigation.bind(this);
         findViewById(R.id.tabHome).setOnClickListener(v -> {
             searchInput.setText("");
             categorySpinner.setSelection(0);
         });
-        findViewById(R.id.tabBorrowedBooks).setOnClickListener(v ->
-                Toast.makeText(this, "Màn hình Mượn sách sẽ được kết nối ở bước tiếp theo.", Toast.LENGTH_SHORT).show());
-        findViewById(R.id.tabNotifications).setOnClickListener(v ->
-                Toast.makeText(this, "Màn hình Thông báo sẽ được kết nối ở bước tiếp theo.", Toast.LENGTH_SHORT).show());
-        findViewById(R.id.tabAccount).setOnClickListener(v ->
-                Toast.makeText(this, "Màn hình Tài khoản sẽ được kết nối ở bước tiếp theo.", Toast.LENGTH_SHORT).show());
 
         ArrayAdapter<String> categoryAdapter = new ArrayAdapter<>(this, android.R.layout.simple_spinner_item, categories);
         categoryAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
