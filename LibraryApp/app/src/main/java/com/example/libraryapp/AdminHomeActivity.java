@@ -91,32 +91,98 @@ public class AdminHomeActivity extends AppCompatActivity {
                 .setNegativeButton("Quay lại", (d, w) -> d.dismiss())
                 .setPositiveButton(approve ? "Duyệt" : "Từ chối", (d, w) -> {
                     SQLiteDatabase db = dbHelper.getWritableDatabase();
+                    boolean success = false;
+                    String emailSubject = approve ? "Yêu cầu mượn sách đã được duyệt - MyLibrary" : "Cập nhật yêu cầu mượn sách - MyLibrary";
+                    String emailBody = "Xin chào " + safe(item.customerName) + ",\n\nYêu cầu mượn sách “" + item.bookTitle + "” " +
+                            (approve ? "đã được duyệt." : "đã bị từ chối.") +
+                            (approve ? "\nVui lòng liên hệ thư viện để nhận sách." : "") +
+                            "\n\nTrân trọng,\nMyLibrary";
                     db.beginTransaction();
                     try {
+                        Cursor pending = db.rawQuery(
+                                "SELECT id FROM reservations WHERE id=? AND LOWER(status)='pending'",
+                                new String[]{String.valueOf(item.id)});
+                        boolean stillPending;
+                        try { stillPending = pending.moveToFirst(); } finally { pending.close(); }
+                        if (!stillPending) {
+                            Toast.makeText(this, "Yêu cầu đã được xử lý trước đó.", Toast.LENGTH_LONG).show();
+                            return;
+                        }
+
+                        int copyId = -1;
+                        if (approve) {
+                            try (Cursor copy = db.rawQuery(
+                                    "SELECT id FROM book_copies WHERE book_id=? AND LOWER(status)='available' ORDER BY id LIMIT 1",
+                                    new String[]{String.valueOf(item.bookId)})) {
+                                if (copy.moveToFirst()) copyId = copy.getInt(0);
+                            }
+                            if (copyId < 0) {
+                                Toast.makeText(this, "Không còn bản sao khả dụng để cấp mượn. Chưa duyệt yêu cầu.", Toast.LENGTH_LONG).show();
+                                return;
+                            }
+                            ContentValues loan = new ContentValues();
+                            loan.put("customer_id", item.customerId);
+                            loan.put("book_copy_id", copyId);
+                            loan.put("admin_borrow_id", adminId);
+                            String now = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault()).format(new Date());
+                            java.util.Calendar calendar = java.util.Calendar.getInstance();
+                            calendar.add(java.util.Calendar.DAY_OF_YEAR, 14);
+                            String due = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault()).format(calendar.getTime());
+                            loan.put("borrow_date", now);
+                            loan.put("due_date", due);
+                            loan.put("status", "borrowed");
+                            long loanId = db.insert("borrow_records", null, loan);
+                            if (loanId < 0) throw new IllegalStateException("Không tạo được phiếu mượn.");
+                            ContentValues copyUpdate = new ContentValues();
+                            copyUpdate.put("status", "borrowed");
+                            if (db.update("book_copies", copyUpdate, "id=? AND LOWER(status)='available'",
+                                    new String[]{String.valueOf(copyId)}) != 1) {
+                                throw new IllegalStateException("Bản sao sách vừa được cấp cho yêu cầu khác.");
+                            }
+                            db.execSQL("UPDATE books SET available_quantity=CASE WHEN available_quantity>0 THEN available_quantity-1 ELSE 0 END WHERE id=?",
+                                    new Object[]{item.bookId});
+                        }
+
                         ContentValues update = new ContentValues();
                         update.put("status", approve ? "approved" : "rejected");
                         int changed = db.update("reservations", update,
                                 "id=? AND LOWER(status)='pending'",
                                 new String[]{String.valueOf(item.id)});
-                        if (changed == 1) {
-                            ContentValues notification = new ContentValues();
-                            notification.put("customer_id", item.customerId);
-                            notification.putNull("admin_id");
-                            notification.put("title", approve ? "Yêu cầu mượn đã được duyệt" : "Yêu cầu mượn bị từ chối");
-                            notification.put("content", "Yêu cầu mượn sách “" + item.bookTitle + "” " +
-                                    (approve ? "đã được Admin duyệt." : "đã bị Admin từ chối."));
-                            notification.put("is_read", 0);
-                            notification.put("created_at", new SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault()).format(new Date()));
-                            db.insert("notifications", null, notification);
-                            db.setTransactionSuccessful();
-                            Toast.makeText(this, approve ? "Đã duyệt yêu cầu." : "Đã từ chối yêu cầu.", Toast.LENGTH_SHORT).show();
-                        } else {
-                            Toast.makeText(this, "Yêu cầu đã được xử lý trước đó.", Toast.LENGTH_LONG).show();
-                        }
+                        if (changed != 1) throw new IllegalStateException("Không cập nhật được trạng thái yêu cầu.");
+
+                        ContentValues notification = new ContentValues();
+                        notification.put("customer_id", item.customerId);
+                        notification.putNull("admin_id");
+                        notification.put("title", approve ? "Yêu cầu mượn đã được duyệt" : "Yêu cầu mượn bị từ chối");
+                        notification.put("content", "Yêu cầu mượn sách “" + item.bookTitle + "” " +
+                                (approve ? "đã được duyệt. Hạn trả dự kiến sau 14 ngày." : "đã bị Admin từ chối."));
+                        notification.put("is_read", 0);
+                        notification.put("created_at", new SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault()).format(new Date()));
+                        if (db.insert("notifications", null, notification) < 0) throw new IllegalStateException("Không tạo được thông báo trong ứng dụng.");
+                        db.setTransactionSuccessful();
+                        success = true;
+                    } catch (Exception ex) {
+                        Toast.makeText(this, "Không xử lý được yêu cầu: " + safe(ex.getMessage()), Toast.LENGTH_LONG).show();
                     } finally {
                         db.endTransaction();
                     }
-                    loadRequests();
+                    if (success) {
+                        Toast.makeText(this, approve ? "Đã duyệt, tạo phiếu mượn và gửi thông báo trong ứng dụng." : "Đã từ chối và tạo thông báo trong ứng dụng.", Toast.LENGTH_LONG).show();
+                        loadRequests();
+                        // Opens an email composer addressed to the customer's Gmail.
+                        // Android apps must not silently send email using embedded SMTP credentials.
+                        if (item.email != null && item.email.contains("@")) {
+                            Intent email = new Intent(Intent.ACTION_SENDTO);
+                            email.setData(android.net.Uri.parse("mailto:" + android.net.Uri.encode(item.email)));
+                            email.putExtra(Intent.EXTRA_SUBJECT, emailSubject);
+                            email.putExtra(Intent.EXTRA_TEXT, emailBody);
+                            try {
+                                startActivity(Intent.createChooser(email, "Gửi email thông báo cho độc giả"));
+                            } catch (android.content.ActivityNotFoundException ignored) {
+                                Toast.makeText(this, "Thông báo đã lưu trong ứng dụng; thiết bị chưa có ứng dụng email để gửi Gmail.", Toast.LENGTH_LONG).show();
+                            }
+                        }
+                    }
                 }).show();
     }
 
