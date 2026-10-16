@@ -52,24 +52,35 @@ public final class CloudLibraryRepository {
         if (user == null) throw new IllegalStateException("Bạn chưa đăng nhập.");
         String uid = user.getUid();
         String email = user.getEmail() == null ? "" : user.getEmail();
-        return firestore.collection(COLLECTION_CUSTOMERS).document(uid).get()
-                .continueWithTask(profileTask -> {
-                    if (!profileTask.isSuccessful()) {
-                        Exception error = profileTask.getException();
-                        throw error == null ? new IllegalStateException("Không đọc được hồ sơ độc giả.") : error;
-                    }
-                    DocumentSnapshot profile = profileTask.getResult();
-                    Map<String, Object> data = new HashMap<>();
-                    data.put("customerUid", uid);
-                    data.put("customerEmail", email);
-                    data.put("customerName", profile == null ? "" : profile.getString("fullName"));
-                    data.put("bookId", bookCloudId);
-                    data.put("bookTitle", bookTitle);
-                    data.put("status", "pending");
-                    data.put("createdAt", System.currentTimeMillis());
-                    data.put("updatedAt", System.currentTimeMillis());
-                    return firestore.collection(COLLECTION_RESERVATIONS).add(data);
-                });
+
+        DocumentReference profileRef = firestore.collection(COLLECTION_CUSTOMERS).document(uid);
+        Query pendingRequests = firestore.collection(COLLECTION_RESERVATIONS)
+                .whereEqualTo("customerUid", uid)
+                .whereEqualTo("bookId", bookCloudId)
+                .whereEqualTo("status", "pending");
+        DocumentReference reservationRef = firestore.collection(COLLECTION_RESERVATIONS).document();
+
+        return firestore.runTransaction(transaction -> {
+            // Read all documents/query results before writing, so rapid taps from the
+            // same Reader cannot create duplicate pending requests for the same book.
+            DocumentSnapshot profile = transaction.get(profileRef);
+            com.google.firebase.firestore.QuerySnapshot existing = transaction.get(pendingRequests);
+            if (!existing.isEmpty()) {
+                throw new IllegalStateException("Bạn đã có yêu cầu đang chờ duyệt cho cuốn sách này.");
+            }
+
+            Map<String, Object> data = new HashMap<>();
+            data.put("customerUid", uid);
+            data.put("customerEmail", email);
+            data.put("customerName", profile.getString("fullName"));
+            data.put("bookId", bookCloudId);
+            data.put("bookTitle", bookTitle);
+            data.put("status", "pending");
+            data.put("createdAt", System.currentTimeMillis());
+            data.put("updatedAt", System.currentTimeMillis());
+            transaction.set(reservationRef, data);
+            return reservationRef;
+        });
     }
 
     public ListenerRegistration listenAvailableBooks(
