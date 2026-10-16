@@ -71,8 +71,9 @@ public class ReaderBookDetailActivity extends AppCompatActivity {
             submitBorrowRequest(auth.getCurrentUid(), book, requestButton);
         });
         bookListener = cloudRepository.listenBookByTitleAndAuthor(book.getTitle(), book.getAuthor(), (snapshot, error) -> {
-            if (isFinishing() || isDestroyed() || snapshot == null || snapshot.isEmpty()) return;
-            com.google.firebase.firestore.DocumentSnapshot cloudBook = snapshot.getDocuments().get(0);
+            if (isFinishing() || isDestroyed() || error != null || snapshot == null || snapshot.isEmpty()) return;
+            com.google.firebase.firestore.DocumentSnapshot cloudBook = findMatchingCloudBook(snapshot, book.getAuthor());
+            if (cloudBook == null) return;
             Long available = cloudBook.getLong("availableQuantity");
             Long total = cloudBook.getLong("totalQuantity");
             if (available != null && total != null) {
@@ -100,12 +101,13 @@ public class ReaderBookDetailActivity extends AppCompatActivity {
 
         CloudLibraryRepository cloud = cloudRepository;
         cloud.findBookByTitleAndAuthor(book.getTitle(), book.getAuthor()).addOnSuccessListener(snapshot -> {
-            if (snapshot == null || snapshot.isEmpty()) {
+            com.google.firebase.firestore.DocumentSnapshot document =
+                    snapshot == null ? null : findMatchingCloudBook(snapshot, book.getAuthor());
+            if (document == null) {
                 requestButton.setEnabled(true);
-                Toast.makeText(this, "Không tìm thấy ánh xạ sách này trên Firestore. Vui lòng đồng bộ danh mục sách.", Toast.LENGTH_LONG).show();
+                Toast.makeText(this, "Không tìm thấy sách khớp tiêu đề và tác giả trên Firestore. Hãy mở màn hình Admin để đồng bộ danh mục, rồi thử lại.", Toast.LENGTH_LONG).show();
                 return;
             }
-            com.google.firebase.firestore.DocumentSnapshot document = snapshot.getDocuments().get(0);
             String cloudBookId = document.getId();
             Long availableQuantity = document.getLong("availableQuantity");
             if (availableQuantity == null || availableQuantity <= 0) {
@@ -132,6 +134,20 @@ public class ReaderBookDetailActivity extends AppCompatActivity {
                     "Không thể kiểm tra dữ liệu chung: " + safe(error.getMessage(), "Lỗi kết nối"),
                     Toast.LENGTH_LONG).show();
         });
+    }
+
+    private com.google.firebase.firestore.DocumentSnapshot findMatchingCloudBook(
+            com.google.firebase.firestore.QuerySnapshot snapshot, String expectedAuthor) {
+        if (snapshot == null) return null;
+        for (com.google.firebase.firestore.DocumentSnapshot document : snapshot.getDocuments()) {
+            String actualAuthor = document.getString("author");
+            if (actualAuthor != null && expectedAuthor != null
+                    && actualAuthor.trim().replaceAll("\\s+", " ")
+                    .equalsIgnoreCase(expectedAuthor.trim().replaceAll("\\s+", " "))) {
+                return document;
+            }
+        }
+        return null;
     }
 
     private void setText(int id, String value) { ((TextView)findViewById(id)).setText(value); }
