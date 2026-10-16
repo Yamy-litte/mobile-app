@@ -14,7 +14,9 @@ import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
 import com.example.libraryapp.auth.FirebaseAuthManager;
 import com.example.libraryapp.dao.AdminDao;
+import com.example.libraryapp.dao.BookDao;
 import com.example.libraryapp.model.Admin;
+import com.example.libraryapp.model.Book;
 import com.example.libraryapp.service.CloudLibraryRepository;
 import com.google.firebase.firestore.ListenerRegistration;
 import com.google.firebase.firestore.QueryDocumentSnapshot;
@@ -61,8 +63,21 @@ public class AdminHomeActivity extends AppCompatActivity {
         super.onStart();
         if (cloud == null) return;
         cloud.seedDemoBooksIfMissing()
+                .continueWithTask(seedTask -> {
+                    if (!seedTask.isSuccessful()) {
+                        Exception error = seedTask.getException();
+                        throw error == null ? new IllegalStateException("Không đồng bộ được dữ liệu sách mẫu.") : error;
+                    }
+                    BookDao bookDao = new BookDao(this);
+                    try {
+                        List<Book> localBooks = bookDao.getAll();
+                        return cloud.syncLocalBooks(localBooks);
+                    } finally {
+                        bookDao.close();
+                    }
+                })
                 .addOnFailureListener(error -> Toast.makeText(this,
-                        "Không đồng bộ được dữ liệu sách mẫu: " + safe(error.getMessage()),
+                        "Không đồng bộ được danh mục sách SQLite lên Firestore: " + safe(error.getMessage()),
                         Toast.LENGTH_LONG).show());
         requestsListener = cloud.listenPendingReservations((snapshot, error) -> {
             if (isFinishing() || isDestroyed()) return;
