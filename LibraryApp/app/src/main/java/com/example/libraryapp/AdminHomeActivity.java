@@ -60,6 +60,10 @@ public class AdminHomeActivity extends AppCompatActivity {
     @Override protected void onStart() {
         super.onStart();
         if (cloud == null) return;
+        cloud.seedDemoBooksIfMissing()
+                .addOnFailureListener(error -> Toast.makeText(this,
+                        "Không đồng bộ được dữ liệu sách mẫu: " + safe(error.getMessage()),
+                        Toast.LENGTH_LONG).show());
         requestsListener = cloud.listenPendingReservations((snapshot, error) -> {
             if (isFinishing() || isDestroyed()) return;
             if (error != null) {
