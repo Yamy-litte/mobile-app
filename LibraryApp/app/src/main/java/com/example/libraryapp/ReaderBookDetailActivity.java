@@ -65,6 +65,7 @@ public class ReaderBookDetailActivity extends AppCompatActivity {
         setText(R.id.textDetailLocation, locationText);
         setText(R.id.textDetailQuantity, "Còn " + book.getAvailableQuantity() + "/" + book.getTotalQuantity() + " cuốn");
         View requestButton = findViewById(R.id.btnRequestBorrow);
+        updateRequestButtonText(requestButton, book.getAvailableQuantity());
         requestButton.setOnClickListener(v -> {
             if (!v.isEnabled()) return;
             v.setEnabled(false);
@@ -78,6 +79,7 @@ public class ReaderBookDetailActivity extends AppCompatActivity {
             Long total = cloudBook.getLong("totalQuantity");
             if (available != null && total != null) {
                 setText(R.id.textDetailQuantity, "Còn " + available + "/" + total + " cuốn");
+                updateRequestButtonText(requestButton, available.intValue());
             }
         });
         findViewById(R.id.btnDetailBack).setOnClickListener(v -> finish());
@@ -85,11 +87,6 @@ public class ReaderBookDetailActivity extends AppCompatActivity {
 
 
     private void submitBorrowRequest(String firebaseUid, Book book, View requestButton) {
-        if (book.getAvailableQuantity() <= 0) {
-            requestButton.setEnabled(true);
-            Toast.makeText(this, "Sách hiện đã hết bản có thể mượn.", Toast.LENGTH_LONG).show();
-            return;
-        }
         CustomerDao customerDao = new CustomerDao(this);
         Customer customer = customerDao.getByFirebaseUid(firebaseUid);
         customerDao.close();
@@ -110,16 +107,14 @@ public class ReaderBookDetailActivity extends AppCompatActivity {
             }
             String cloudBookId = document.getId();
             Long availableQuantity = document.getLong("availableQuantity");
-            if (availableQuantity == null || availableQuantity <= 0) {
-                requestButton.setEnabled(true);
-                Toast.makeText(this, "Sách hiện đã hết bản có thể mượn.", Toast.LENGTH_LONG).show();
-                return;
-            }
-            cloud.submitReservation(cloudBookId, book.getTitle())
+            boolean preorder = availableQuantity == null || availableQuantity <= 0;
+            cloud.submitReservation(cloudBookId, book.getTitle(), preorder)
                     .addOnSuccessListener(reference -> {
                         requestButton.setEnabled(true);
                         Toast.makeText(this,
-                                "Đã gửi yêu cầu mượn lên hệ thống chung. Vui lòng chờ Admin xác nhận.",
+                                preorder
+                                        ? "Đã đặt trước sách. Yêu cầu đang chờ Admin xác nhận khi có bản sách."
+                                        : "Đã gửi yêu cầu mượn lên hệ thống chung. Vui lòng chờ Admin xác nhận.",
                                 Toast.LENGTH_LONG).show();
                     })
                     .addOnFailureListener(error -> {
@@ -134,6 +129,13 @@ public class ReaderBookDetailActivity extends AppCompatActivity {
                     "Không thể kiểm tra dữ liệu chung: " + safe(error.getMessage(), "Lỗi kết nối"),
                     Toast.LENGTH_LONG).show();
         });
+    }
+
+    private void updateRequestButtonText(View button, int available) {
+        if (button instanceof android.widget.Button) {
+            ((android.widget.Button) button).setText(available <= 0
+                    ? "Đặt trước khi có sách" : "Gửi yêu cầu mượn sách");
+        }
     }
 
     private com.google.firebase.firestore.DocumentSnapshot findMatchingCloudBook(
