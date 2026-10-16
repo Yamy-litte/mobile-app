@@ -48,16 +48,28 @@ public final class CloudLibraryRepository {
     }
 
     public Task<DocumentReference> submitReservation(String bookCloudId, String bookTitle) {
-        String uid = currentUid();
-        if (uid == null) throw new IllegalStateException("Bạn chưa đăng nhập.");
-        Map<String, Object> data = new HashMap<>();
-        data.put("customerUid", uid);
-        data.put("bookId", bookCloudId);
-        data.put("bookTitle", bookTitle);
-        data.put("status", "pending");
-        data.put("createdAt", System.currentTimeMillis());
-        data.put("updatedAt", System.currentTimeMillis());
-        return firestore.collection(COLLECTION_RESERVATIONS).add(data);
+        com.google.firebase.auth.FirebaseUser user = auth.getCurrentUser();
+        if (user == null) throw new IllegalStateException("Bạn chưa đăng nhập.");
+        String uid = user.getUid();
+        String email = user.getEmail() == null ? "" : user.getEmail();
+        return firestore.collection(COLLECTION_CUSTOMERS).document(uid).get()
+                .continueWithTask(profileTask -> {
+                    if (!profileTask.isSuccessful()) {
+                        Exception error = profileTask.getException();
+                        throw error == null ? new IllegalStateException("Không đọc được hồ sơ độc giả.") : error;
+                    }
+                    DocumentSnapshot profile = profileTask.getResult();
+                    Map<String, Object> data = new HashMap<>();
+                    data.put("customerUid", uid);
+                    data.put("customerEmail", email);
+                    data.put("customerName", profile == null ? "" : profile.getString("fullName"));
+                    data.put("bookId", bookCloudId);
+                    data.put("bookTitle", bookTitle);
+                    data.put("status", "pending");
+                    data.put("createdAt", System.currentTimeMillis());
+                    data.put("updatedAt", System.currentTimeMillis());
+                    return firestore.collection(COLLECTION_RESERVATIONS).add(data);
+                });
     }
 
     public ListenerRegistration listenAvailableBooks(
