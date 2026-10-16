@@ -19,6 +19,9 @@ import com.example.libraryapp.auth.FirebaseAuthManager;
 import com.example.libraryapp.dao.CustomerDao;
 import com.example.libraryapp.database.LibraryDbHelper;
 import com.example.libraryapp.model.Customer;
+import com.example.libraryapp.service.CloudLibraryRepository;
+import com.google.firebase.firestore.ListenerRegistration;
+import com.google.firebase.firestore.QueryDocumentSnapshot;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
@@ -27,8 +30,12 @@ public class ReaderBorrowedBooksActivity extends AppCompatActivity {
     private LibraryDbHelper dbHelper;
     private TextView emptyText;
     private ItemAdapter adapter;
+    private CloudLibraryRepository cloud;
+    private ListenerRegistration reservationsListener;
+    private ListenerRegistration borrowRecordsListener;
     private int customerId = -1;
     private final List<BorrowedItem> items = new ArrayList<>();
+    private final List<BorrowedItem> cloudItems = new ArrayList<>();
 
     @Override protected void onCreate(Bundle state) {
         super.onCreate(state);
@@ -49,12 +56,80 @@ public class ReaderBorrowedBooksActivity extends AppCompatActivity {
 
         customerId = customer.getId();
         dbHelper = new LibraryDbHelper(this);
+        cloud = new CloudLibraryRepository();
         loadRecords();
     }
 
     @Override protected void onResume() {
         super.onResume();
         if (dbHelper != null && customerId > 0 && adapter != null) loadRecords();
+    }
+
+    @Override protected void onStart() {
+        super.onStart();
+        if (cloud == null) return;
+        reservationsListener = cloud.listenMyReservations((snapshot, error) -> {
+            if (isFinishing() || isDestroyed()) return;
+            if (error != null) {
+                Toast.makeText(this, "Không tải được yêu cầu mượn từ hệ thống chung: "
+                        + safe(error.getMessage()), Toast.LENGTH_LONG).show();
+                return;
+            }
+            cloudItems.clear();
+            if (snapshot != null) {
+                for (QueryDocumentSnapshot doc : snapshot) {
+                    String status = doc.getString("status");
+                    String normalized = status == null ? "" : status.trim().toLowerCase(Locale.ROOT);
+                    String label;
+                    if ("pending".equals(normalized)) label = "Chờ Admin xác nhận";
+                    else if ("approved".equals(normalized)) label = "Đã duyệt";
+                    else if ("rejected".equals(normalized)) label = "Bị từ chối";
+                    else if ("cancelled".equals(normalized)) label = "Đã hủy";
+                    else label = isBlank(status) ? "Chưa cập nhật" : status;
+                    Long createdAt = doc.getLong("createdAt");
+                    String details = "Yêu cầu mượn: " + formatTime(createdAt)
+                            + "\nTrạng thái yêu cầu: " + label;
+                    cloudItems.add(new BorrowedItem(safe(doc.getString("bookTitle")),
+                            details, 0, false));
+                }
+            }
+            loadRecords();
+        });
+        borrowRecordsListener = cloud.listenMyBorrowRecords((snapshot, error) -> {
+            if (isFinishing() || isDestroyed()) return;
+            if (error != null) {
+                Toast.makeText(this, "Không tải được lịch sử mượn từ hệ thống chung: "
+                        + safe(error.getMessage()), Toast.LENGTH_LONG).show();
+                return;
+            }
+            if (snapshot != null) {
+                for (QueryDocumentSnapshot doc : snapshot) {
+                    String reservationId = doc.getString("reservationId");
+                    boolean exists = false;
+                    for (BorrowedItem item : cloudItems) {
+                        if (item.cloudKey != null && item.cloudKey.equals("borrow:" + doc.getId())) {
+                            exists = true;
+                            break;
+                        }
+                    }
+                    if (exists) continue;
+                    String status = doc.getString("status");
+                    String statusText = "returned".equalsIgnoreCase(status) ? "Đã trả"
+                            : ("overdue".equalsIgnoreCase(status) ? "Quá hạn" : "Đang mượn");
+                    String details = "Trạng thái phiếu mượn: " + statusText
+                            + "\nNgày mượn: " + formatTime(doc.getLong("borrowedAt"))
+                            + "\nHạn trả: " + formatTime(doc.getLong("dueAt"));
+                    cloudItems.add(new BorrowedItem(safe(doc.getString("bookTitle")),
+                            details, 0, "borrow:" + doc.getId(), false));
+                }
+            }
+            loadRecords();
+        });
+    }
+
+    private String formatTime(Long timestamp) {
+        return timestamp == null ? "Chưa cập nhật"
+                : android.text.format.DateFormat.format("dd/MM/yyyy HH:mm", timestamp).toString();
     }
 
     private void loadRecords() {
@@ -81,26 +156,9 @@ public class ReaderBorrowedBooksActivity extends AppCompatActivity {
             }
         }
 
-        String requestSql = "SELECT r.id, b.title, r.reservation_date, r.status " +
-                "FROM reservations r LEFT JOIN books b ON b.id=r.book_id " +
-                "WHERE r.customer_id=? ORDER BY r.id DESC";
-        try (Cursor c = db.rawQuery(requestSql, new String[]{String.valueOf(customerId)})) {
-            while (c.moveToNext()) {
-                int reservationId = c.getInt(0);
-                String status = c.getString(3);
-                String normalized = status == null ? "" : status.trim().toLowerCase(Locale.ROOT);
-                String label;
-                if ("pending".equals(normalized)) label = "Chờ Admin xác nhận";
-                else if ("approved".equals(normalized) || "confirmed".equals(normalized)) label = "Đã duyệt";
-                else if ("rejected".equals(normalized)) label = "Bị từ chối";
-                else if ("cancelled".equals(normalized) || "canceled".equals(normalized)) label = "Đã hủy";
-                else label = isBlank(status) ? "Chưa cập nhật" : status;
-                String details = "Yêu cầu mượn: " + safe(c.getString(2)) +
-                        "\nTrạng thái yêu cầu: " + label;
-                items.add(new BorrowedItem(safe(c.getString(1)), details, reservationId,
-                        "pending".equals(normalized)));
-            }
-        }
+        // Cloud reservations and borrow records are appended below. These are the
+        // shared source of truth for requests created and reviewed on other devices.
+        items.addAll(cloudItems);
 
         adapter.notifyDataSetChanged();
         emptyText.setVisibility(items.isEmpty() ? View.VISIBLE : View.GONE);
@@ -140,6 +198,18 @@ public class ReaderBorrowedBooksActivity extends AppCompatActivity {
         finish();
     }
 
+    @Override protected void onStop() {
+        if (reservationsListener != null) {
+            reservationsListener.remove();
+            reservationsListener = null;
+        }
+        if (borrowRecordsListener != null) {
+            borrowRecordsListener.remove();
+            borrowRecordsListener = null;
+        }
+        super.onStop();
+    }
+
     @Override protected void onDestroy() {
         if (dbHelper != null) dbHelper.close();
         super.onDestroy();
@@ -149,11 +219,16 @@ public class ReaderBorrowedBooksActivity extends AppCompatActivity {
         final String title;
         final String details;
         final int reservationId;
+        final String cloudKey;
         final boolean canCancel;
         BorrowedItem(String title, String details, int reservationId, boolean canCancel) {
+            this(title, details, reservationId, null, canCancel);
+        }
+        BorrowedItem(String title, String details, int reservationId, String cloudKey, boolean canCancel) {
             this.title = title;
             this.details = details;
             this.reservationId = reservationId;
+            this.cloudKey = cloudKey;
             this.canCancel = canCancel;
         }
     }
