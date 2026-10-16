@@ -17,6 +17,9 @@ import com.example.libraryapp.auth.FirebaseAuthManager;
 import com.example.libraryapp.dao.BookDao;
 import com.example.libraryapp.database.SampleDataSeeder;
 import com.example.libraryapp.model.Book;
+import com.example.libraryapp.service.CloudLibraryRepository;
+import com.google.firebase.firestore.ListenerRegistration;
+import com.google.firebase.firestore.QueryDocumentSnapshot;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
@@ -30,6 +33,8 @@ public class ReaderHomeActivity extends AppCompatActivity {
     private TextView countText;
     private TextView emptyText;
     private BookDao bookDao;
+    private CloudLibraryRepository cloud;
+    private ListenerRegistration booksListener;
     private final String[] categories = {"Tất cả danh mục", "Văn học", "Khoa học", "Công nghệ", "Kỹ năng sống", "Lịch sử", "Thiếu nhi"};
 
     @Override protected void onCreate(Bundle state) {
@@ -68,6 +73,7 @@ public class ReaderHomeActivity extends AppCompatActivity {
         SampleDataSeeder.seed(this);
         bookDao = new BookDao(this);
         allBooks.addAll(bookDao.getAll());
+        cloud = new CloudLibraryRepository();
         filterBooks();
 
         searchInput.addTextChangedListener(new TextWatcher() {
@@ -85,6 +91,44 @@ public class ReaderHomeActivity extends AppCompatActivity {
             detailIntent.putExtra("book_id", book.getId());
             startActivity(detailIntent);
         });
+    }
+
+    @Override protected void onStart() {
+        super.onStart();
+        if (cloud == null) return;
+        booksListener = cloud.listenAvailableBooks((snapshot, error) -> {
+            if (isFinishing() || isDestroyed()) return;
+            if (error != null) {
+                Toast.makeText(this, "Không đồng bộ được tồn kho sách: "
+                        + (error.getMessage() == null ? "Lỗi kết nối" : error.getMessage()),
+                        Toast.LENGTH_LONG).show();
+                return;
+            }
+            if (snapshot == null) return;
+            for (QueryDocumentSnapshot doc : snapshot) {
+                String title = doc.getString("title");
+                String author = doc.getString("author");
+                Long total = doc.getLong("totalQuantity");
+                Long available = doc.getLong("availableQuantity");
+                if (title == null || author == null || total == null || available == null) continue;
+                for (Book localBook : allBooks) {
+                    if (title.equals(localBook.getTitle()) && author.equals(localBook.getAuthor())) {
+                        localBook.setTotalQuantity(total.intValue());
+                        localBook.setAvailableQuantity(available.intValue());
+                        break;
+                    }
+                }
+            }
+            filterBooks();
+        });
+    }
+
+    @Override protected void onStop() {
+        if (booksListener != null) {
+            booksListener.remove();
+            booksListener = null;
+        }
+        super.onStop();
     }
 
     private void filterBooks() {
@@ -108,6 +152,10 @@ public class ReaderHomeActivity extends AppCompatActivity {
     }
 
     @Override protected void onDestroy() {
+        if (booksListener != null) {
+            booksListener.remove();
+            booksListener = null;
+        }
         if (bookDao != null) bookDao.close();
         super.onDestroy();
     }
