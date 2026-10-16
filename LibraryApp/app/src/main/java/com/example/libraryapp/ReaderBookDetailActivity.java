@@ -18,6 +18,7 @@ import com.example.libraryapp.model.Location;
 import com.example.libraryapp.model.Customer;
 import com.example.libraryapp.model.Reservation;
 import com.example.libraryapp.service.CloudLibraryRepository;
+import com.google.firebase.firestore.ListenerRegistration;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.List;
@@ -28,6 +29,7 @@ public class ReaderBookDetailActivity extends AppCompatActivity {
     private CategoryDao categoryDao;
     private LocationDao locationDao;
     private CloudLibraryRepository cloudRepository;
+    private ListenerRegistration bookListener;
 
     @Override protected void onCreate(Bundle state) {
         super.onCreate(state);
@@ -68,6 +70,15 @@ public class ReaderBookDetailActivity extends AppCompatActivity {
             v.setEnabled(false);
             submitBorrowRequest(auth.getCurrentUid(), book, requestButton);
         });
+        bookListener = cloudRepository.bookDocument(String.valueOf(book.getId()))
+                .addSnapshotListener((snapshot, error) -> {
+                    if (isFinishing() || isDestroyed() || snapshot == null || !snapshot.exists()) return;
+                    Long available = snapshot.getLong("availableQuantity");
+                    Long total = snapshot.getLong("totalQuantity");
+                    if (available != null && total != null) {
+                        setText(R.id.textDetailQuantity, "Còn " + available + "/" + total + " cuốn");
+                    }
+                });
         findViewById(R.id.btnDetailBack).setOnClickListener(v -> finish());
     }
 
@@ -93,6 +104,12 @@ public class ReaderBookDetailActivity extends AppCompatActivity {
             if (!document.exists()) {
                 requestButton.setEnabled(true);
                 Toast.makeText(this, "Sách chưa được đồng bộ lên Firestore. Vui lòng báo Admin mở ứng dụng để đồng bộ dữ liệu.", Toast.LENGTH_LONG).show();
+                return;
+            }
+            Long availableQuantity = document.getLong("availableQuantity");
+            if (availableQuantity == null || availableQuantity <= 0) {
+                requestButton.setEnabled(true);
+                Toast.makeText(this, "Sách hiện đã hết bản có thể mượn.", Toast.LENGTH_LONG).show();
                 return;
             }
             cloud.submitReservation(cloudBookId, book.getTitle())
@@ -127,6 +144,10 @@ public class ReaderBookDetailActivity extends AppCompatActivity {
         if (bookDao != null) bookDao.close();
         if (categoryDao != null) categoryDao.close();
         if (locationDao != null) locationDao.close();
+        if (bookListener != null) {
+            bookListener.remove();
+            bookListener = null;
+        }
         super.onDestroy();
     }
 }
