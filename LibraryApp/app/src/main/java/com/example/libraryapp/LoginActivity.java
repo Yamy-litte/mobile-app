@@ -9,6 +9,8 @@ import com.example.libraryapp.auth.FirebaseAuthManager;
 import com.example.libraryapp.dao.AdminDao;
 import com.example.libraryapp.dao.CustomerDao;
 import com.example.libraryapp.model.Admin;
+import com.example.libraryapp.service.CloudLibraryRepository;
+import com.google.firebase.messaging.FirebaseMessaging;
 
 public class LoginActivity extends AppCompatActivity {
     private static final String CONFIGURED_ADMIN_EMAIL = "admin@gmail.com";
@@ -69,6 +71,7 @@ public class LoginActivity extends AppCompatActivity {
                     return;
                 }
                 Toast.makeText(this, "Đăng nhập thành công.", Toast.LENGTH_SHORT).show();
+                registerForPushNotifications(uid);
             }
 
             Intent intent = new Intent(this, "admin".equals(role) ? AdminHomeActivity.class : ReaderHomeActivity.class);
@@ -157,6 +160,22 @@ public class LoginActivity extends AppCompatActivity {
         } finally {
             dao.close();
         }
+    }
+
+    private void registerForPushNotifications(String uid) {
+        if (android.os.Build.VERSION.SDK_INT >= 33
+                && checkSelfPermission(android.Manifest.permission.POST_NOTIFICATIONS)
+                != android.content.pm.PackageManager.PERMISSION_GRANTED) {
+            requestPermissions(new String[]{android.Manifest.permission.POST_NOTIFICATIONS}, 9001);
+        }
+        FirebaseMessaging.getInstance().getToken()
+                .addOnSuccessListener(token -> {
+                    if (token == null || token.trim().isEmpty()) return;
+                    new CloudLibraryRepository().saveCurrentDeviceToken(token)
+                            .addOnFailureListener(error -> android.util.Log.e(
+                                    "FCM", "Unable to save device token for " + uid, error));
+                })
+                .addOnFailureListener(error -> android.util.Log.e("FCM", "Unable to get FCM token", error));
     }
 
     private void sendResetEmail() {
