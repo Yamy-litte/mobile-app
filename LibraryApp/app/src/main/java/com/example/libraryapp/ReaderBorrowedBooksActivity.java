@@ -35,7 +35,8 @@ public class ReaderBorrowedBooksActivity extends AppCompatActivity {
     private ListenerRegistration borrowRecordsListener;
     private int customerId = -1;
     private final List<BorrowedItem> items = new ArrayList<>();
-    private final List<BorrowedItem> cloudItems = new ArrayList<>();
+    private final List<BorrowedItem> cloudReservationItems = new ArrayList<>();
+    private final List<BorrowedItem> cloudBorrowItems = new ArrayList<>();
 
     @Override protected void onCreate(Bundle state) {
         super.onCreate(state);
@@ -75,7 +76,7 @@ public class ReaderBorrowedBooksActivity extends AppCompatActivity {
                         + safe(error.getMessage()), Toast.LENGTH_LONG).show();
                 return;
             }
-            cloudItems.clear();
+            cloudReservationItems.clear();
             if (snapshot != null) {
                 for (QueryDocumentSnapshot doc : snapshot) {
                     String status = doc.getString("status");
@@ -89,7 +90,7 @@ public class ReaderBorrowedBooksActivity extends AppCompatActivity {
                     Long createdAt = doc.getLong("createdAt");
                     String details = "Yêu cầu mượn: " + formatTime(createdAt)
                             + "\nTrạng thái yêu cầu: " + label;
-                    cloudItems.add(new BorrowedItem(safe(doc.getString("bookTitle")),
+                    cloudReservationItems.add(new BorrowedItem(safe(doc.getString("bookTitle")),
                             details, 0, false));
                 }
             }
@@ -102,24 +103,16 @@ public class ReaderBorrowedBooksActivity extends AppCompatActivity {
                         + safe(error.getMessage()), Toast.LENGTH_LONG).show();
                 return;
             }
+            cloudBorrowItems.clear();
             if (snapshot != null) {
                 for (QueryDocumentSnapshot doc : snapshot) {
-                    String reservationId = doc.getString("reservationId");
-                    boolean exists = false;
-                    for (BorrowedItem item : cloudItems) {
-                        if (item.cloudKey != null && item.cloudKey.equals("borrow:" + doc.getId())) {
-                            exists = true;
-                            break;
-                        }
-                    }
-                    if (exists) continue;
                     String status = doc.getString("status");
                     String statusText = "returned".equalsIgnoreCase(status) ? "Đã trả"
                             : ("overdue".equalsIgnoreCase(status) ? "Quá hạn" : "Đang mượn");
                     String details = "Trạng thái phiếu mượn: " + statusText
                             + "\nNgày mượn: " + formatTime(doc.getLong("borrowedAt"))
                             + "\nHạn trả: " + formatTime(doc.getLong("dueAt"));
-                    cloudItems.add(new BorrowedItem(safe(doc.getString("bookTitle")),
+                    cloudBorrowItems.add(new BorrowedItem(safe(doc.getString("bookTitle")),
                             details, 0, "borrow:" + doc.getId(), false));
                 }
             }
@@ -158,7 +151,8 @@ public class ReaderBorrowedBooksActivity extends AppCompatActivity {
 
         // Cloud reservations and borrow records are appended below. These are the
         // shared source of truth for requests created and reviewed on other devices.
-        items.addAll(cloudItems);
+        items.addAll(cloudReservationItems);
+        items.addAll(cloudBorrowItems);
 
         adapter.notifyDataSetChanged();
         emptyText.setVisibility(items.isEmpty() ? View.VISIBLE : View.GONE);
