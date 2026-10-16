@@ -62,13 +62,19 @@ public class ReaderBookDetailActivity extends AppCompatActivity {
                         safe(location.getFloor(), "?") + ", kệ " + safe(location.getShelfNumber(), "?");
         setText(R.id.textDetailLocation, locationText);
         setText(R.id.textDetailQuantity, "Còn " + book.getAvailableQuantity() + "/" + book.getTotalQuantity() + " cuốn");
-        findViewById(R.id.btnRequestBorrow).setOnClickListener(v -> submitBorrowRequest(auth.getCurrentUid(), book));
+        View requestButton = findViewById(R.id.btnRequestBorrow);
+        requestButton.setOnClickListener(v -> {
+            if (!v.isEnabled()) return;
+            v.setEnabled(false);
+            submitBorrowRequest(auth.getCurrentUid(), book, requestButton);
+        });
         findViewById(R.id.btnDetailBack).setOnClickListener(v -> finish());
     }
 
 
-    private void submitBorrowRequest(String firebaseUid, Book book) {
+    private void submitBorrowRequest(String firebaseUid, Book book, View requestButton) {
         if (book.getAvailableQuantity() <= 0) {
+            requestButton.setEnabled(true);
             Toast.makeText(this, "Sách hiện đã hết bản có thể mượn.", Toast.LENGTH_LONG).show();
             return;
         }
@@ -76,6 +82,7 @@ public class ReaderBookDetailActivity extends AppCompatActivity {
         Customer customer = customerDao.getByFirebaseUid(firebaseUid);
         customerDao.close();
         if (customer == null) {
+            requestButton.setEnabled(true);
             Toast.makeText(this, "Không tìm thấy hồ sơ độc giả. Vui lòng đăng nhập lại.", Toast.LENGTH_LONG).show();
             return;
         }
@@ -84,19 +91,29 @@ public class ReaderBookDetailActivity extends AppCompatActivity {
         String cloudBookId = String.valueOf(book.getId());
         cloud.getBook(cloudBookId).addOnSuccessListener(document -> {
             if (!document.exists()) {
+                requestButton.setEnabled(true);
                 Toast.makeText(this, "Sách chưa được đồng bộ lên Firestore. Vui lòng báo Admin mở ứng dụng để đồng bộ dữ liệu.", Toast.LENGTH_LONG).show();
                 return;
             }
             cloud.submitReservation(cloudBookId, book.getTitle())
-                    .addOnSuccessListener(reference -> Toast.makeText(this,
-                            "Đã gửi yêu cầu mượn lên hệ thống chung. Vui lòng chờ Admin xác nhận.",
-                            Toast.LENGTH_LONG).show())
-                    .addOnFailureListener(error -> Toast.makeText(this,
-                            "Không gửi được yêu cầu lên Firestore: " + safe(error.getMessage(), "Lỗi kết nối"),
-                            Toast.LENGTH_LONG).show());
-        }).addOnFailureListener(error -> Toast.makeText(this,
-                "Không thể kiểm tra dữ liệu chung: " + safe(error.getMessage(), "Lỗi kết nối"),
-                Toast.LENGTH_LONG).show());
+                    .addOnSuccessListener(reference -> {
+                        requestButton.setEnabled(true);
+                        Toast.makeText(this,
+                                "Đã gửi yêu cầu mượn lên hệ thống chung. Vui lòng chờ Admin xác nhận.",
+                                Toast.LENGTH_LONG).show();
+                    })
+                    .addOnFailureListener(error -> {
+                        requestButton.setEnabled(true);
+                        Toast.makeText(this,
+                                "Không gửi được yêu cầu lên Firestore: " + safe(error.getMessage(), "Lỗi kết nối"),
+                                Toast.LENGTH_LONG).show();
+                    });
+        }).addOnFailureListener(error -> {
+            requestButton.setEnabled(true);
+            Toast.makeText(this,
+                    "Không thể kiểm tra dữ liệu chung: " + safe(error.getMessage(), "Lỗi kết nối"),
+                    Toast.LENGTH_LONG).show();
+        });
     }
 
     private void setText(int id, String value) { ((TextView)findViewById(id)).setText(value); }
