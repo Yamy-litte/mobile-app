@@ -80,7 +80,8 @@ public class AdminHomeActivity extends AppCompatActivity {
                             doc.getString("bookTitle"),
                             doc.getString("customerName"),
                             doc.getString("customerEmail"),
-                            doc.getLong("createdAt") == null ? 0L : doc.getLong("createdAt")));
+                            doc.getLong("createdAt") == null ? 0L : doc.getLong("createdAt"),
+                            doc.getString("requestType")));
                 }
             }
             adapter.notifyDataSetChanged();
@@ -125,8 +126,9 @@ public class AdminHomeActivity extends AppCompatActivity {
     private static class RequestItem {
         final String id, customerUid, bookId, bookTitle, customerName, customerEmail;
         final long createdAt;
+        final String requestType;
         RequestItem(String id, String customerUid, String bookId, String bookTitle,
-                    String customerName, String customerEmail, long createdAt) {
+                    String customerName, String customerEmail, long createdAt, String requestType) {
             this.id = id;
             this.customerUid = customerUid;
             this.bookId = bookId;
@@ -134,6 +136,7 @@ public class AdminHomeActivity extends AppCompatActivity {
             this.customerName = customerName;
             this.customerEmail = customerEmail;
             this.createdAt = createdAt;
+            this.requestType = requestType;
         }
     }
 
@@ -150,8 +153,12 @@ public class AdminHomeActivity extends AppCompatActivity {
             String date = item.createdAt > 0
                     ? android.text.format.DateFormat.format("dd/MM/yyyy HH:mm", item.createdAt).toString()
                     : "Chưa cập nhật";
+            String requestType = item.requestType;
+            String requestLabel = "preorder".equalsIgnoreCase(requestType)
+                    ? "ĐẶT TRƯỚC (chờ có sách)" : "MƯỢN SÁCH";
             ((TextView) row.findViewById(R.id.textAdminRequestDetails)).setText(
-                    "Độc giả: " + safe(item.customerName) + "\nEmail: " + safe(item.customerEmail)
+                    "Loại yêu cầu: " + requestLabel
+                            + "\nĐộc giả: " + safe(item.customerName) + "\nEmail: " + safe(item.customerEmail)
                             + "\nNgày gửi: " + date);
             Button approve = row.findViewById(R.id.btnApproveRequest);
             Button reject = row.findViewById(R.id.btnRejectRequest);
