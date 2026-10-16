@@ -97,9 +97,9 @@ public final class CloudLibraryRepository {
             com.google.firebase.firestore.EventListener<com.google.firebase.firestore.QuerySnapshot> listener) {
         String uid = currentUid();
         if (uid == null) throw new IllegalStateException("Bạn chưa đăng nhập.");
+        // Avoid requiring a composite index just to show the Reader's requests.
         return firestore.collection(COLLECTION_RESERVATIONS)
                 .whereEqualTo("customerUid", uid)
-                .orderBy("createdAt", Query.Direction.DESCENDING)
                 .addSnapshotListener(listener);
     }
 
@@ -138,9 +138,9 @@ public final class CloudLibraryRepository {
             com.google.firebase.firestore.EventListener<com.google.firebase.firestore.QuerySnapshot> listener) {
         String uid = currentUid();
         if (uid == null) throw new IllegalStateException("Bạn chưa đăng nhập.");
+        // Filter by owner only; this query does not need a customerUid + createdAt index.
         return firestore.collection(COLLECTION_NOTIFICATIONS)
                 .whereEqualTo("customerUid", uid)
-                .orderBy("createdAt", Query.Direction.DESCENDING)
                 .addSnapshotListener(listener);
     }
 
