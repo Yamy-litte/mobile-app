@@ -70,7 +70,7 @@ public class ReaderBookDetailActivity extends AppCompatActivity {
             v.setEnabled(false);
             submitBorrowRequest(auth.getCurrentUid(), book, requestButton);
         });
-        bookListener = cloudRepository.listenBookByLocalId(String.valueOf(book.getId()), (snapshot, error) -> {
+        bookListener = cloudRepository.listenBookByTitleAndAuthor(book.getTitle(), book.getAuthor(), (snapshot, error) -> {
             if (isFinishing() || isDestroyed() || snapshot == null || snapshot.isEmpty()) return;
             com.google.firebase.firestore.DocumentSnapshot cloudBook = snapshot.getDocuments().get(0);
             Long available = cloudBook.getLong("availableQuantity");
@@ -99,7 +99,7 @@ public class ReaderBookDetailActivity extends AppCompatActivity {
         }
 
         CloudLibraryRepository cloud = cloudRepository;
-        cloud.findBookByLocalId(String.valueOf(book.getId())).addOnSuccessListener(snapshot -> {
+        cloud.findBookByTitleAndAuthor(book.getTitle(), book.getAuthor()).addOnSuccessListener(snapshot -> {
             if (snapshot == null || snapshot.isEmpty()) {
                 requestButton.setEnabled(true);
                 Toast.makeText(this, "Không tìm thấy ánh xạ sách này trên Firestore. Vui lòng đồng bộ danh mục sách.", Toast.LENGTH_LONG).show();
