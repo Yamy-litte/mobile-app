@@ -74,7 +74,8 @@ public class AdminHomeActivity extends AppCompatActivity {
                 "WHERE LOWER(r.status)='pending' ORDER BY r.id DESC";
         try (Cursor c = dbHelper.getReadableDatabase().rawQuery(sql, null)) {
             while (c.moveToNext()) {
-                requests.add(new RequestItem(c.getInt(0), c.getInt(1), c.getInt(2), c.getString(3), c.getString(4),\n                        c.getString(5), c.getString(6), c.getString(7)));
+                requests.add(new RequestItem(c.getInt(0), c.getInt(1), c.getInt(2), c.getString(3), c.getString(4),
+                        c.getString(5), c.getString(6), c.getString(7)));
             }
         }
         adapter.notifyDataSetChanged();
@@ -198,7 +199,19 @@ public class AdminHomeActivity extends AppCompatActivity {
     }
 
     private static class RequestItem {
-        final int id, customerId, bookId;\n        final String bookTitle, customerName, email, date, status;\n        RequestItem(int id, int customerId, int bookId, String bookTitle, String customerName, String email, String date, String status) {\n            this.id = id; this.customerId = customerId; this.bookId = bookId; this.bookTitle = bookTitle; this.customerName = customerName;\n            this.email = email; this.date = date; this.status = status;\n        }
+        final int id, customerId, bookId;
+        final String bookTitle, customerName, email, date, status;
+
+        RequestItem(int id, int customerId, int bookId, String bookTitle, String customerName, String email, String date, String status) {
+            this.id = id;
+            this.customerId = customerId;
+            this.bookId = bookId;
+            this.bookTitle = bookTitle;
+            this.customerName = customerName;
+            this.email = email;
+            this.date = date;
+            this.status = status;
+        }
     }
 
     private class RequestAdapter extends BaseAdapter {
