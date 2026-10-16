@@ -81,6 +81,9 @@ public class ReaderBorrowedBooksActivity extends AppCompatActivity {
                 for (QueryDocumentSnapshot doc : snapshot) {
                     String status = doc.getString("status");
                     String normalized = status == null ? "" : status.trim().toLowerCase(Locale.ROOT);
+                    // An approved request is represented by its cloud borrow record.
+                    // Hiding it here avoids showing the same book twice after approval.
+                    if ("approved".equals(normalized)) continue;
                     String label;
                     if ("pending".equals(normalized)) label = "Chờ Admin xác nhận";
                     else if ("approved".equals(normalized)) label = "Đã duyệt";
