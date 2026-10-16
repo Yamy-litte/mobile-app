@@ -3,6 +3,7 @@ package com.example.libraryapp;
 import android.content.Intent;
 import android.os.Bundle;
 import android.widget.EditText;
+import android.widget.CheckBox;
 import android.widget.Toast;
 import androidx.appcompat.app.AppCompatActivity;
 import com.example.libraryapp.auth.FirebaseAuthManager;
@@ -17,6 +18,10 @@ public class LoginActivity extends AppCompatActivity {
     private static final String CONFIGURED_ADMIN_UID = "hDZ5s2jS35ah0J98pVKAM2QQNxx2";
 
     private EditText emailInput, passwordInput;
+    private CheckBox rememberCheckbox;
+    private static final String SESSION_PREFS = "library_session";
+    private static final String KEY_REMEMBER = "remember_login";
+    private static final String KEY_ROLE = "account_role";
     private String role = "reader";
     private FirebaseAuthManager auth;
 
@@ -28,6 +33,9 @@ public class LoginActivity extends AppCompatActivity {
         auth = new FirebaseAuthManager();
         emailInput = findViewById(R.id.editEmail);
         passwordInput = findViewById(R.id.editPassword);
+        rememberCheckbox = findViewById(R.id.checkRemember);
+        rememberCheckbox.setChecked(getSharedPreferences(SESSION_PREFS, MODE_PRIVATE)
+                .getBoolean(KEY_REMEMBER, false));
         findViewById(R.id.btnLogin).setOnClickListener(v -> doLogin());
         findViewById(R.id.btnForgot).setOnClickListener(v -> sendResetEmail());
         findViewById(R.id.btnRegister).setOnClickListener(v -> {
@@ -73,6 +81,11 @@ public class LoginActivity extends AppCompatActivity {
                 Toast.makeText(this, "Đăng nhập thành công.", Toast.LENGTH_SHORT).show();
                 registerForPushNotifications(uid);
             }
+
+            getSharedPreferences(SESSION_PREFS, MODE_PRIVATE).edit()
+                    .putBoolean(KEY_REMEMBER, rememberCheckbox.isChecked())
+                    .putString(KEY_ROLE, role)
+                    .apply();
 
             Intent intent = new Intent(this, "admin".equals(role) ? AdminHomeActivity.class : ReaderHomeActivity.class);
             intent.putExtra("account_role", role);
