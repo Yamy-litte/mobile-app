@@ -120,6 +120,52 @@ public final class CloudLibraryRepository {
     }
 
 
+
+    /**
+     * Seeds the shared demo catalogue without overwriting documents already edited
+     * by an Admin. Call only after the Admin role has been verified.
+     */
+    public Task<Void> seedDemoBooksIfMissing() {
+        final String[][] rows = {
+                {"1", "Dế Mèn Phiêu Lưu Ký", "Tô Hoài", "Kim Đồng", "2022", "144", "Văn học", "Cuộc phiêu lưu của Dế Mèn và những bài học về tình bạn, lòng dũng cảm.", "8", "6"},
+                {"2", "Cho Tôi Xin Một Vé Đi Tuổi Thơ", "Nguyễn Nhật Ánh", "Trẻ", "2021", "208", "Văn học", "Câu chuyện tuổi thơ được kể bằng góc nhìn hóm hỉnh và giàu cảm xúc.", "6", "4"},
+                {"3", "Nhà Giả Kim", "Paulo Coelho", "NXB Văn Học", "2020", "228", "Văn học", "Hành trình theo đuổi ước mơ và tìm kiếm kho báu của chính mình.", "10", "7"},
+                {"4", "Lược Sử Thời Gian", "Stephen Hawking", "Trẻ", "2019", "256", "Khoa học", "Giới thiệu những câu hỏi lớn về vũ trụ, thời gian và vật lý hiện đại.", "5", "3"},
+                {"5", "Vũ Trụ Trong Vỏ Hạt Dẻ", "Stephen Hawking", "Trẻ", "2020", "224", "Khoa học", "Khám phá các ý tưởng nền tảng của vũ trụ học bằng cách diễn giải phổ thông.", "4", "2"},
+                {"6", "Clean Code", "Robert C. Martin", "Prentice Hall", "2008", "464", "Công nghệ", "Các nguyên tắc viết mã nguồn rõ ràng, dễ bảo trì và dễ kiểm thử.", "5", "3"},
+                {"7", "Đắc Nhân Tâm", "Dale Carnegie", "NXB Tổng hợp", "2022", "320", "Kỹ năng sống", "Những nguyên tắc giao tiếp và xây dựng mối quan hệ tích cực.", "12", "9"},
+                {"8", "Atomic Habits", "James Clear", "NXB Thế Giới", "2020", "320", "Kỹ năng sống", "Phương pháp tạo thói quen tốt bằng những thay đổi nhỏ và bền vững.", "8", "5"}
+        };
+        java.util.List<Task<?>> operations = new java.util.ArrayList<>();
+        for (String[] row : rows) {
+            final String[] item = row;
+            operations.add(firestore.collection(COLLECTION_BOOKS).document(item[0]).get()
+                    .continueWithTask(result -> {
+                        if (!result.isSuccessful()) {
+                            Exception error = result.getException();
+                            throw error == null ? new IllegalStateException("Không đọc được danh mục sách.") : error;
+                        }
+                        if (result.getResult().exists()) return com.google.android.gms.tasks.Tasks.forResult(null);
+                        Map<String, Object> book = new HashMap<>();
+                        book.put("localBookId", item[0]);
+                        book.put("title", item[1]);
+                        book.put("author", item[2]);
+                        book.put("publisher", item[3]);
+                        book.put("publishYear", Integer.parseInt(item[4]));
+                        book.put("pages", Integer.parseInt(item[5]));
+                        book.put("category", item[6]);
+                        book.put("summary", item[7]);
+                        book.put("totalQuantity", Integer.parseInt(item[8]));
+                        book.put("availableQuantity", Integer.parseInt(item[9]));
+                        book.put("active", true);
+                        book.put("updatedAt", System.currentTimeMillis());
+                        return firestore.collection(COLLECTION_BOOKS).document(item[0]).set(book);
+                    }));
+        }
+        return com.google.android.gms.tasks.Tasks.whenAll(operations);
+    }
+
+
     /**
      * Reviews a cloud reservation atomically so two Admin devices cannot
      * approve the same request or allocate the same final copy.
