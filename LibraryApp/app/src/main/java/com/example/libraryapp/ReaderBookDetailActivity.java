@@ -70,15 +70,15 @@ public class ReaderBookDetailActivity extends AppCompatActivity {
             v.setEnabled(false);
             submitBorrowRequest(auth.getCurrentUid(), book, requestButton);
         });
-        bookListener = cloudRepository.bookDocument(String.valueOf(book.getId()))
-                .addSnapshotListener((snapshot, error) -> {
-                    if (isFinishing() || isDestroyed() || snapshot == null || !snapshot.exists()) return;
-                    Long available = snapshot.getLong("availableQuantity");
-                    Long total = snapshot.getLong("totalQuantity");
-                    if (available != null && total != null) {
-                        setText(R.id.textDetailQuantity, "Còn " + available + "/" + total + " cuốn");
-                    }
-                });
+        bookListener = cloudRepository.listenBookByLocalId(String.valueOf(book.getId()), (snapshot, error) -> {
+            if (isFinishing() || isDestroyed() || snapshot == null || snapshot.isEmpty()) return;
+            com.google.firebase.firestore.DocumentSnapshot cloudBook = snapshot.getDocuments().get(0);
+            Long available = cloudBook.getLong("availableQuantity");
+            Long total = cloudBook.getLong("totalQuantity");
+            if (available != null && total != null) {
+                setText(R.id.textDetailQuantity, "Còn " + available + "/" + total + " cuốn");
+            }
+        });
         findViewById(R.id.btnDetailBack).setOnClickListener(v -> finish());
     }
 
@@ -99,13 +99,14 @@ public class ReaderBookDetailActivity extends AppCompatActivity {
         }
 
         CloudLibraryRepository cloud = cloudRepository;
-        String cloudBookId = String.valueOf(book.getId());
-        cloud.getBook(cloudBookId).addOnSuccessListener(document -> {
-            if (!document.exists()) {
+        cloud.findBookByLocalId(String.valueOf(book.getId())).addOnSuccessListener(snapshot -> {
+            if (snapshot == null || snapshot.isEmpty()) {
                 requestButton.setEnabled(true);
-                Toast.makeText(this, "Sách chưa được đồng bộ lên Firestore. Vui lòng báo Admin mở ứng dụng để đồng bộ dữ liệu.", Toast.LENGTH_LONG).show();
+                Toast.makeText(this, "Không tìm thấy ánh xạ sách này trên Firestore. Vui lòng đồng bộ danh mục sách.", Toast.LENGTH_LONG).show();
                 return;
             }
+            com.google.firebase.firestore.DocumentSnapshot document = snapshot.getDocuments().get(0);
+            String cloudBookId = document.getId();
             Long availableQuantity = document.getLong("availableQuantity");
             if (availableQuantity == null || availableQuantity <= 0) {
                 requestButton.setEnabled(true);
