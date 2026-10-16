@@ -63,12 +63,9 @@ public class LoginActivity extends AppCompatActivity {
                 }
                 Toast.makeText(this, "Đăng nhập Admin thành công.", Toast.LENGTH_SHORT).show();
             } else {
-                CustomerDao dao = new CustomerDao(this);
-                boolean profileExists = dao.getByFirebaseUid(uid) != null;
-                dao.close();
-                if (!profileExists) {
+                if (!ensureReaderProfile(uid, authenticatedEmail)) {
                     auth.logout();
-                    Toast.makeText(this, "Không tìm thấy hồ sơ độc giả. Vui lòng đăng ký tài khoản.", Toast.LENGTH_LONG).show();
+                    Toast.makeText(this, "Không thể khôi phục hồ sơ độc giả trong SQLite. Hãy kiểm tra email hoặc đăng ký lại.", Toast.LENGTH_LONG).show();
                     return;
                 }
                 Toast.makeText(this, "Đăng nhập thành công.", Toast.LENGTH_SHORT).show();
@@ -80,6 +77,49 @@ public class LoginActivity extends AppCompatActivity {
             finish();
         }).addOnFailureListener(e ->
             Toast.makeText(this, friendly(e.getMessage()), Toast.LENGTH_LONG).show());
+    }
+
+    /**
+     * Recreates a minimal local Reader profile when emulator/app data was wiped.
+     * Firebase Authentication remains the source of identity; no password is stored in SQLite.
+     */
+    private boolean ensureReaderProfile(String uid, String authenticatedEmail) {
+        if (uid == null || uid.trim().isEmpty() || authenticatedEmail == null
+                || authenticatedEmail.trim().isEmpty()) {
+            return false;
+        }
+
+        CustomerDao dao = new CustomerDao(this);
+        try {
+            com.example.libraryapp.model.Customer customer = dao.getByFirebaseUid(uid);
+            if (customer != null) {
+                return "active".equalsIgnoreCase(customer.getStatus());
+            }
+
+            // Avoid silently attaching an existing local profile owned by a different Firebase UID.
+            com.example.libraryapp.model.Customer sameEmail = dao.getByEmail(authenticatedEmail);
+            if (sameEmail != null) {
+                return false;
+            }
+
+            String email = authenticatedEmail.trim();
+            String localPart = email.contains("@") ? email.substring(0, email.indexOf("@")) : email;
+            String displayName = localPart.replace('.', ' ').replace('_', ' ').trim();
+            if (displayName.isEmpty()) displayName = "Độc giả";
+
+            com.example.libraryapp.model.Customer recovered = new com.example.libraryapp.model.Customer(
+                    0, uid, email, displayName, null, null, "active", null, null);
+            long id = dao.insert(recovered);
+            if (id <= 0) return false;
+
+            customer = dao.getByFirebaseUid(uid);
+            return customer != null && "active".equalsIgnoreCase(customer.getStatus());
+        } catch (Exception e) {
+            android.util.Log.e("LoginActivity", "Unable to restore local Reader profile", e);
+            return false;
+        } finally {
+            dao.close();
+        }
     }
 
     /**
