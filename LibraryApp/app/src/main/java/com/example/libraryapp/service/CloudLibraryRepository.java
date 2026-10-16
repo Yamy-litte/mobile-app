@@ -132,6 +132,8 @@ public final class CloudLibraryRepository {
             throw new IllegalArgumentException("FCM token không hợp lệ.");
         }
         Map<String, Object> update = new HashMap<>();
+        // Required by Firestore rules when this profile document is first created.
+        update.put("uid", uid);
         update.put("fcmToken", token);
         update.put("fcmTokenUpdatedAt", System.currentTimeMillis());
         return firestore.collection(COLLECTION_CUSTOMERS).document(uid)
