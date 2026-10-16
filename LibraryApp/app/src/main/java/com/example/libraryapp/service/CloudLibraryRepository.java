@@ -48,6 +48,11 @@ public final class CloudLibraryRepository {
     }
 
     public Task<DocumentReference> submitReservation(String bookCloudId, String bookTitle) {
+        return submitReservation(bookCloudId, bookTitle, false);
+    }
+
+    /** A preorder remains pending until Admin can allocate an available copy. */
+    public Task<DocumentReference> submitReservation(String bookCloudId, String bookTitle, boolean preorder) {
         com.google.firebase.auth.FirebaseUser user = auth.getCurrentUser();
         if (user == null) throw new IllegalStateException("Bạn chưa đăng nhập.");
         String uid = user.getUid();
@@ -79,6 +84,7 @@ public final class CloudLibraryRepository {
                         data.put("bookId", bookCloudId);
                         data.put("bookTitle", bookTitle);
                         data.put("status", "pending");
+                        data.put("requestType", preorder ? "preorder" : "borrow");
                         data.put("createdAt", System.currentTimeMillis());
                         data.put("updatedAt", System.currentTimeMillis());
                         return firestore.collection(COLLECTION_RESERVATIONS).add(data);
@@ -138,6 +144,28 @@ public final class CloudLibraryRepository {
         update.put("fcmTokenUpdatedAt", System.currentTimeMillis());
         return firestore.collection(COLLECTION_CUSTOMERS).document(uid)
                 .set(update, SetOptions.merge());
+    }
+
+    /** Cancel only the signed-in Reader's own pending reservation/preorder. */
+    public Task<Void> cancelReservation(String reservationId) {
+        String uid = currentUid();
+        if (uid == null) throw new IllegalStateException("Bạn chưa đăng nhập.");
+        if (reservationId == null || reservationId.trim().isEmpty()) {
+            throw new IllegalArgumentException("Mã yêu cầu không hợp lệ.");
+        }
+        DocumentReference ref = firestore.collection(COLLECTION_RESERVATIONS).document(reservationId);
+        return firestore.runTransaction(transaction -> {
+            DocumentSnapshot request = transaction.get(ref);
+            if (!request.exists()) throw new IllegalStateException("Không tìm thấy yêu cầu.");
+            if (!uid.equals(request.getString("customerUid"))) {
+                throw new SecurityException("Bạn không có quyền hủy yêu cầu này.");
+            }
+            if (!"pending".equalsIgnoreCase(request.getString("status"))) {
+                throw new IllegalStateException("Chỉ có thể hủy yêu cầu đang chờ Admin xác nhận.");
+            }
+            transaction.update(ref, "status", "cancelled", "updatedAt", System.currentTimeMillis());
+            return null;
+        });
     }
 
     public Task<DocumentReference> createNotification(String customerUid, String title, String content) {
