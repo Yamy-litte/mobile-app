@@ -8,6 +8,8 @@ import com.google.firebase.firestore.FirebaseFirestore;
 import com.google.firebase.firestore.ListenerRegistration;
 import com.google.firebase.firestore.Query;
 import com.google.firebase.firestore.SetOptions;
+import com.example.libraryapp.model.Book;
+import java.util.List;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -284,6 +286,43 @@ public final class CloudLibraryRepository {
         });
     }
 
+
+    /**
+     * Sync local SQLite books to the shared catalog without overwriting existing cloud inventory.
+     * SQLite IDs remain stable document IDs so current reservations keep their references.
+     */
+    public Task<Void> syncLocalBooks(List<Book> localBooks) {
+        if (localBooks == null || localBooks.isEmpty()) return com.google.android.gms.tasks.Tasks.forResult(null);
+        return firestore.collection(COLLECTION_BOOKS).get().continueWithTask(queryTask -> {
+            if (!queryTask.isSuccessful()) {
+                Exception error = queryTask.getException();
+                throw error == null ? new IllegalStateException("Không đọc được danh mục sách trên Firestore.") : error;
+            }
+            Map<String, DocumentSnapshot> existingById = new HashMap<>();
+            for (DocumentSnapshot document : queryTask.getResult().getDocuments()) existingById.put(document.getId(), document);
+            com.google.firebase.firestore.WriteBatch batch = firestore.batch();
+            boolean hasChanges = false;
+            for (Book localBook : localBooks) {
+                if (localBook == null || localBook.getId() <= 0 || isBlank(localBook.getTitle())) continue;
+                String id = String.valueOf(localBook.getId());
+                DocumentSnapshot existing = existingById.get(id);
+                DocumentReference ref = firestore.collection(COLLECTION_BOOKS).document(id);
+                Map<String, Object> data = new HashMap<>();
+                if (existing == null || !existing.contains("localBookId")) data.put("localBookId", id);
+                if (existing == null || isBlank(existing.getString("title"))) data.put("title", localBook.getTitle());
+                if (existing == null || isBlank(existing.getString("author"))) data.put("author", localBook.getAuthor());
+                if (existing == null || isBlank(existing.getString("publisher"))) data.put("publisher", localBook.getPublisher());
+                if (existing == null || existing.getLong("publishYear") == null) data.put("publishYear", localBook.getPublishYear());
+                if (existing == null || existing.getLong("pages") == null) data.put("pages", localBook.getPages());
+                if (existing == null || isBlank(existing.getString("summary"))) data.put("summary", localBook.getSummary());
+                if (existing == null || existing.getLong("totalQuantity") == null) data.put("totalQuantity", localBook.getTotalQuantity());
+                if (existing == null || existing.getLong("availableQuantity") == null) data.put("availableQuantity", localBook.getAvailableQuantity());
+                if (existing == null || existing.getBoolean("active") == null) data.put("active", true);
+                if (!data.isEmpty()) { data.put("updatedAt", System.currentTimeMillis()); batch.set(ref, data, SetOptions.merge()); hasChanges = true; }
+            }
+            return hasChanges ? batch.commit() : com.google.android.gms.tasks.Tasks.forResult(null);
+        });
+    }
 
     /**
      * Reviews a cloud reservation atomically so two Admin devices cannot
