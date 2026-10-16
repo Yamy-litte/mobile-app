@@ -149,6 +149,28 @@ public class ReaderBorrowedBooksActivity extends AppCompatActivity {
             }
         }
 
+        // Preserve legacy local requests already stored on this device.
+        String requestSql = "SELECT r.id, b.title, r.reservation_date, r.status " +
+                "FROM reservations r LEFT JOIN books b ON b.id=r.book_id " +
+                "WHERE r.customer_id=? ORDER BY r.id DESC";
+        try (Cursor c = db.rawQuery(requestSql, new String[]{String.valueOf(customerId)})) {
+            while (c.moveToNext()) {
+                int reservationId = c.getInt(0);
+                String status = c.getString(3);
+                String normalized = status == null ? "" : status.trim().toLowerCase(Locale.ROOT);
+                String label;
+                if ("pending".equals(normalized)) label = "Chờ Admin xác nhận (lưu trên thiết bị)";
+                else if ("approved".equals(normalized) || "confirmed".equals(normalized)) label = "Đã duyệt (lưu trên thiết bị)";
+                else if ("rejected".equals(normalized)) label = "Bị từ chối (lưu trên thiết bị)";
+                else if ("cancelled".equals(normalized) || "canceled".equals(normalized)) label = "Đã hủy (lưu trên thiết bị)";
+                else label = isBlank(status) ? "Chưa cập nhật" : status;
+                String details = "Yêu cầu mượn: " + safe(c.getString(2))
+                        + "\nTrạng thái yêu cầu: " + label;
+                items.add(new BorrowedItem(safe(c.getString(1)), details, reservationId,
+                        "pending".equals(normalized)));
+            }
+        }
+
         // Cloud reservations and borrow records are appended below. These are the
         // shared source of truth for requests created and reviewed on other devices.
         items.addAll(cloudReservationItems);
