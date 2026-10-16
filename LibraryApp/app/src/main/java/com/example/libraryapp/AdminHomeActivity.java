@@ -92,11 +92,6 @@ public class AdminHomeActivity extends AppCompatActivity {
                 .setPositiveButton(approve ? "Duyệt" : "Từ chối", (d, w) -> {
                     SQLiteDatabase db = dbHelper.getWritableDatabase();
                     boolean success = false;
-                    String emailSubject = approve ? "Yêu cầu mượn sách đã được duyệt - MyLibrary" : "Cập nhật yêu cầu mượn sách - MyLibrary";
-                    String emailBody = "Xin chào " + safe(item.customerName) + ",\n\nYêu cầu mượn sách “" + item.bookTitle + "” " +
-                            (approve ? "đã được duyệt." : "đã bị từ chối.") +
-                            (approve ? "\nVui lòng liên hệ thư viện để nhận sách." : "") +
-                            "\n\nTrân trọng,\nMyLibrary";
                     db.beginTransaction();
                     try {
                         Cursor pending = db.rawQuery(
@@ -167,21 +162,9 @@ public class AdminHomeActivity extends AppCompatActivity {
                         db.endTransaction();
                     }
                     if (success) {
-                        Toast.makeText(this, approve ? "Đã duyệt, tạo phiếu mượn và gửi thông báo trong ứng dụng." : "Đã từ chối và tạo thông báo trong ứng dụng.", Toast.LENGTH_LONG).show();
+                        Toast.makeText(this, approve ? "Đã duyệt, tạo phiếu mượn và lưu thông báo trong ứng dụng." : "Đã từ chối và tạo thông báo trong ứng dụng.", Toast.LENGTH_LONG).show();
                         loadRequests();
-                        // Opens an email composer addressed to the customer's Gmail.
-                        // Android apps must not silently send email using embedded SMTP credentials.
-                        if (item.email != null && item.email.contains("@")) {
-                            Intent email = new Intent(Intent.ACTION_SENDTO);
-                            email.setData(android.net.Uri.parse("mailto:" + android.net.Uri.encode(item.email)));
-                            email.putExtra(Intent.EXTRA_SUBJECT, emailSubject);
-                            email.putExtra(Intent.EXTRA_TEXT, emailBody);
-                            try {
-                                startActivity(Intent.createChooser(email, "Gửi email thông báo cho độc giả"));
-                            } catch (android.content.ActivityNotFoundException ignored) {
-                                Toast.makeText(this, "Thông báo đã lưu trong ứng dụng; thiết bị chưa có ứng dụng email để gửi Gmail.", Toast.LENGTH_LONG).show();
-                            }
-                        }
+
                     }
                 }).show();
     }
