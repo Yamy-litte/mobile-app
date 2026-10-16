@@ -268,35 +268,6 @@ public final class CloudLibraryRepository {
                 .addSnapshotListener(listener);
     }
 
-    /** Cancel only a pending reservation owned by the signed-in Reader. */
-    public Task<Void> cancelReservation(String reservationId) {
-        String uid = currentUid();
-        if (uid == null) throw new IllegalStateException("Bạn chưa đăng nhập.");
-        DocumentReference reservationRef =
-                firestore.collection(COLLECTION_RESERVATIONS).document(reservationId);
-        return firestore.runTransaction(transaction -> {
-            DocumentSnapshot reservation = transaction.get(reservationRef);
-            if (!reservation.exists()) {
-                throw new IllegalStateException("Không tìm thấy yêu cầu mượn.");
-            }
-            if (!uid.equals(reservation.getString("customerUid"))) {
-                throw new IllegalStateException("Bạn không có quyền hủy yêu cầu này.");
-            }
-            if (!"pending".equals(reservation.getString("status"))) {
-                throw new IllegalStateException("Chỉ có thể hủy yêu cầu đang chờ duyệt.");
-            }
-            Map<String, Object> updates = new HashMap<>();
-            updates.put("status", "cancelled");
-            updates.put("updatedAt", System.currentTimeMillis());
-            transaction.update(reservationRef, updates);
-            return null;
-        });
-    }
-
-    public Task<Void> markNotificationRead(String notificationId) {
-        return firestore.collection(COLLECTION_NOTIFICATIONS).document(notificationId)
-                .update("isRead", true);
-    }
 
     public Task<DocumentSnapshot> getBook(String cloudBookId) {
         return firestore.collection(COLLECTION_BOOKS).document(cloudBookId).get();
