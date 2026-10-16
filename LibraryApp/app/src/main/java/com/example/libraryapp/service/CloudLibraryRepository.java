@@ -273,18 +273,21 @@ public final class CloudLibraryRepository {
 
 
     /** Resolve the cloud document through the explicit localBookId mapping field. */
-    public Task<com.google.firebase.firestore.QuerySnapshot> findBookByLocalId(String localBookId) {
+    public Task<com.google.firebase.firestore.QuerySnapshot> findBookByTitleAndAuthor(String title, String author) {
         return firestore.collection(COLLECTION_BOOKS)
-                .whereEqualTo("localBookId", localBookId)
+                .whereEqualTo("title", title)
+                .whereEqualTo("author", author)
                 .limit(1)
                 .get();
     }
 
-    public ListenerRegistration listenBookByLocalId(
-            String localBookId,
+    public ListenerRegistration listenBookByTitleAndAuthor(
+            String title,
+            String author,
             com.google.firebase.firestore.EventListener<com.google.firebase.firestore.QuerySnapshot> listener) {
         return firestore.collection(COLLECTION_BOOKS)
-                .whereEqualTo("localBookId", localBookId)
+                .whereEqualTo("title", title)
+                .whereEqualTo("author", author)
                 .limit(1)
                 .addSnapshotListener(listener);
     }
