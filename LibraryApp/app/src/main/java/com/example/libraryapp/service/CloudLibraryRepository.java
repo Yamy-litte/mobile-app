@@ -202,28 +202,39 @@ public final class CloudLibraryRepository {
             }
 
             com.google.firebase.firestore.WriteBatch batch = firestore.batch();
-            boolean hasMissingBooks = false;
-            for (String[] item : rows) {
-                if (existingIds.contains(item[0])) continue;
-
-                Map<String, Object> book = new HashMap<>();
-                book.put("localBookId", item[0]);
-                book.put("title", item[1]);
-                book.put("author", item[2]);
-                book.put("publisher", item[3]);
-                book.put("publishYear", Integer.parseInt(item[4]));
-                book.put("pages", Integer.parseInt(item[5]));
-                book.put("category", item[6]);
-                book.put("summary", item[7]);
-                book.put("totalQuantity", Integer.parseInt(item[8]));
-                book.put("availableQuantity", Integer.parseInt(item[9]));
-                book.put("active", true);
-                book.put("updatedAt", System.currentTimeMillis());
-                batch.set(firestore.collection(COLLECTION_BOOKS).document(item[0]), book);
-                hasMissingBooks = true;
+            boolean hasChanges = false;
+            Map<String, DocumentSnapshot> existingById = new HashMap<>();
+            for (DocumentSnapshot document : queryTask.getResult().getDocuments()) {
+                existingById.put(document.getId(), document);
             }
 
-            return hasMissingBooks
+            for (String[] item : rows) {
+                DocumentSnapshot existing = existingById.get(item[0]);
+                DocumentReference bookRef = firestore.collection(COLLECTION_BOOKS).document(item[0]);
+                Map<String, Object> book = new HashMap<>();
+
+                // Repair identity/display fields on older demo documents without changing
+                // quantities that an Admin may already have edited.
+                if (existing == null || !existing.contains("localBookId")) book.put("localBookId", item[0]);
+                if (existing == null || isBlank(existing.getString("title"))) book.put("title", item[1]);
+                if (existing == null || isBlank(existing.getString("author"))) book.put("author", item[2]);
+                if (existing == null || isBlank(existing.getString("publisher"))) book.put("publisher", item[3]);
+                if (existing == null || existing.getLong("publishYear") == null) book.put("publishYear", Integer.parseInt(item[4]));
+                if (existing == null || existing.getLong("pages") == null) book.put("pages", Integer.parseInt(item[5]));
+                if (existing == null || isBlank(existing.getString("category"))) book.put("category", item[6]);
+                if (existing == null || isBlank(existing.getString("summary"))) book.put("summary", item[7]);
+                if (existing == null || existing.getLong("totalQuantity") == null) book.put("totalQuantity", Integer.parseInt(item[8]));
+                if (existing == null || existing.getLong("availableQuantity") == null) book.put("availableQuantity", Integer.parseInt(item[9]));
+                if (existing == null || existing.getBoolean("active") == null) book.put("active", true);
+
+                if (!book.isEmpty()) {
+                    book.put("updatedAt", System.currentTimeMillis());
+                    batch.set(bookRef, book, SetOptions.merge());
+                    hasChanges = true;
+                }
+            }
+
+            return hasChanges
                     ? batch.commit()
                     : com.google.android.gms.tasks.Tasks.forResult(null);
         });
@@ -310,13 +321,19 @@ public final class CloudLibraryRepository {
     }
 
 
-    /** Resolve the cloud document through the explicit localBookId mapping field. */
+    /** Resolve by title first, then let the caller verify the author. */
     public Task<com.google.firebase.firestore.QuerySnapshot> findBookByTitleAndAuthor(String title, String author) {
         return firestore.collection(COLLECTION_BOOKS)
                 .whereEqualTo("title", title)
-                .whereEqualTo("author", author)
-                .limit(1)
-                .get();
+                .limit(10)
+                .get()
+                .continueWith(task -> {
+                    if (!task.isSuccessful()) {
+                        Exception error = task.getException();
+                        throw error == null ? new IllegalStateException("Không đọc được danh mục sách trên Firestore.") : error;
+                    }
+                    return task.getResult();
+                });
     }
 
     public ListenerRegistration listenBookByTitleAndAuthor(
@@ -325,9 +342,12 @@ public final class CloudLibraryRepository {
             com.google.firebase.firestore.EventListener<com.google.firebase.firestore.QuerySnapshot> listener) {
         return firestore.collection(COLLECTION_BOOKS)
                 .whereEqualTo("title", title)
-                .whereEqualTo("author", author)
-                .limit(1)
+                .limit(10)
                 .addSnapshotListener(listener);
+    }
+
+    private static boolean isBlank(String value) {
+        return value == null || value.trim().isEmpty();
     }
 
     public Task<DocumentSnapshot> getBook(String cloudBookId) {
