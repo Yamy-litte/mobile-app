@@ -124,6 +124,20 @@ public final class CloudLibraryRepository {
                 .update(update);
     }
 
+    /** Save this device's FCM token on the signed-in Reader profile. */
+    public Task<Void> saveCurrentDeviceToken(String token) {
+        String uid = currentUid();
+        if (uid == null) throw new IllegalStateException("Bạn chưa đăng nhập.");
+        if (token == null || token.trim().isEmpty()) {
+            throw new IllegalArgumentException("FCM token không hợp lệ.");
+        }
+        Map<String, Object> update = new HashMap<>();
+        update.put("fcmToken", token);
+        update.put("fcmTokenUpdatedAt", System.currentTimeMillis());
+        return firestore.collection(COLLECTION_CUSTOMERS).document(uid)
+                .set(update, SetOptions.merge());
+    }
+
     public Task<DocumentReference> createNotification(String customerUid, String title, String content) {
         Map<String, Object> notification = new HashMap<>();
         notification.put("customerUid", customerUid);
