@@ -20,6 +20,9 @@ import com.example.libraryapp.model.Book;
 import com.example.libraryapp.service.CloudLibraryRepository;
 import com.google.firebase.firestore.ListenerRegistration;
 import com.google.firebase.firestore.QueryDocumentSnapshot;
+import com.google.firebase.firestore.QuerySnapshot;
+import java.util.HashSet;
+import java.util.Set;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
@@ -35,6 +38,9 @@ public class ReaderHomeActivity extends AppCompatActivity {
     private BookDao bookDao;
     private CloudLibraryRepository cloud;
     private ListenerRegistration booksListener;
+    private ListenerRegistration notificationsListener;
+    private final Set<String> knownNotificationIds = new HashSet<>();
+    private boolean notificationSnapshotInitialized = false;
     private final String[] categories = {"Tất cả danh mục", "Văn học", "Khoa học", "Công nghệ", "Kỹ năng sống", "Lịch sử", "Thiếu nhi"};
 
     @Override protected void onCreate(Bundle state) {
@@ -96,6 +102,24 @@ public class ReaderHomeActivity extends AppCompatActivity {
     @Override protected void onStart() {
         super.onStart();
         if (cloud == null) return;
+        notificationSnapshotInitialized = false;
+        knownNotificationIds.clear();
+        notificationsListener = cloud.listenMyNotifications((snapshot, error) -> {
+            if (isFinishing() || isDestroyed() || error != null || snapshot == null) return;
+            if (!notificationSnapshotInitialized) {
+                for (QueryDocumentSnapshot doc : snapshot) knownNotificationIds.add(doc.getId());
+                notificationSnapshotInitialized = true;
+                return;
+            }
+            for (com.google.firebase.firestore.DocumentChange change : snapshot.getDocumentChanges()) {
+                QueryDocumentSnapshot doc = (QueryDocumentSnapshot) change.getDocument();
+                if (change.getType() == com.google.firebase.firestore.DocumentChange.Type.ADDED
+                        && knownNotificationIds.add(doc.getId())) {
+                    com.example.libraryapp.service.LocalLibraryNotification.show(
+                            this, doc.getString("title"), doc.getString("content"), doc.getId());
+                }
+            }
+        });
         booksListener = cloud.listenAvailableBooks((snapshot, error) -> {
             if (isFinishing() || isDestroyed()) return;
             if (error != null) {
@@ -124,6 +148,10 @@ public class ReaderHomeActivity extends AppCompatActivity {
     }
 
     @Override protected void onStop() {
+        if (notificationsListener != null) {
+            notificationsListener.remove();
+            notificationsListener = null;
+        }
         if (booksListener != null) {
             booksListener.remove();
             booksListener = null;
