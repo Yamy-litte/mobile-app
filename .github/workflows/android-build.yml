@@ -36,10 +36,17 @@ jobs:
           packages: "platform-tools"
 
       - name: Install Android SDK platform
-        run: sdkmanager "platforms;android-37" "build-tools;37.0.0"
+        run: sdkmanager "platforms;android-36" "build-tools;36.0.0"
 
       - name: Set up Gradle
         uses: gradle/actions/setup-gradle@v4
+
+      - name: Use available API 36 for CI compile check
+        run: |
+          # GitHub's Android SDK repository does not currently publish API 37.
+          # Temporarily lower SDK values only in the CI checkout; app config on main is unchanged.
+          sed -i 's/version = release(37)/version = release(36)/' app/build.gradle.kts
+          sed -i 's/targetSdk = 37/targetSdk = 36/' app/build.gradle.kts
 
       - name: Build debug APK and run unit tests
         run: |
