@@ -186,33 +186,47 @@ public final class CloudLibraryRepository {
                 {"7", "Đắc Nhân Tâm", "Dale Carnegie", "NXB Tổng hợp", "2022", "320", "Kỹ năng sống", "Những nguyên tắc giao tiếp và xây dựng mối quan hệ tích cực.", "12", "9"},
                 {"8", "Atomic Habits", "James Clear", "NXB Thế Giới", "2020", "320", "Kỹ năng sống", "Phương pháp tạo thói quen tốt bằng những thay đổi nhỏ và bền vững.", "8", "5"}
         };
-        java.util.List<Task<?>> operations = new java.util.ArrayList<>();
-        for (String[] row : rows) {
-            final String[] item = row;
-            operations.add(firestore.collection(COLLECTION_BOOKS).document(item[0]).get()
-                    .continueWithTask(result -> {
-                        if (!result.isSuccessful()) {
-                            Exception error = result.getException();
-                            throw error == null ? new IllegalStateException("Không đọc được danh mục sách.") : error;
-                        }
-                        if (result.getResult().exists()) return com.google.android.gms.tasks.Tasks.forResult(null);
-                        Map<String, Object> book = new HashMap<>();
-                        book.put("localBookId", item[0]);
-                        book.put("title", item[1]);
-                        book.put("author", item[2]);
-                        book.put("publisher", item[3]);
-                        book.put("publishYear", Integer.parseInt(item[4]));
-                        book.put("pages", Integer.parseInt(item[5]));
-                        book.put("category", item[6]);
-                        book.put("summary", item[7]);
-                        book.put("totalQuantity", Integer.parseInt(item[8]));
-                        book.put("availableQuantity", Integer.parseInt(item[9]));
-                        book.put("active", true);
-                        book.put("updatedAt", System.currentTimeMillis());
-                        return firestore.collection(COLLECTION_BOOKS).document(item[0]).set(book);
-                    }));
-        }
-        return com.google.android.gms.tasks.Tasks.whenAll(operations);
+
+        // One collection read replaces eight separate document reads whenever Admin opens the screen.
+        return firestore.collection(COLLECTION_BOOKS).get().continueWithTask(queryTask -> {
+            if (!queryTask.isSuccessful()) {
+                Exception error = queryTask.getException();
+                throw error == null
+                        ? new IllegalStateException("Không đọc được danh mục sách.")
+                        : error;
+            }
+
+            java.util.Set<String> existingIds = new java.util.HashSet<>();
+            for (DocumentSnapshot document : queryTask.getResult().getDocuments()) {
+                existingIds.add(document.getId());
+            }
+
+            com.google.firebase.firestore.WriteBatch batch = firestore.batch();
+            boolean hasMissingBooks = false;
+            for (String[] item : rows) {
+                if (existingIds.contains(item[0])) continue;
+
+                Map<String, Object> book = new HashMap<>();
+                book.put("localBookId", item[0]);
+                book.put("title", item[1]);
+                book.put("author", item[2]);
+                book.put("publisher", item[3]);
+                book.put("publishYear", Integer.parseInt(item[4]));
+                book.put("pages", Integer.parseInt(item[5]));
+                book.put("category", item[6]);
+                book.put("summary", item[7]);
+                book.put("totalQuantity", Integer.parseInt(item[8]));
+                book.put("availableQuantity", Integer.parseInt(item[9]));
+                book.put("active", true);
+                book.put("updatedAt", System.currentTimeMillis());
+                batch.set(firestore.collection(COLLECTION_BOOKS).document(item[0]), book);
+                hasMissingBooks = true;
+            }
+
+            return hasMissingBooks
+                    ? batch.commit()
+                    : com.google.android.gms.tasks.Tasks.forResult(null);
+        });
     }
 
 
