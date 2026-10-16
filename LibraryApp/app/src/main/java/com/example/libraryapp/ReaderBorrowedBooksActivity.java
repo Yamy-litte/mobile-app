@@ -93,8 +93,13 @@ public class ReaderBorrowedBooksActivity extends AppCompatActivity {
                     Long createdAt = doc.getLong("createdAt");
                     String details = "Yêu cầu mượn: " + formatTime(createdAt)
                             + "\nTrạng thái yêu cầu: " + label;
+                    boolean canCancel = "pending".equals(normalized);
+                    String requestType = doc.getString("requestType");
+                    if ("preorder".equalsIgnoreCase(requestType)) {
+                        details = "Loại yêu cầu: Đặt trước\n" + details;
+                    }
                     cloudReservationItems.add(new BorrowedItem(safe(doc.getString("bookTitle")),
-                            details, 0, false));
+                            details, 0, "reservation:" + doc.getId(), canCancel));
                 }
             }
             loadRecords();
@@ -185,7 +190,24 @@ public class ReaderBorrowedBooksActivity extends AppCompatActivity {
     }
 
     private void cancelRequest(BorrowedItem item) {
-        if (item.reservationId <= 0 || !item.canCancel) return;
+        if (!item.canCancel) return;
+        if (item.cloudKey != null && item.cloudKey.startsWith("reservation:")) {
+            String cloudReservationId = item.cloudKey.substring("reservation:".length());
+            new AlertDialog.Builder(this)
+                    .setTitle("Hủy yêu cầu")
+                    .setMessage("Bạn muốn hủy yêu cầu cho cuốn “" + item.title + "” chứ?")
+                    .setNegativeButton("Không", (dialog, which) -> dialog.dismiss())
+                    .setPositiveButton("Hủy yêu cầu", (dialog, which) ->
+                            cloud.cancelReservation(cloudReservationId)
+                                    .addOnSuccessListener(unused -> Toast.makeText(this,
+                                            "Đã hủy yêu cầu.", Toast.LENGTH_SHORT).show())
+                                    .addOnFailureListener(error -> Toast.makeText(this,
+                                            "Không hủy được yêu cầu: " + safe(error.getMessage()),
+                                            Toast.LENGTH_LONG).show()))
+                    .show();
+            return;
+        }
+        if (item.reservationId <= 0) return;
         new AlertDialog.Builder(this)
                 .setTitle("Hủy yêu cầu mượn")
                 .setMessage("Bạn muốn hủy yêu cầu mượn cuốn “" + item.title + "” chứ?")
