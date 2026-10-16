@@ -1,9 +1,6 @@
 package com.example.libraryapp;
 
-import android.content.ContentValues;
 import android.content.Intent;
-import android.database.Cursor;
-import android.database.sqlite.SQLiteDatabase;
 import android.os.Bundle;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -17,20 +14,20 @@ import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
 import com.example.libraryapp.auth.FirebaseAuthManager;
 import com.example.libraryapp.dao.AdminDao;
-import com.example.libraryapp.database.LibraryDbHelper;
 import com.example.libraryapp.model.Admin;
-import java.text.SimpleDateFormat;
+import com.example.libraryapp.service.CloudLibraryRepository;
+import com.google.firebase.firestore.ListenerRegistration;
+import com.google.firebase.firestore.QueryDocumentSnapshot;
 import java.util.ArrayList;
-import java.util.Date;
 import java.util.List;
-import java.util.Locale;
 
 public class AdminHomeActivity extends AppCompatActivity {
-    private LibraryDbHelper dbHelper;
-    private int adminId = -1;
     private TextView emptyText, countText;
     private final List<RequestItem> requests = new ArrayList<>();
     private RequestAdapter adapter;
+    private CloudLibraryRepository cloud;
+    private ListenerRegistration requestsListener;
+    private String adminUid;
 
     @Override protected void onCreate(Bundle state) {
         super.onCreate(state);
@@ -45,7 +42,8 @@ public class AdminHomeActivity extends AppCompatActivity {
             goToLogin();
             return;
         }
-        adminId = admin.getId();
+        adminUid = auth.getCurrentUid();
+        cloud = new CloudLibraryRepository();
         setContentView(R.layout.activity_admin_home);
         AdminTabNavigation.bind(this);
         emptyText = findViewById(R.id.textAdminRequestsEmpty);
@@ -57,115 +55,51 @@ public class AdminHomeActivity extends AppCompatActivity {
             auth.logout();
             goToLogin();
         });
-        dbHelper = new LibraryDbHelper(this);
-        loadRequests();
     }
 
-    @Override protected void onResume() {
-        super.onResume();
-        if (dbHelper != null && adapter != null) loadRequests();
-    }
-
-    private void loadRequests() {
-        requests.clear();
-        String sql = "SELECT r.id, r.customer_id, r.book_id, b.title, c.full_name, c.email, r.reservation_date, r.status " +
-                "FROM reservations r JOIN books b ON b.id=r.book_id " +
-                "JOIN customers c ON c.id=r.customer_id " +
-                "WHERE LOWER(r.status)='pending' ORDER BY r.id DESC";
-        try (Cursor c = dbHelper.getReadableDatabase().rawQuery(sql, null)) {
-            while (c.moveToNext()) {
-                requests.add(new RequestItem(c.getInt(0), c.getInt(1), c.getInt(2), c.getString(3), c.getString(4),
-                        c.getString(5), c.getString(6), c.getString(7)));
+    @Override protected void onStart() {
+        super.onStart();
+        if (cloud == null) return;
+        requestsListener = cloud.listenPendingReservations((snapshot, error) -> {
+            if (isFinishing() || isDestroyed()) return;
+            if (error != null) {
+                Toast.makeText(this, "Không tải được yêu cầu chung: " + safe(error.getMessage()), Toast.LENGTH_LONG).show();
+                return;
             }
-        }
-        adapter.notifyDataSetChanged();
-        countText.setText("Yêu cầu đang chờ: " + requests.size());
-        emptyText.setVisibility(requests.isEmpty() ? View.VISIBLE : View.GONE);
+            requests.clear();
+            if (snapshot != null) {
+                for (QueryDocumentSnapshot doc : snapshot) {
+                    requests.add(new RequestItem(
+                            doc.getId(),
+                            doc.getString("customerUid"),
+                            doc.getString("bookId"),
+                            doc.getString("bookTitle"),
+                            doc.getString("customerName"),
+                            doc.getString("customerEmail"),
+                            doc.getLong("createdAt") == null ? 0L : doc.getLong("createdAt")));
+                }
+            }
+            adapter.notifyDataSetChanged();
+            countText.setText("Yêu cầu đang chờ: " + requests.size());
+            emptyText.setVisibility(requests.isEmpty() ? View.VISIBLE : View.GONE);
+        });
     }
 
     private void processRequest(RequestItem item, boolean approve) {
         String action = approve ? "duyệt" : "từ chối";
         new AlertDialog.Builder(this)
                 .setTitle(approve ? "Duyệt yêu cầu" : "Từ chối yêu cầu")
-                .setMessage("Bạn muốn " + action + " yêu cầu mượn “" + item.bookTitle + "” của " + item.customerName + "?")
+                .setMessage("Bạn muốn " + action + " yêu cầu mượn “" + safe(item.bookTitle) + "” của " + safe(item.customerName) + "?")
                 .setNegativeButton("Quay lại", (d, w) -> d.dismiss())
                 .setPositiveButton(approve ? "Duyệt" : "Từ chối", (d, w) -> {
-                    SQLiteDatabase db = dbHelper.getWritableDatabase();
-                    boolean success = false;
-                    db.beginTransaction();
-                    try {
-                        Cursor pending = db.rawQuery(
-                                "SELECT id FROM reservations WHERE id=? AND LOWER(status)='pending'",
-                                new String[]{String.valueOf(item.id)});
-                        boolean stillPending;
-                        try { stillPending = pending.moveToFirst(); } finally { pending.close(); }
-                        if (!stillPending) {
-                            Toast.makeText(this, "Yêu cầu đã được xử lý trước đó.", Toast.LENGTH_LONG).show();
-                            return;
-                        }
-
-                        int copyId = -1;
-                        if (approve) {
-                            try (Cursor copy = db.rawQuery(
-                                    "SELECT id FROM book_copies WHERE book_id=? AND LOWER(status)='available' ORDER BY id LIMIT 1",
-                                    new String[]{String.valueOf(item.bookId)})) {
-                                if (copy.moveToFirst()) copyId = copy.getInt(0);
-                            }
-                            if (copyId < 0) {
-                                Toast.makeText(this, "Không còn bản sao khả dụng để cấp mượn. Chưa duyệt yêu cầu.", Toast.LENGTH_LONG).show();
-                                return;
-                            }
-                            ContentValues loan = new ContentValues();
-                            loan.put("customer_id", item.customerId);
-                            loan.put("book_copy_id", copyId);
-                            loan.put("admin_borrow_id", adminId);
-                            String now = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault()).format(new Date());
-                            java.util.Calendar calendar = java.util.Calendar.getInstance();
-                            calendar.add(java.util.Calendar.DAY_OF_YEAR, 14);
-                            String due = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault()).format(calendar.getTime());
-                            loan.put("borrow_date", now);
-                            loan.put("due_date", due);
-                            loan.put("status", "borrowed");
-                            long loanId = db.insert("borrow_records", null, loan);
-                            if (loanId < 0) throw new IllegalStateException("Không tạo được phiếu mượn.");
-                            ContentValues copyUpdate = new ContentValues();
-                            copyUpdate.put("status", "borrowed");
-                            if (db.update("book_copies", copyUpdate, "id=? AND LOWER(status)='available'",
-                                    new String[]{String.valueOf(copyId)}) != 1) {
-                                throw new IllegalStateException("Bản sao sách vừa được cấp cho yêu cầu khác.");
-                            }
-                            db.execSQL("UPDATE books SET available_quantity=CASE WHEN available_quantity>0 THEN available_quantity-1 ELSE 0 END WHERE id=?",
-                                    new Object[]{item.bookId});
-                        }
-
-                        ContentValues update = new ContentValues();
-                        update.put("status", approve ? "approved" : "rejected");
-                        int changed = db.update("reservations", update,
-                                "id=? AND LOWER(status)='pending'",
-                                new String[]{String.valueOf(item.id)});
-                        if (changed != 1) throw new IllegalStateException("Không cập nhật được trạng thái yêu cầu.");
-
-                        ContentValues notification = new ContentValues();
-                        notification.put("customer_id", item.customerId);
-                        notification.putNull("admin_id");
-                        notification.put("title", approve ? "Yêu cầu mượn đã được duyệt" : "Yêu cầu mượn bị từ chối");
-                        notification.put("content", "Yêu cầu mượn sách “" + item.bookTitle + "” " +
-                                (approve ? "đã được duyệt. Hạn trả dự kiến sau 14 ngày." : "đã bị Admin từ chối."));
-                        notification.put("is_read", 0);
-                        notification.put("created_at", new SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault()).format(new Date()));
-                        if (db.insert("notifications", null, notification) < 0) throw new IllegalStateException("Không tạo được thông báo trong ứng dụng.");
-                        db.setTransactionSuccessful();
-                        success = true;
-                    } catch (Exception ex) {
-                        Toast.makeText(this, "Không xử lý được yêu cầu: " + safe(ex.getMessage()), Toast.LENGTH_LONG).show();
-                    } finally {
-                        db.endTransaction();
-                    }
-                    if (success) {
-                        Toast.makeText(this, approve ? "Đã duyệt, tạo phiếu mượn và lưu thông báo trong ứng dụng." : "Đã từ chối và tạo thông báo trong ứng dụng.", Toast.LENGTH_LONG).show();
-                        loadRequests();
-
-                    }
+                    cloud.reviewReservation(item.id, approve, adminUid)
+                            .addOnSuccessListener(unused -> Toast.makeText(this,
+                                    approve ? "Đã duyệt yêu cầu, cập nhật tồn kho và gửi thông báo trong ứng dụng."
+                                            : "Đã từ chối yêu cầu và gửi thông báo trong ứng dụng.",
+                                    Toast.LENGTH_LONG).show())
+                            .addOnFailureListener(error -> Toast.makeText(this,
+                                    "Không xử lý được yêu cầu: " + safe(error.getMessage()),
+                                    Toast.LENGTH_LONG).show());
                 }).show();
     }
 
@@ -176,39 +110,45 @@ public class AdminHomeActivity extends AppCompatActivity {
         finish();
     }
 
-    @Override protected void onDestroy() {
-        if (dbHelper != null) dbHelper.close();
-        super.onDestroy();
+    @Override protected void onStop() {
+        if (requestsListener != null) {
+            requestsListener.remove();
+            requestsListener = null;
+        }
+        super.onStop();
     }
 
     private static class RequestItem {
-        final int id, customerId, bookId;
-        final String bookTitle, customerName, email, date, status;
-
-        RequestItem(int id, int customerId, int bookId, String bookTitle, String customerName, String email, String date, String status) {
+        final String id, customerUid, bookId, bookTitle, customerName, customerEmail;
+        final long createdAt;
+        RequestItem(String id, String customerUid, String bookId, String bookTitle,
+                    String customerName, String customerEmail, long createdAt) {
             this.id = id;
-            this.customerId = customerId;
+            this.customerUid = customerUid;
             this.bookId = bookId;
             this.bookTitle = bookTitle;
             this.customerName = customerName;
-            this.email = email;
-            this.date = date;
-            this.status = status;
+            this.customerEmail = customerEmail;
+            this.createdAt = createdAt;
         }
     }
 
     private class RequestAdapter extends BaseAdapter {
         @Override public int getCount() { return requests.size(); }
         @Override public Object getItem(int position) { return requests.get(position); }
-        @Override public long getItemId(int position) { return requests.get(position).id; }
+        @Override public long getItemId(int position) { return position; }
         @Override public View getView(int position, View convertView, ViewGroup parent) {
             View row = convertView;
-            if (row == null) row = LayoutInflater.from(AdminHomeActivity.this).inflate(R.layout.row_admin_borrow_request, parent, false);
+            if (row == null) row = LayoutInflater.from(AdminHomeActivity.this)
+                    .inflate(R.layout.row_admin_borrow_request, parent, false);
             RequestItem item = requests.get(position);
-            ((TextView) row.findViewById(R.id.textAdminRequestTitle)).setText(item.bookTitle);
+            ((TextView) row.findViewById(R.id.textAdminRequestTitle)).setText(safe(item.bookTitle));
+            String date = item.createdAt > 0
+                    ? android.text.format.DateFormat.format("dd/MM/yyyy HH:mm", item.createdAt).toString()
+                    : "Chưa cập nhật";
             ((TextView) row.findViewById(R.id.textAdminRequestDetails)).setText(
-                    "Độc giả: " + safe(item.customerName) + "\nEmail: " + safe(item.email) +
-                    "\nNgày gửi: " + safe(item.date));
+                    "Độc giả: " + safe(item.customerName) + "\nEmail: " + safe(item.customerEmail)
+                            + "\nNgày gửi: " + date);
             Button approve = row.findViewById(R.id.btnApproveRequest);
             Button reject = row.findViewById(R.id.btnRejectRequest);
             approve.setOnClickListener(v -> processRequest(item, true));
@@ -216,5 +156,8 @@ public class AdminHomeActivity extends AppCompatActivity {
             return row;
         }
     }
-    private String safe(String value) { return value == null || value.trim().isEmpty() ? "Chưa cập nhật" : value; }
+
+    private String safe(String value) {
+        return value == null || value.trim().isEmpty() ? "Chưa cập nhật" : value;
+    }
 }
