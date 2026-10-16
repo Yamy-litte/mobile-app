@@ -144,6 +144,31 @@ public final class CloudLibraryRepository {
                 .addSnapshotListener(listener);
     }
 
+    public Task<Void> markNotificationRead(String notificationId) {
+        String uid = currentUid();
+        if (uid == null) throw new IllegalStateException("Bạn chưa đăng nhập.");
+        if (notificationId == null || notificationId.trim().isEmpty()) {
+            throw new IllegalArgumentException("Mã thông báo không hợp lệ.");
+        }
+        DocumentReference notificationRef =
+                firestore.collection(COLLECTION_NOTIFICATIONS).document(notificationId);
+        return firestore.runTransaction(transaction -> {
+            DocumentSnapshot notification = transaction.get(notificationRef);
+            if (!notification.exists()) {
+                throw new IllegalStateException("Không tìm thấy thông báo.");
+            }
+            if (!uid.equals(notification.getString("customerUid"))) {
+                throw new SecurityException("Bạn không có quyền cập nhật thông báo này.");
+            }
+            if (Boolean.TRUE.equals(notification.getBoolean("isRead"))) {
+                return null;
+            }
+            transaction.update(notificationRef, "isRead", true);
+            return null;
+        });
+    }
+
+
 
 
     /**
