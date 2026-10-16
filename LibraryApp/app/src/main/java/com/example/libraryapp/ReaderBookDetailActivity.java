@@ -17,6 +17,7 @@ import com.example.libraryapp.model.Category;
 import com.example.libraryapp.model.Location;
 import com.example.libraryapp.model.Customer;
 import com.example.libraryapp.model.Reservation;
+import com.example.libraryapp.service.CloudLibraryRepository;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.List;
@@ -26,6 +27,7 @@ public class ReaderBookDetailActivity extends AppCompatActivity {
     private BookDao bookDao;
     private CategoryDao categoryDao;
     private LocationDao locationDao;
+    private CloudLibraryRepository cloudRepository;
 
     @Override protected void onCreate(Bundle state) {
         super.onCreate(state);
@@ -33,6 +35,7 @@ public class ReaderBookDetailActivity extends AppCompatActivity {
         if (!auth.isLoggedIn()) { goToLogin(); return; }
         setContentView(R.layout.activity_reader_book_detail);
         ReaderTabNavigation.bind(this);
+        cloudRepository = new CloudLibraryRepository();
 
         int bookId = getIntent().getIntExtra("book_id", -1);
         bookDao = new BookDao(this);
@@ -77,34 +80,23 @@ public class ReaderBookDetailActivity extends AppCompatActivity {
             return;
         }
 
-        ReservationDao reservationDao = new ReservationDao(this);
-        List<Reservation> requests = reservationDao.getByCustomerId(customer.getId());
-        for (Reservation existing : requests) {
-            String status = existing.getStatus() == null ? "" : existing.getStatus().trim().toLowerCase(Locale.ROOT);
-            if (existing.getBookId() == book.getId() &&
-                    ("pending".equals(status) || "approved".equals(status) || "confirmed".equals(status))) {
-                reservationDao.close();
-                Toast.makeText(this, "Bạn đã có yêu cầu mượn sách này đang được xử lý.", Toast.LENGTH_LONG).show();
+        CloudLibraryRepository cloud = cloudRepository;
+        String cloudBookId = String.valueOf(book.getId());
+        cloud.getBook(cloudBookId).addOnSuccessListener(document -> {
+            if (!document.exists()) {
+                Toast.makeText(this, "Sách chưa được đồng bộ lên Firestore. Vui lòng báo Admin mở ứng dụng để đồng bộ dữ liệu.", Toast.LENGTH_LONG).show();
                 return;
             }
-        }
-
-        String now = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault()).format(new Date());
-        Reservation request = new Reservation();
-        request.setCustomerId(customer.getId());
-        request.setBookId(book.getId());
-        request.setBookCopyId(0);
-        request.setReservationDate(now);
-        request.setStatus("pending");
-        request.setExpirationDate(null);
-        long requestId = reservationDao.insert(request);
-        reservationDao.close();
-
-        if (requestId > 0) {
-            Toast.makeText(this, "Đã gửi yêu cầu mượn. Vui lòng chờ Admin xác nhận.", Toast.LENGTH_LONG).show();
-        } else {
-            Toast.makeText(this, "Chưa gửi được yêu cầu. Vui lòng thử lại.", Toast.LENGTH_LONG).show();
-        }
+            cloud.submitReservation(cloudBookId, book.getTitle())
+                    .addOnSuccessListener(reference -> Toast.makeText(this,
+                            "Đã gửi yêu cầu mượn lên hệ thống chung. Vui lòng chờ Admin xác nhận.",
+                            Toast.LENGTH_LONG).show())
+                    .addOnFailureListener(error -> Toast.makeText(this,
+                            "Không gửi được yêu cầu lên Firestore: " + safe(error.getMessage(), "Lỗi kết nối"),
+                            Toast.LENGTH_LONG).show());
+        }).addOnFailureListener(error -> Toast.makeText(this,
+                "Không thể kiểm tra dữ liệu chung: " + safe(error.getMessage(), "Lỗi kết nối"),
+                Toast.LENGTH_LONG).show());
     }
 
     private void setText(int id, String value) { ((TextView)findViewById(id)).setText(value); }
