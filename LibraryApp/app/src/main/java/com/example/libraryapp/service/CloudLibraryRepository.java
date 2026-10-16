@@ -90,7 +90,6 @@ public final class CloudLibraryRepository {
             com.google.firebase.firestore.EventListener<com.google.firebase.firestore.QuerySnapshot> listener) {
         return firestore.collection(COLLECTION_BOOKS)
                 .whereEqualTo("active", true)
-                .orderBy("title", Query.Direction.ASCENDING)
                 .addSnapshotListener(listener);
     }
 
