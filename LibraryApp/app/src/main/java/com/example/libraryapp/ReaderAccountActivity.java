@@ -21,6 +21,7 @@ import com.example.libraryapp.model.Customer;
 import com.example.libraryapp.model.LibraryCard;
 import com.example.libraryapp.service.CloudLibraryRepository;
 import com.google.zxing.BarcodeFormat;
+import com.google.zxing.EncodeHintType;
 import com.google.zxing.MultiFormatWriter;
 import com.google.zxing.WriterException;
 import com.google.zxing.common.BitMatrix;
@@ -133,20 +134,20 @@ public class ReaderAccountActivity extends AppCompatActivity {
                 cardDao.update(savedCard);
             }
 
-            android.view.View card = LayoutInflater.from(this).inflate(R.layout.dialog_digital_library_card, null, false);
+            // Always render and sync the exact persisted card number, not a separately recomputed value.\n            String barcodeValue = savedCard.getCardNumber();\n            android.view.View card = LayoutInflater.from(this).inflate(R.layout.dialog_digital_library_card, null, false);
             ((TextView) card.findViewById(R.id.digitalCardName)).setText(customer.getFullName());
             ((TextView) card.findViewById(R.id.digitalCardEmail)).setText(customer.getEmail());
-            ((TextView) card.findViewById(R.id.digitalCardNumber)).setText(cardCode);
+            ((TextView) card.findViewById(R.id.digitalCardNumber)).setText(barcodeValue);
             ((TextView) card.findViewById(R.id.digitalCardIssueDate)).setText("Ngày cấp: " + savedCard.getIssueDate());
-            new CloudLibraryRepository().upsertReaderCardNumber(uid, cardCode)
+            new CloudLibraryRepository().upsertReaderCardNumber(uid, barcodeValue)
                     .addOnFailureListener(error -> Toast.makeText(this,
                             "Thẻ đã tạo trên máy này nhưng chưa đồng bộ mã thẻ lên hệ thống chung.",
                             Toast.LENGTH_LONG).show());
 
             ImageView barcodeView = card.findViewById(R.id.digitalCardBarcode);
             try {
-                barcodeView.setImageBitmap(createBarcode(cardCode));
-                barcodeView.setContentDescription("Barcode thẻ độc giả " + cardCode);
+                barcodeView.setImageBitmap(createBarcode(barcodeValue));
+                barcodeView.setContentDescription("Barcode thẻ độc giả " + barcodeValue);
             } catch (WriterException error) {
                 Toast.makeText(this, "Không thể tạo barcode cho thẻ.", Toast.LENGTH_LONG).show();
                 return;
@@ -163,8 +164,12 @@ public class ReaderAccountActivity extends AppCompatActivity {
     }
 
     private Bitmap createBarcode(String value) throws WriterException {
+        java.util.Map<EncodeHintType, Object> hints = new java.util.EnumMap<>(EncodeHintType.class);
+        // Wider quiet zones help camera decoders detect the beginning/end of Code 128.
+        hints.put(EncodeHintType.MARGIN, 24);
+        hints.put(EncodeHintType.CHARACTER_SET, "UTF-8");
         BitMatrix matrix = new MultiFormatWriter().encode(
-                value, BarcodeFormat.CODE_128, 900, 220);
+                value, BarcodeFormat.CODE_128, 1000, 260, hints);
         Bitmap bitmap = Bitmap.createBitmap(matrix.getWidth(), matrix.getHeight(), Bitmap.Config.ARGB_8888);
         for (int x = 0; x < matrix.getWidth(); x++) {
             for (int y = 0; y < matrix.getHeight(); y++) {
