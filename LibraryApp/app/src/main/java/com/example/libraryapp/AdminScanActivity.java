@@ -28,6 +28,7 @@ import java.util.List;
 public class AdminScanActivity extends AppCompatActivity {
     private CloudLibraryRepository cloud;
     private String adminUid;
+    private String scannedReaderUid;
     private TextView statusText, readerText, emptyText;
     private Button scanButton;
     private ListView borrowList;
@@ -275,6 +276,17 @@ public class AdminScanActivity extends AppCompatActivity {
                 })
                 .addOnFailureListener(error -> statusText.setText(
                         "Không thể xác nhận trả sách: " + safe(error.getMessage())));
+    }
+
+    private String safe(String value) {
+        return value == null || value.trim().isEmpty() ? "Chưa cập nhật" : value.trim();
+    }
+
+    private void goToLogin() {
+        Intent intent = new Intent(this, MainActivity.class);
+        intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
+        startActivity(intent);
+        finish();
     }
 
     private static class BorrowItem {
