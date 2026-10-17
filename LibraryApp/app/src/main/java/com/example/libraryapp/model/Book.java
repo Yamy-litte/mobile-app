@@ -13,6 +13,7 @@ public class Book {
     private String publisher;
     private int publishYear;
     private String summary;
+    private String imageUrl;
     private int pages;
     private int totalQuantity;
     private int availableQuantity;
@@ -33,6 +34,10 @@ public class Book {
         this.totalQuantity = totalQuantity;
         this.availableQuantity = availableQuantity;
     }
+
+    public String getImageUrl() { return imageUrl; }
+
+    public void setImageUrl(String imageUrl) { this.imageUrl = imageUrl; }
 
     public int getId() {
         return id;
