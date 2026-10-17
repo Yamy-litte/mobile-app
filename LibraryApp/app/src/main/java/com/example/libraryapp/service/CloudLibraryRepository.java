@@ -471,10 +471,35 @@ public final class CloudLibraryRepository {
     /** Finds a Reader profile using the stable barcode printed on the digital library card. */
     public Task<com.google.firebase.firestore.QuerySnapshot> findReaderByCardNumber(String cardNumber) {
         if (isBlank(cardNumber)) throw new IllegalArgumentException("Mã thẻ không hợp lệ.");
+        String normalized = cardNumber.trim();
+        // First use the canonical digital-card field. If an older profile stored the
+        // same card value under a legacy field, try those fields without guessing a UID.
         return firestore.collection(COLLECTION_CUSTOMERS)
-                .whereEqualTo("libraryCardNumber", cardNumber.trim())
+                .whereEqualTo("libraryCardNumber", normalized)
                 .limit(2)
-                .get();
+                .get()
+                .continueWithTask(task -> {
+                    if (!task.isSuccessful()) {
+                        Exception error = task.getException();
+                        throw error == null ? new IllegalStateException("Không tra cứu được mã thẻ.") : error;
+                    }
+                    if (!task.getResult().isEmpty()) return com.google.android.gms.tasks.Tasks.forResult(task.getResult());
+                    return firestore.collection(COLLECTION_CUSTOMERS)
+                            .whereEqualTo("cardNumber", normalized)
+                            .limit(2)
+                            .get()
+                            .continueWithTask(legacyTask -> {
+                                if (!legacyTask.isSuccessful()) {
+                                    Exception error = legacyTask.getException();
+                                    throw error == null ? new IllegalStateException("Không tra cứu được mã thẻ.") : error;
+                                }
+                                if (!legacyTask.getResult().isEmpty()) return com.google.android.gms.tasks.Tasks.forResult(legacyTask.getResult());
+                                return firestore.collection(COLLECTION_CUSTOMERS)
+                                        .whereEqualTo("libraryCardNo", normalized)
+                                        .limit(2)
+                                        .get();
+                            });
+                });
     }
 
     /** Loads the scanned Reader's borrowing history without requiring a composite index. */
