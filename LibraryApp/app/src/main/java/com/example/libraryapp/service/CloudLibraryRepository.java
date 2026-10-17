@@ -49,6 +49,18 @@ public final class CloudLibraryRepository {
                 .set(profile, SetOptions.merge());
     }
 
+    /** Stores the stable digital library-card number in the shared reader profile for Admin lookup. */
+    public Task<Void> upsertReaderCardNumber(String uid, String cardNumber) {
+        if (isBlank(uid) || isBlank(cardNumber)) {
+            throw new IllegalArgumentException("Mã thẻ độc giả không hợp lệ.");
+        }
+        Map<String, Object> update = new HashMap<>();
+        update.put("libraryCardNumber", cardNumber);
+        update.put("updatedAt", System.currentTimeMillis());
+        return firestore.collection(COLLECTION_CUSTOMERS).document(uid)
+                .set(update, SetOptions.merge());
+    }
+
     public Task<DocumentReference> submitReservation(String bookCloudId, String bookTitle) {
         return submitReservation(bookCloudId, bookTitle, false);
     }
