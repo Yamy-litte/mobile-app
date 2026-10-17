@@ -8,6 +8,7 @@ import android.view.View;
 import android.widget.EditText;
 import android.widget.LinearLayout;
 import android.widget.ListView;
+import android.widget.HorizontalScrollView;
 import android.widget.ScrollView;
 import android.widget.TextView;
 import android.widget.Toast;
@@ -16,9 +17,11 @@ import androidx.appcompat.app.AppCompatActivity;
 import com.example.libraryapp.auth.FirebaseAuthManager;
 import com.example.libraryapp.dao.AdminDao;
 import com.example.libraryapp.dao.BookDao;
+import com.example.libraryapp.dao.CategoryDao;
 import com.example.libraryapp.database.SampleDataSeeder;
 import com.example.libraryapp.model.Admin;
 import com.example.libraryapp.model.Book;
+import com.example.libraryapp.model.Category;
 import com.example.libraryapp.service.CloudLibraryRepository;
 import java.util.ArrayList;
 import java.util.List;
@@ -32,6 +35,9 @@ public class AdminBookInventoryActivity extends AppCompatActivity {
     private TextView count, empty;
     private BookDao bookDao;
     private CloudLibraryRepository cloud;
+    private final List<Category> categories = new ArrayList<>();
+    private int selectedCategoryId = -1;
+    private LinearLayout categoryFilterContainer;
 
     @Override protected void onCreate(Bundle state) {
         super.onCreate(state);
@@ -46,6 +52,7 @@ public class AdminBookInventoryActivity extends AppCompatActivity {
         search = findViewById(R.id.editAdminBookSearch);
         count = findViewById(R.id.textAdminBookCount);
         empty = findViewById(R.id.textAdminBooksEmpty);
+        categoryFilterContainer = findViewById(R.id.categoryFilterContainer);
         ListView list = findViewById(R.id.listAdminBooks);
         adapter = new AdminBookInventoryAdapter(this, new AdminBookInventoryAdapter.Actions() {
             @Override public void onEdit(Book book) { showBookDialog(book); }
@@ -64,6 +71,7 @@ public class AdminBookInventoryActivity extends AppCompatActivity {
         bookDao = new BookDao(this);
         cloud = new CloudLibraryRepository();
         SampleDataSeeder.seed(this);
+        loadCategories();
         reloadBooks();
         findViewById(R.id.btnAddBook).setOnClickListener(v -> showBookDialog(null));
         AdminTabNavigation.bind(this);
@@ -99,15 +107,57 @@ public class AdminBookInventoryActivity extends AppCompatActivity {
         filterBooks();
     }
 
+    private void loadCategories() {
+        CategoryDao categoryDao = new CategoryDao(this);
+        categories.clear();
+        categories.addAll(categoryDao.getAll());
+        categoryDao.close();
+        categoryFilterContainer.removeAllViews();
+        addCategoryChip("Tất cả", -1, true);
+        for (Category category : categories) {
+            addCategoryChip(category.getCategoryName(), category.getId(), false);
+        }
+    }
+
+    private void addCategoryChip(String label, int categoryId, boolean selected) {
+        TextView chip = new TextView(this);
+        chip.setText(label);
+        chip.setTextSize(13);
+        chip.setGravity(android.view.Gravity.CENTER);
+        chip.setPadding(dp(18), 0, dp(18), 0);
+        chip.setMinHeight(dp(38));
+        chip.setBackgroundResource(selected ? R.drawable.bg_filter_selected : R.drawable.bg_filter_chip);
+        chip.setTextColor(selected ? android.graphics.Color.WHITE : getColor(R.color.mylibrary_ink));
+        LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(-2, dp(38));
+        if (categoryFilterContainer.getChildCount() > 0) params.leftMargin = dp(8);
+        categoryFilterContainer.addView(chip, params);
+        chip.setTag(categoryId);
+        chip.setOnClickListener(v -> {
+            selectedCategoryId = categoryId;
+            for (int i = 0; i < categoryFilterContainer.getChildCount(); i++) {
+                View item = categoryFilterContainer.getChildAt(i);
+                boolean isSelected = ((Integer) item.getTag()) == selectedCategoryId;
+                item.setBackgroundResource(isSelected ? R.drawable.bg_filter_selected : R.drawable.bg_filter_chip);
+                ((TextView) item).setTextColor(isSelected ? android.graphics.Color.WHITE : getColor(R.color.mylibrary_ink));
+            }
+            filterBooks();
+        });
+    }
+
+    private int dp(int value) {
+        return (int) (value * getResources().getDisplayMetrics().density + 0.5f);
+    }
+
     private void filterBooks() {
         String query = search.getText().toString().trim().toLowerCase(Locale.ROOT);
         shownBooks.clear();
         for (Book book : allBooks) {
             if (book.getTitle() == null) continue;
-            if (query.isEmpty() || book.getTitle().toLowerCase(Locale.ROOT).contains(query)
-                    || (book.getAuthor() != null && book.getAuthor().toLowerCase(Locale.ROOT).contains(query))) {
-                shownBooks.add(book);
-            }
+            boolean matchesText = query.isEmpty()
+                    || book.getTitle().toLowerCase(Locale.ROOT).contains(query)
+                    || (book.getAuthor() != null && book.getAuthor().toLowerCase(Locale.ROOT).contains(query));
+            boolean matchesCategory = selectedCategoryId < 0 || book.getCategoryId() == selectedCategoryId;
+            if (matchesText && matchesCategory) shownBooks.add(book);
         }
         adapter.replace(shownBooks);
         count.setText(shownBooks.size() + " sách");
@@ -122,18 +172,31 @@ public class AdminBookInventoryActivity extends AppCompatActivity {
         int pad = (int) (16 * getResources().getDisplayMetrics().density);
         form.setPadding(pad, pad / 2, pad, pad);
         scroll.addView(form);
-        EditText title = field(form, "Tên sách *", editing ? existing.getTitle() : "");
-        EditText author = field(form, "Tác giả *", editing ? existing.getAuthor() : "");
-        EditText publisher = field(form, "Nhà xuất bản", editing ? existing.getPublisher() : "");
-        EditText year = field(form, "Năm xuất bản", editing && existing.getPublishYear() > 0 ? String.valueOf(existing.getPublishYear()) : "");
-        EditText pages = field(form, "Số trang", editing && existing.getPages() > 0 ? String.valueOf(existing.getPages()) : "");
-        EditText category = field(form, "ID danh mục (mặc định 1)", editing ? String.valueOf(existing.getCategoryId()) : "1");
-        EditText location = field(form, "ID vị trí kệ (mặc định 1)", editing ? String.valueOf(existing.getLocationId()) : "1");
-        EditText total = field(form, "Tổng số bản *", editing ? String.valueOf(existing.getTotalQuantity()) : "1");
-        EditText available = field(form, "Số bản còn lại *", editing ? String.valueOf(existing.getAvailableQuantity()) : "1");
-        EditText image = field(form, "URL ảnh bìa (http/https)", editing ? existing.getImageUrl() : "");
-        EditText summary = field(form, "Giới thiệu sách", editing ? existing.getSummary() : "");
-        summary.setMinLines(2);
+        TextView requiredNote = new TextView(this);
+        requiredNote.setText("Các mục có dấu * là bắt buộc. Điền thông tin sách và số lượng trong kho.");
+        requiredNote.setTextSize(13);
+        requiredNote.setTextColor(getColor(R.color.mylibrary_muted));
+        form.addView(requiredNote);
+        EditText title = field(form, "Tên sách *", "Ví dụ: Đắc nhân tâm", editing ? existing.getTitle() : "");
+        EditText author = field(form, "Tác giả *", "Nhập họ tên tác giả", editing ? existing.getAuthor() : "");
+        EditText publisher = field(form, "Nhà xuất bản", "Ví dụ: NXB Trẻ", editing ? existing.getPublisher() : "");
+        EditText year = field(form, "Năm xuất bản", "Ví dụ: 2024", editing && existing.getPublishYear() > 0 ? String.valueOf(existing.getPublishYear()) : "");
+        year.setInputType(android.text.InputType.TYPE_CLASS_NUMBER);
+        EditText pages = field(form, "Số trang", "Ví dụ: 320", editing && existing.getPages() > 0 ? String.valueOf(existing.getPages()) : "");
+        pages.setInputType(android.text.InputType.TYPE_CLASS_NUMBER);
+        EditText category = field(form, "ID danh mục *", "Nhập ID danh mục từ dữ liệu hiện có", editing ? String.valueOf(existing.getCategoryId()) : (categories.isEmpty() ? "" : String.valueOf(categories.get(0).getId())));
+        category.setInputType(android.text.InputType.TYPE_CLASS_NUMBER);
+        EditText location = field(form, "ID vị trí kệ *", "Nhập ID vị trí kệ từ dữ liệu hiện có", editing ? String.valueOf(existing.getLocationId()) : "1");
+        location.setInputType(android.text.InputType.TYPE_CLASS_NUMBER);
+        EditText total = field(form, "Tổng số bản *", "Ví dụ: 5", editing ? String.valueOf(existing.getTotalQuantity()) : "1");
+        total.setInputType(android.text.InputType.TYPE_CLASS_NUMBER);
+        EditText available = field(form, "Số bản còn lại *", "Không lớn hơn tổng số bản", editing ? String.valueOf(existing.getAvailableQuantity()) : "1");
+        available.setInputType(android.text.InputType.TYPE_CLASS_NUMBER);
+        EditText image = field(form, "URL ảnh bìa", "Dán link ảnh công khai bắt đầu bằng https://", editing ? existing.getImageUrl() : "");
+        image.setInputType(android.text.InputType.TYPE_TEXT_VARIATION_URI);
+        EditText summary = field(form, "Giới thiệu sách", "Tóm tắt nội dung cuốn sách", editing ? existing.getSummary() : "");
+        summary.setSingleLine(false);
+        summary.setMinLines(3);
         summary.setGravity(android.view.Gravity.TOP);
         new AlertDialog.Builder(this)
                 .setTitle(editing ? "Sửa thông tin sách" : "Thêm sách mới")
@@ -145,7 +208,7 @@ public class AdminBookInventoryActivity extends AppCompatActivity {
                     String imageUrl = image.getText().toString().trim();
                     int totalValue = number(total, -1);
                     int availableValue = number(available, -1);
-                    if (bookTitle.isEmpty() || bookAuthor.isEmpty() || totalValue < 0
+                    if (bookTitle.isEmpty() || bookAuthor.isEmpty() || number(category, -1) <= 0 || number(location, -1) <= 0 || totalValue < 0
                             || availableValue < 0 || availableValue > totalValue
                             || (!imageUrl.isEmpty() && !(imageUrl.startsWith("https://") || imageUrl.startsWith("http://")))) {
                         Toast.makeText(this, "Kiểm tra tên, tác giả, số lượng và URL ảnh (phải bắt đầu bằng http:// hoặc https://).", Toast.LENGTH_LONG).show();
@@ -168,11 +231,19 @@ public class AdminBookInventoryActivity extends AppCompatActivity {
                 }).show();
     }
 
-    private EditText field(LinearLayout parent, String hint, String value) {
+    private EditText field(LinearLayout parent, String label, String hint, String value) {
+        TextView labelView = new TextView(this);
+        labelView.setText(label);
+        labelView.setTextSize(13);
+        labelView.setTextColor(getColor(R.color.mylibrary_ink));
+        labelView.setTypeface(null, android.graphics.Typeface.BOLD);
+        LinearLayout.LayoutParams labelParams = new LinearLayout.LayoutParams(-1, -2);
+        labelParams.topMargin = dp(10);
+        parent.addView(labelView, labelParams);
         EditText input = new EditText(this);
         input.setHint(hint);
         input.setText(value == null ? "" : value);
-        input.setSingleLine(false);
+        input.setSingleLine(label.startsWith("Giới thiệu"));
         input.setTextSize(15);
         parent.addView(input, new LinearLayout.LayoutParams(-1, -2));
         return input;
