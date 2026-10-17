@@ -10,6 +10,8 @@ import android.widget.LinearLayout;
 import android.widget.ListView;
 import android.widget.HorizontalScrollView;
 import android.widget.ScrollView;
+import android.widget.Spinner;
+import android.widget.ArrayAdapter;
 import android.widget.TextView;
 import android.widget.Toast;
 import androidx.appcompat.app.AlertDialog;
@@ -18,10 +20,12 @@ import com.example.libraryapp.auth.FirebaseAuthManager;
 import com.example.libraryapp.dao.AdminDao;
 import com.example.libraryapp.dao.BookDao;
 import com.example.libraryapp.dao.CategoryDao;
+import com.example.libraryapp.dao.LocationDao;
 import com.example.libraryapp.database.SampleDataSeeder;
 import com.example.libraryapp.model.Admin;
 import com.example.libraryapp.model.Book;
 import com.example.libraryapp.model.Category;
+import com.example.libraryapp.model.Location;
 import com.example.libraryapp.service.CloudLibraryRepository;
 import java.util.ArrayList;
 import java.util.List;
@@ -36,6 +40,7 @@ public class AdminBookInventoryActivity extends AppCompatActivity {
     private BookDao bookDao;
     private CloudLibraryRepository cloud;
     private final List<Category> categories = new ArrayList<>();
+    private final List<Location> locations = new ArrayList<>();
     private int selectedCategoryId = -1;
     private LinearLayout categoryFilterContainer;
 
@@ -112,6 +117,10 @@ public class AdminBookInventoryActivity extends AppCompatActivity {
         categories.clear();
         categories.addAll(categoryDao.getAll());
         categoryDao.close();
+        LocationDao locationDao = new LocationDao(this);
+        locations.clear();
+        locations.addAll(locationDao.getAll());
+        locationDao.close();
         categoryFilterContainer.removeAllViews();
         addCategoryChip("Tất cả", -1, true);
         for (Category category : categories) {
@@ -184,10 +193,10 @@ public class AdminBookInventoryActivity extends AppCompatActivity {
         year.setInputType(android.text.InputType.TYPE_CLASS_NUMBER);
         EditText pages = field(form, "Số trang", "Ví dụ: 320", editing && existing.getPages() > 0 ? String.valueOf(existing.getPages()) : "");
         pages.setInputType(android.text.InputType.TYPE_CLASS_NUMBER);
-        EditText category = field(form, "ID danh mục *", "Nhập ID danh mục từ dữ liệu hiện có", editing ? String.valueOf(existing.getCategoryId()) : (categories.isEmpty() ? "" : String.valueOf(categories.get(0).getId())));
-        category.setInputType(android.text.InputType.TYPE_CLASS_NUMBER);
-        EditText location = field(form, "ID vị trí kệ *", "Nhập ID vị trí kệ từ dữ liệu hiện có", editing ? String.valueOf(existing.getLocationId()) : "1");
-        location.setInputType(android.text.InputType.TYPE_CLASS_NUMBER);
+        Spinner category = selectionField(form, "Danh mục sách *", categoryOptions(),
+                findCategoryPosition(editing ? existing.getCategoryId() : (categories.isEmpty() ? -1 : categories.get(0).getId())));
+        Spinner location = selectionField(form, "Vị trí kệ *", locationOptions(),
+                findLocationPosition(editing ? existing.getLocationId() : (locations.isEmpty() ? -1 : locations.get(0).getId())));
         EditText total = field(form, "Tổng số bản *", "Ví dụ: 5", editing ? String.valueOf(existing.getTotalQuantity()) : "1");
         total.setInputType(android.text.InputType.TYPE_CLASS_NUMBER);
         EditText available = field(form, "Số bản còn lại *", "Không lớn hơn tổng số bản", editing ? String.valueOf(existing.getAvailableQuantity()) : "1");
@@ -208,7 +217,7 @@ public class AdminBookInventoryActivity extends AppCompatActivity {
                     String imageUrl = image.getText().toString().trim();
                     int totalValue = number(total, -1);
                     int availableValue = number(available, -1);
-                    if (bookTitle.isEmpty() || bookAuthor.isEmpty() || number(category, -1) <= 0 || number(location, -1) <= 0 || totalValue < 0
+                    if (bookTitle.isEmpty() || bookAuthor.isEmpty() || categories.isEmpty() || locations.isEmpty() || totalValue < 0
                             || availableValue < 0 || availableValue > totalValue
                             || (!imageUrl.isEmpty() && !(imageUrl.startsWith("https://") || imageUrl.startsWith("http://")))) {
                         Toast.makeText(this, "Kiểm tra tên, tác giả, số lượng và URL ảnh (phải bắt đầu bằng http:// hoặc https://).", Toast.LENGTH_LONG).show();
@@ -220,8 +229,8 @@ public class AdminBookInventoryActivity extends AppCompatActivity {
                     book.setPublisher(publisher.getText().toString().trim());
                     book.setPublishYear(Math.max(0, number(year, 0)));
                     book.setPages(Math.max(0, number(pages, 0)));
-                    book.setCategoryId(Math.max(1, number(category, 1)));
-                    book.setLocationId(Math.max(1, number(location, 1)));
+                    book.setCategoryId(selectedCategoryId(category));
+                    book.setLocationId(selectedLocationId(location));
                     book.setTotalQuantity(totalValue);
                     book.setAvailableQuantity(availableValue);
                     book.setImageUrl(imageUrl);
@@ -229,6 +238,46 @@ public class AdminBookInventoryActivity extends AppCompatActivity {
                     if (editing) bookDao.update(book); else bookDao.insert(book);
                     syncAndReload();
                 }).show();
+    }
+
+    private List<String> categoryOptions() {
+        List<String> options = new ArrayList<>();
+        for (Category item : categories) options.add(item.getCategoryName());
+        return options;
+    }
+    private List<String> locationOptions() {
+        List<String> options = new ArrayList<>();
+        for (Location item : locations) options.add("Tòa nhà " + safe(item.getBuilding()) + " · Tầng " + safe(item.getFloor()) + " · Kệ " + safe(item.getShelfNumber()));
+        return options;
+    }
+    private Spinner selectionField(LinearLayout parent, String label, List<String> options, int selectedPosition) {
+        TextView labelView = new TextView(this);
+        labelView.setText(label); labelView.setTextSize(13);
+        labelView.setTextColor(getColor(R.color.mylibrary_ink));
+        labelView.setTypeface(null, android.graphics.Typeface.BOLD);
+        LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(-1, -2); lp.topMargin = dp(12);
+        parent.addView(labelView, lp);
+        Spinner spinner = new Spinner(this);
+        ArrayAdapter<String> a = new ArrayAdapter<>(this, android.R.layout.simple_spinner_item, options);
+        a.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
+        spinner.setAdapter(a);
+        if (!options.isEmpty()) spinner.setSelection(Math.max(0, Math.min(selectedPosition, options.size()-1)));
+        parent.addView(spinner, new LinearLayout.LayoutParams(-1, dp(48)));
+        return spinner;
+    }
+    private int findCategoryPosition(int id) {
+        for (int i=0;i<categories.size();i++) if(categories.get(i).getId()==id) return i;
+        return 0;
+    }
+    private int findLocationPosition(int id) {
+        for (int i=0;i<locations.size();i++) if(locations.get(i).getId()==id) return i;
+        return 0;
+    }
+    private int selectedCategoryId(Spinner spinner) {
+        int p=spinner.getSelectedItemPosition(); return p>=0 && p<categories.size()?categories.get(p).getId():-1;
+    }
+    private int selectedLocationId(Spinner spinner) {
+        int p=spinner.getSelectedItemPosition(); return p>=0 && p<locations.size()?locations.get(p).getId():-1;
     }
 
     private EditText field(LinearLayout parent, String label, String hint, String value) {
