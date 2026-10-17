@@ -574,6 +574,7 @@ public final class CloudLibraryRepository {
     public ListenerRegistration listenActiveBorrowRecords(
             com.google.firebase.firestore.EventListener<com.google.firebase.firestore.QuerySnapshot> listener) {
         return firestore.collection(COLLECTION_BORROW_RECORDS)
+                .whereIn("status", java.util.Arrays.asList("borrowed", "awaiting_pickup"))
                 .addSnapshotListener(listener);
     }
 
