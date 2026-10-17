@@ -111,16 +111,17 @@ public class ReaderAccountActivity extends AppCompatActivity {
             return;
         }
 
-        // A Firebase UID is stable across devices; a SQLite row ID is not.
-        String cardCode = "LIB-" + uid.substring(0, Math.min(10, uid.length())).toUpperCase(Locale.ROOT);
         LibraryCardDao cardDao = new LibraryCardDao(this);
         try {
             LibraryCard savedCard = cardDao.getByCustomerId(customer.getId());
             String issueDate = new SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(new Date());
             if (savedCard == null) {
+                // Create a stable code only once. SQLite row IDs differ between devices,
+                // so the Firebase UID is the source for a newly issued card number.
+                String newCardCode = "LIB-" + uid.substring(0, Math.min(10, uid.length())).toUpperCase(Locale.ROOT);
                 savedCard = new LibraryCard();
                 savedCard.setCustomerId(customer.getId());
-                savedCard.setCardNumber(cardCode);
+                savedCard.setCardNumber(newCardCode);
                 savedCard.setStatus("active");
                 savedCard.setIssueDate(issueDate);
                 long insertedId = cardDao.insert(savedCard);
@@ -128,14 +129,21 @@ public class ReaderAccountActivity extends AppCompatActivity {
                     Toast.makeText(this, "Không thể tạo thẻ thư viện. Hãy thử lại.", Toast.LENGTH_LONG).show();
                     return;
                 }
-            } else if (!cardCode.equals(savedCard.getCardNumber())) {
-                savedCard.setCardNumber(cardCode);
-                savedCard.setStatus("active");
-                cardDao.update(savedCard);
+                // Re-read so the card object reflects the persisted record.
+                savedCard = cardDao.getByCustomerId(customer.getId());
+                if (savedCard == null) {
+                    Toast.makeText(this, "Không thể đọc lại thẻ vừa tạo. Hãy thử lại.", Toast.LENGTH_LONG).show();
+                    return;
+                }
             }
 
-            // Always render and sync the exact persisted card number, not a separately recomputed value.
-            String barcodeValue = savedCard.getCardNumber();
+            // Preserve existing card numbers, including older numeric cards, so printed
+            // barcodes and Admin lookup remain identical instead of silently changing codes.
+            String barcodeValue = savedCard.getCardNumber() == null ? "" : savedCard.getCardNumber().trim();
+            if (barcodeValue.isEmpty()) {
+                Toast.makeText(this, "Thẻ chưa có mã hợp lệ. Hãy tạo lại thẻ thư viện.", Toast.LENGTH_LONG).show();
+                return;
+            }
             android.view.View card = LayoutInflater.from(this).inflate(R.layout.dialog_digital_library_card, null, false);
             ((TextView) card.findViewById(R.id.digitalCardName)).setText(customer.getFullName());
             ((TextView) card.findViewById(R.id.digitalCardEmail)).setText(customer.getEmail());
