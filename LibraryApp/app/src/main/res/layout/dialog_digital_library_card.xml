@@ -53,7 +53,7 @@
     <ImageView
         android:id="@+id/digitalCardBarcode"
         android:layout_width="match_parent"
-        android:layout_height="100dp"
+        android:layout_height="140dp"
         android:layout_marginTop="12dp"
         android:adjustViewBounds="true"
         android:contentDescription="Barcode thẻ thư viện"
