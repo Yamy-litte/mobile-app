@@ -140,6 +140,9 @@ public class ReaderHomeActivity extends AppCompatActivity {
                     if (title.equals(localBook.getTitle()) && author.equals(localBook.getAuthor())) {
                         localBook.setTotalQuantity(total.intValue());
                         localBook.setAvailableQuantity(available.intValue());
+                        String imageUrl = doc.getString("imageUrl");
+                        if (imageUrl != null) localBook.setImageUrl(imageUrl);
+                        bookDao.update(localBook);
                         break;
                     }
                 }
