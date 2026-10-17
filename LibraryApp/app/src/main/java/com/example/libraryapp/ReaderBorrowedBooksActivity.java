@@ -11,6 +11,7 @@ import android.view.ViewGroup;
 import android.widget.BaseAdapter;
 import android.widget.Button;
 import android.widget.ListView;
+import android.widget.ProgressBar;
 import android.widget.TextView;
 import android.widget.Toast;
 import androidx.appcompat.app.AlertDialog;
@@ -117,11 +118,21 @@ public class ReaderBorrowedBooksActivity extends AppCompatActivity {
                     String status = doc.getString("status");
                     String statusText = "returned".equalsIgnoreCase(status) ? "Đã trả"
                             : ("overdue".equalsIgnoreCase(status) ? "Quá hạn" : "Đang mượn");
+                    Long borrowedAt = doc.getLong("borrowedAt");
+                    Long dueAt = doc.getLong("dueAt");
                     String details = "Trạng thái phiếu mượn: " + statusText
-                            + "\nNgày mượn: " + formatTime(doc.getLong("borrowedAt"))
-                            + "\nHạn trả: " + formatTime(doc.getLong("dueAt"));
+                            + "\nNgày mượn: " + formatTime(borrowedAt)
+                            + "\nHạn trả: " + formatTime(dueAt);
+                    if (dueAt != null && !"returned".equalsIgnoreCase(status)) {
+                        long daysLeft = (dueAt - System.currentTimeMillis() + 86399999L) / 86400000L;
+                        details += daysLeft < 0 ? "\nĐã quá hạn " + Math.abs(daysLeft) + " ngày"
+                                : "\nCòn " + daysLeft + " ngày đến hạn trả";
+                    }
+                    boolean canRenew = "borrowed".equalsIgnoreCase(status) && dueAt != null
+                            && dueAt >= System.currentTimeMillis();
                     cloudBorrowItems.add(new BorrowedItem(safe(doc.getString("bookTitle")),
-                            details, 0, "borrow:" + doc.getId(), false));
+                            details, 0, "borrow:" + doc.getId(), false, canRenew,
+                            borrowedAt == null ? 0L : borrowedAt, dueAt == null ? 0L : dueAt));
                 }
             }
             loadRecords();
@@ -187,6 +198,22 @@ public class ReaderBorrowedBooksActivity extends AppCompatActivity {
         adapter.notifyDataSetChanged();
         emptyText.setVisibility(items.isEmpty() ? View.VISIBLE : View.GONE);
         if (items.isEmpty()) emptyText.setText("Bạn chưa có yêu cầu mượn hoặc lịch sử mượn sách.");
+    }
+
+    private void renewRequest(BorrowedItem item) {
+        if (!item.canRenew || item.cloudKey == null || !item.cloudKey.startsWith("borrow:")) return;
+        String recordId = item.cloudKey.substring("borrow:".length());
+        new AlertDialog.Builder(this)
+                .setTitle("Gia hạn mượn sách")
+                .setMessage("Gia hạn sách “" + item.title + "” thêm 7 ngày? Mỗi phiếu mượn chỉ được gia hạn một lần trong bản demo.")
+                .setNegativeButton("Để sau", null)
+                .setPositiveButton("Gia hạn", (dialog, which) ->
+                        cloud.renewBorrowRecord(recordId)
+                                .addOnSuccessListener(unused -> Toast.makeText(this,
+                                        "Đã gia hạn thêm 7 ngày.", Toast.LENGTH_LONG).show())
+                                .addOnFailureListener(error -> Toast.makeText(this,
+                                        "Không thể gia hạn: " + safe(error.getMessage()), Toast.LENGTH_LONG).show()))
+                .show();
     }
 
     private void cancelRequest(BorrowedItem item) {
@@ -262,15 +289,25 @@ public class ReaderBorrowedBooksActivity extends AppCompatActivity {
         final int reservationId;
         final String cloudKey;
         final boolean canCancel;
+        final boolean canRenew;
+        final long borrowedAt;
+        final long dueAt;
         BorrowedItem(String title, String details, int reservationId, boolean canCancel) {
-            this(title, details, reservationId, null, canCancel);
+            this(title, details, reservationId, null, canCancel, false, 0L, 0L);
         }
         BorrowedItem(String title, String details, int reservationId, String cloudKey, boolean canCancel) {
+            this(title, details, reservationId, cloudKey, canCancel, false, 0L, 0L);
+        }
+        BorrowedItem(String title, String details, int reservationId, String cloudKey,
+                     boolean canCancel, boolean canRenew, long borrowedAt, long dueAt) {
             this.title = title;
             this.details = details;
             this.reservationId = reservationId;
             this.cloudKey = cloudKey;
             this.canCancel = canCancel;
+            this.canRenew = canRenew;
+            this.borrowedAt = borrowedAt;
+            this.dueAt = dueAt;
         }
     }
 
@@ -293,6 +330,19 @@ public class ReaderBorrowedBooksActivity extends AppCompatActivity {
             Button cancelButton = row.findViewById(R.id.btnCancelBorrowRequest);
             cancelButton.setVisibility(item.canCancel ? View.VISIBLE : View.GONE);
             cancelButton.setOnClickListener(v -> cancelRequest(item));
+            Button renewButton = row.findViewById(R.id.btnRenewBorrow);
+            renewButton.setVisibility(item.canRenew ? View.VISIBLE : View.GONE);
+            renewButton.setOnClickListener(v -> renewRequest(item));
+            ProgressBar progress = row.findViewById(R.id.progressBorrowingPeriod);
+            if (item.borrowedAt > 0L && item.dueAt > item.borrowedAt && item.canRenew) {
+                progress.setVisibility(View.VISIBLE);
+                long total = item.dueAt - item.borrowedAt;
+                int percent = (int) Math.max(0, Math.min(100,
+                        ((System.currentTimeMillis() - item.borrowedAt) * 100L) / total));
+                progress.setProgress(percent);
+            } else {
+                progress.setVisibility(View.GONE);
+            }
             return row;
         }
     }
