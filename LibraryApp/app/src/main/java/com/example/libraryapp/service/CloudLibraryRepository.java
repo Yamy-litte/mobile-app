@@ -450,6 +450,14 @@ public final class CloudLibraryRepository {
         });
     }
 
+    /** Live list of active loans for the Admin Home loan-management view. */
+    public ListenerRegistration listenActiveBorrowRecords(
+            com.google.firebase.firestore.EventListener<com.google.firebase.firestore.QuerySnapshot> listener) {
+        return firestore.collection(COLLECTION_BORROW_RECORDS)
+                .whereEqualTo("status", "borrowed")
+                .addSnapshotListener(listener);
+    }
+
     public ListenerRegistration listenMyBorrowRecords(
             com.google.firebase.firestore.EventListener<com.google.firebase.firestore.QuerySnapshot> listener) {
         String uid = currentUid();
