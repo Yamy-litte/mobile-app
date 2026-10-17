@@ -176,6 +176,21 @@ public class LoginActivity extends AppCompatActivity {
     }
 
     private void registerForPushNotifications(String uid) {
+        // Backfill profile fields for existing Firebase customers as well as new registrations.
+        CustomerDao profileDao = new CustomerDao(this);
+        try {
+            com.example.libraryapp.model.Customer profile = profileDao.getByFirebaseUid(uid);
+            if (profile != null) {
+                new CloudLibraryRepository().upsertReaderProfile(
+                        uid, profile.getEmail(), profile.getFullName(),
+                        profile.getPhoneNumber(), profile.getAvatarUrl())
+                        .addOnFailureListener(error -> android.util.Log.e(
+                                "FCM", "Unable to sync Reader profile for " + uid, error));
+            }
+        } finally {
+            profileDao.close();
+        }
+
         if (android.os.Build.VERSION.SDK_INT >= 33
                 && checkSelfPermission(android.Manifest.permission.POST_NOTIFICATIONS)
                 != android.content.pm.PackageManager.PERMISSION_GRANTED) {
