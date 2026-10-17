@@ -3,7 +3,9 @@ package com.example.libraryapp;
 import android.content.Intent;
 import android.os.Bundle;
 import android.view.View;
-import android.widget.ArrayAdapter;
+import android.widget.BaseAdapter;
+import android.view.LayoutInflater;
+import android.view.ViewGroup;
 import android.widget.ListView;
 import android.widget.TextView;
 import android.widget.Toast;
@@ -19,7 +21,10 @@ public class ReaderNotificationsActivity extends AppCompatActivity {
     private final List<String> rows = new ArrayList<>();
     private final List<String> documentIds = new ArrayList<>();
     private final List<Boolean> readStates = new ArrayList<>();
-    private ArrayAdapter<String> adapter;
+    private final List<String> titles = new ArrayList<>();
+    private final List<String> contents = new ArrayList<>();
+    private final List<String> dates = new ArrayList<>();
+    private NotificationAdapter adapter;
     private TextView emptyText;
     private CloudLibraryRepository cloud;
     private ListenerRegistration notificationsListener;
@@ -33,7 +38,7 @@ public class ReaderNotificationsActivity extends AppCompatActivity {
         ReaderTabNavigation.bind(this);
         emptyText = findViewById(R.id.textNotificationEmpty);
         ListView list = findViewById(R.id.listNotifications);
-        adapter = new ArrayAdapter<>(this, android.R.layout.simple_list_item_1, rows);
+        adapter = new NotificationAdapter();
         list.setAdapter(adapter);
         list.setOnItemClickListener((parent, view, position, id) -> {
             if (position < 0 || position >= documentIds.size() || readStates.get(position)) return;
@@ -56,6 +61,9 @@ public class ReaderNotificationsActivity extends AppCompatActivity {
             rows.clear();
             documentIds.clear();
             readStates.clear();
+            titles.clear();
+            contents.clear();
+            dates.clear();
             if (snapshot != null) {
                 for (QueryDocumentSnapshot doc : snapshot) {
                     String title = doc.getString("title");
@@ -66,13 +74,39 @@ public class ReaderNotificationsActivity extends AppCompatActivity {
                     readStates.add(Boolean.TRUE.equals(isRead));
                     String date = createdAt == null ? "" :
                             android.text.format.DateFormat.format("dd/MM/yyyy HH:mm", createdAt).toString();
-                    rows.add((Boolean.TRUE.equals(isRead) ? "✓ " : "● ")
-                            + safe(title) + "\n" + safe(content) + "\n" + date);
+                    titles.add(safe(title));
+                    contents.add(safe(content));
+                    dates.add(date);
+                    rows.add(safe(title));
                 }
             }
             adapter.notifyDataSetChanged();
             emptyText.setVisibility(rows.isEmpty() ? View.VISIBLE : View.GONE);
         });
+    }
+
+    private class NotificationAdapter extends BaseAdapter {
+        @Override public int getCount() { return titles.size(); }
+        @Override public Object getItem(int position) { return titles.get(position); }
+        @Override public long getItemId(int position) { return position; }
+        @Override public View getView(int position, View convertView, ViewGroup parent) {
+            View row = convertView == null
+                    ? LayoutInflater.from(ReaderNotificationsActivity.this)
+                        .inflate(R.layout.row_reader_notification, parent, false)
+                    : convertView;
+            TextView title = row.findViewById(R.id.textNotificationTitle);
+            TextView content = row.findViewById(R.id.textNotificationContent);
+            TextView date = row.findViewById(R.id.textNotificationDate);
+            TextView state = row.findViewById(R.id.textNotificationState);
+            title.setText(titles.get(position));
+            content.setText(contents.get(position));
+            date.setText(dates.get(position));
+            boolean read = readStates.get(position);
+            state.setText(read ? "ĐÃ ĐỌC" : "CHƯA ĐỌC");
+            state.setTextColor(getColor(read ? R.color.mylibrary_muted : R.color.mylibrary_teal));
+            row.setAlpha(read ? 0.82f : 1f);
+            return row;
+        }
     }
 
     private String safe(String value) {
