@@ -364,7 +364,7 @@ public class ReaderBorrowedBooksActivity extends AppCompatActivity {
                 row = LayoutInflater.from(ReaderBorrowedBooksActivity.this)
                         .inflate(R.layout.row_reader_borrowed_item, parent, false);
             }
-            BorrowedItem item = items.get(position);
+            BorrowedItem item = visibleItems.get(position);
             ((TextView) row.findViewById(R.id.textBorrowedItemTitle)).setText(item.title);
             ((TextView) row.findViewById(R.id.textBorrowedItemDetails)).setText(item.details);
             Button cancelButton = row.findViewById(R.id.btnCancelBorrowRequest);
