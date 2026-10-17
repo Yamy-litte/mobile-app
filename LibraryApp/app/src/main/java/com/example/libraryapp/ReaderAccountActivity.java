@@ -134,7 +134,9 @@ public class ReaderAccountActivity extends AppCompatActivity {
                 cardDao.update(savedCard);
             }
 
-            // Always render and sync the exact persisted card number, not a separately recomputed value.\n            String barcodeValue = savedCard.getCardNumber();\n            android.view.View card = LayoutInflater.from(this).inflate(R.layout.dialog_digital_library_card, null, false);
+            // Always render and sync the exact persisted card number, not a separately recomputed value.
+            String barcodeValue = savedCard.getCardNumber();
+            android.view.View card = LayoutInflater.from(this).inflate(R.layout.dialog_digital_library_card, null, false);
             ((TextView) card.findViewById(R.id.digitalCardName)).setText(customer.getFullName());
             ((TextView) card.findViewById(R.id.digitalCardEmail)).setText(customer.getEmail());
             ((TextView) card.findViewById(R.id.digitalCardNumber)).setText(barcodeValue);
