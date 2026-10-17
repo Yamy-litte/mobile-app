@@ -299,6 +299,37 @@ public final class CloudLibraryRepository {
     }
 
 
+    /** Writes an explicit Admin edit, including quantities, to the matching cloud document. */
+    public Task<Void> syncAdminBook(Book book) {
+        if (book == null || book.getId() <= 0) {
+            throw new IllegalArgumentException("Mã sách không hợp lệ.");
+        }
+        String id = String.valueOf(book.getId());
+        Map<String, Object> data = new HashMap<>();
+        data.put("localBookId", id);
+        data.put("title", book.getTitle());
+        data.put("author", book.getAuthor());
+        data.put("publisher", book.getPublisher());
+        data.put("publishYear", book.getPublishYear());
+        data.put("pages", book.getPages());
+        data.put("summary", book.getSummary());
+        data.put("imageUrl", book.getImageUrl() == null ? "" : book.getImageUrl());
+        data.put("categoryId", book.getCategoryId());
+        data.put("locationId", book.getLocationId());
+        data.put("totalQuantity", book.getTotalQuantity());
+        data.put("availableQuantity", book.getAvailableQuantity());
+        data.put("active", book.isActive());
+        data.put("updatedAt", System.currentTimeMillis());
+        return firestore.collection(COLLECTION_BOOKS).document(id)
+                .set(data, SetOptions.merge());
+    }
+
+    /** Listen to the complete shared catalogue for Admin inventory refresh. */
+    public ListenerRegistration listenAllBooks(
+            com.google.firebase.firestore.EventListener<com.google.firebase.firestore.QuerySnapshot> listener) {
+        return firestore.collection(COLLECTION_BOOKS).addSnapshotListener(listener);
+    }
+
     /**
      * Sync local SQLite books to the shared catalog without overwriting existing cloud inventory.
      * SQLite IDs remain stable document IDs so current reservations keep their references.
