@@ -23,7 +23,22 @@ public class BookDao {
 
     public long insert(Book book) {
         SQLiteDatabase db = dbHelper.getWritableDatabase();
-        return db.insert(LibraryDbHelper.TABLE_BOOKS, null, toValues(book));
+        long id = db.insert(LibraryDbHelper.TABLE_BOOKS, null, toValues(book));
+        if (id > 0) book.setId((int) id);
+        return id;
+    }
+
+    /** Insert/update a Firestore book while preserving its stable numeric ID. */
+    public long upsertCloudBook(Book book) {
+        if (book == null || book.getId() <= 0) return -1;
+        SQLiteDatabase db = dbHelper.getWritableDatabase();
+        ContentValues values = toValues(book);
+        int updated = db.update(LibraryDbHelper.TABLE_BOOKS, values, "id = ?",
+                new String[]{String.valueOf(book.getId())});
+        if (updated > 0) return book.getId();
+        values.put("id", book.getId());
+        return db.insertWithOnConflict(LibraryDbHelper.TABLE_BOOKS, null, values,
+                SQLiteDatabase.CONFLICT_IGNORE);
     }
 
     public int update(Book book) {
