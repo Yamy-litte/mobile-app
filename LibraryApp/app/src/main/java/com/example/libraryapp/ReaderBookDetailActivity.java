@@ -52,6 +52,7 @@ public class ReaderBookDetailActivity extends AppCompatActivity {
 
         Category category = categoryDao.getById(book.getCategoryId());
         Location location = locationDao.getById(book.getLocationId());
+        BookCoverLoader.load(book.getImageUrl(), findViewById(R.id.imageDetailBookCover));
         setText(R.id.textDetailCategory, category == null ? "Chưa phân loại" : category.getCategoryName());
         setText(R.id.textDetailTitle, safe(book.getTitle(), "Chưa có tên sách"));
         setText(R.id.textDetailAuthor, "Tác giả: " + safe(book.getAuthor(), "Chưa cập nhật"));
@@ -75,6 +76,12 @@ public class ReaderBookDetailActivity extends AppCompatActivity {
             if (isFinishing() || isDestroyed() || error != null || snapshot == null || snapshot.isEmpty()) return;
             com.google.firebase.firestore.DocumentSnapshot cloudBook = findMatchingCloudBook(snapshot, book.getAuthor());
             if (cloudBook == null) return;
+            String imageUrl = cloudBook.getString("imageUrl");
+            if (imageUrl != null && !imageUrl.trim().isEmpty()) {
+                book.setImageUrl(imageUrl);
+                bookDao.update(book);
+                BookCoverLoader.load(imageUrl, findViewById(R.id.imageDetailBookCover));
+            }
             Long available = cloudBook.getLong("availableQuantity");
             Long total = cloudBook.getLong("totalQuantity");
             if (available != null && total != null) {
