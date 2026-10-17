@@ -101,12 +101,12 @@
             <ImageView
                 android:id="@+id/digitalCardBarcode"
                 android:layout_width="match_parent"
-                android:layout_height="220dp"
-                android:layout_marginTop="18dp"
+                android:layout_height="300dp"
+                android:layout_marginTop="10dp"
                 android:adjustViewBounds="true"
                 android:background="@android:color/white"
                 android:contentDescription="Barcode thẻ thư viện"
-                android:padding="4dp"
+                android:padding="0dp"
                 android:scaleType="fitCenter" />
 
             <TextView
