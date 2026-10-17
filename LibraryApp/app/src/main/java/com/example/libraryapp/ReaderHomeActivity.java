@@ -70,6 +70,8 @@ public class ReaderHomeActivity extends AppCompatActivity {
             finish();
         });
         ReaderTabNavigation.bind(this);
+        findViewById(R.id.btnBorrowMultipleBooks).setOnClickListener(v ->
+                startActivity(new Intent(this, ReaderMultiBookRequestActivity.class)));
         findViewById(R.id.tabHome).setOnClickListener(v -> {
             searchInput.setText("");
             categorySpinner.setSelection(0);
