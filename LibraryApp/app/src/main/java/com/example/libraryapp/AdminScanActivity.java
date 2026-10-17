@@ -1,6 +1,7 @@
 package com.example.libraryapp;
 
 import android.content.Intent;
+import android.content.pm.ActivityInfo;
 import android.os.Bundle;
 import android.view.View;
 import android.widget.ArrayAdapter;
@@ -46,6 +47,7 @@ public class AdminScanActivity extends AppCompatActivity {
         }
         adminUid = auth.getCurrentUid();
         cloud = new CloudLibraryRepository();
+        setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_PORTRAIT);
         setContentView(R.layout.activity_admin_scan);
         AdminTabNavigation.bind(this);
         statusText = findViewById(R.id.textScanStatus);
@@ -62,11 +64,13 @@ public class AdminScanActivity extends AppCompatActivity {
 
     private void startCardScan() {
         IntentIntegrator integrator = new IntentIntegrator(this);
-        integrator.setDesiredBarcodeFormats(IntentIntegrator.CODE_128);
+        integrator.setDesiredBarcodeFormats(IntentIntegrator.ALL_CODE_TYPES);
         integrator.setPrompt("Quét barcode trên thẻ thư viện số của độc giả");
         integrator.setBeepEnabled(true);
-        integrator.setOrientationLocked(false);
+        integrator.setOrientationLocked(true);
         integrator.setBarcodeImageEnabled(false);
+        integrator.setCameraId(0);
+        integrator.setTimeout(30000L);
         integrator.initiateScan();
     }
 
