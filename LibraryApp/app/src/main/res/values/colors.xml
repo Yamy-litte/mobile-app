@@ -6,4 +6,7 @@
     <color name="mylibrary_teal">#1C6058</color>
     <color name="mylibrary_ink">#243935</color>
     <color name="mylibrary_muted">#78827F</color>
+    <color name="mylibrary_terracotta">#C35D43</color>
+    <color name="mylibrary_soft_green">#E8F4E8</color>
+    <color name="mylibrary_soft_red">#FCE9E9</color>
 </resources>
