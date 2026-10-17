@@ -38,6 +38,24 @@
             android:textSize="14sp"/>
     </LinearLayout>
 
+    <HorizontalScrollView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:scrollbars="none"
+        android:paddingStart="16dp"
+        android:paddingEnd="16dp"
+        android:paddingBottom="10dp">
+        <LinearLayout
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal">
+            <Button android:id="@+id/filterAllLoans" android:layout_width="wrap_content" android:layout_height="40dp" android:layout_marginEnd="8dp" android:text="Tất cả" android:textAllCaps="false" android:backgroundTint="@color/mylibrary_teal" android:textColor="@color/white"/>
+            <Button android:id="@+id/filterActiveLoans" android:layout_width="wrap_content" android:layout_height="40dp" android:layout_marginEnd="8dp" android:text="Đang mượn" android:textAllCaps="false" android:backgroundTint="@color/mylibrary_cream" android:textColor="@color/mylibrary_ink"/>
+            <Button android:id="@+id/filterPendingLoans" android:layout_width="wrap_content" android:layout_height="40dp" android:layout_marginEnd="8dp" android:text="Yêu cầu" android:textAllCaps="false" android:backgroundTint="@color/mylibrary_cream" android:textColor="@color/mylibrary_ink"/>
+            <Button android:id="@+id/filterHistoryLoans" android:layout_width="wrap_content" android:layout_height="40dp" android:text="Lịch sử" android:textAllCaps="false" android:backgroundTint="@color/mylibrary_cream" android:textColor="@color/mylibrary_ink"/>
+        </LinearLayout>
+    </HorizontalScrollView>
+
     <TextView
         android:id="@+id/textBorrowedEmpty"
         android:layout_width="match_parent"
