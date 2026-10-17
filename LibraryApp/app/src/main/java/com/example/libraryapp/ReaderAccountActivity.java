@@ -4,10 +4,6 @@ import android.content.Intent;
 import android.os.Bundle;
 import android.widget.Button;
 import android.widget.LinearLayout;
-import android.widget.ImageView;
-import android.graphics.Bitmap;
-import android.graphics.Color;
-import android.view.LayoutInflater;
 import android.text.InputType;
 import androidx.appcompat.app.AlertDialog;
 import android.widget.EditText;
@@ -20,11 +16,6 @@ import com.example.libraryapp.dao.LibraryCardDao;
 import com.example.libraryapp.model.Customer;
 import com.example.libraryapp.model.LibraryCard;
 import com.example.libraryapp.service.CloudLibraryRepository;
-import com.google.zxing.BarcodeFormat;
-import com.google.zxing.EncodeHintType;
-import com.google.zxing.MultiFormatWriter;
-import com.google.zxing.WriterException;
-import com.google.zxing.common.BitMatrix;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.Locale;
@@ -144,49 +135,22 @@ public class ReaderAccountActivity extends AppCompatActivity {
                 Toast.makeText(this, "Thẻ chưa có mã hợp lệ. Hãy tạo lại thẻ thư viện.", Toast.LENGTH_LONG).show();
                 return;
             }
-            android.view.View card = LayoutInflater.from(this).inflate(R.layout.dialog_digital_library_card, null, false);
-            ((TextView) card.findViewById(R.id.digitalCardName)).setText(customer.getFullName());
-            ((TextView) card.findViewById(R.id.digitalCardEmail)).setText(customer.getEmail());
-            ((TextView) card.findViewById(R.id.digitalCardNumber)).setText(barcodeValue);
-            ((TextView) card.findViewById(R.id.digitalCardIssueDate)).setText("Ngày cấp: " + savedCard.getIssueDate());
             new CloudLibraryRepository().upsertReaderCardNumber(uid, barcodeValue)
                     .addOnFailureListener(error -> Toast.makeText(this,
                             "Thẻ đã tạo trên máy này nhưng chưa đồng bộ mã thẻ lên hệ thống chung.",
                             Toast.LENGTH_LONG).show());
 
-            ImageView barcodeView = card.findViewById(R.id.digitalCardBarcode);
-            try {
-                barcodeView.setImageBitmap(createBarcode(barcodeValue));
-                barcodeView.setContentDescription("Barcode thẻ độc giả " + barcodeValue);
-            } catch (WriterException error) {
-                Toast.makeText(this, "Không thể tạo barcode cho thẻ.", Toast.LENGTH_LONG).show();
-                return;
-            }
-
-            new AlertDialog.Builder(this)
-                    .setTitle("Thẻ thư viện số")
-                    .setView(card)
-                    .setPositiveButton("Đóng", null)
-                    .show();
+            // Open the digital card as a dedicated screen so the barcode can use
+            // the available screen width instead of being squeezed inside a dialog.
+            Intent intent = new Intent(this, DigitalLibraryCardActivity.class);
+            intent.putExtra(DigitalLibraryCardActivity.EXTRA_NAME, customer.getFullName());
+            intent.putExtra(DigitalLibraryCardActivity.EXTRA_EMAIL, customer.getEmail());
+            intent.putExtra(DigitalLibraryCardActivity.EXTRA_CARD_NUMBER, barcodeValue);
+            intent.putExtra(DigitalLibraryCardActivity.EXTRA_ISSUE_DATE, savedCard.getIssueDate());
+            startActivity(intent);
         } finally {
             cardDao.close();
         }
-    }
-
-    private Bitmap createBarcode(String value) throws WriterException {
-        java.util.Map<EncodeHintType, Object> hints = new java.util.EnumMap<>(EncodeHintType.class);
-        // Wider quiet zones help camera decoders detect the beginning/end of Code 128.
-        hints.put(EncodeHintType.MARGIN, 24);
-        hints.put(EncodeHintType.CHARACTER_SET, "UTF-8");
-        BitMatrix matrix = new MultiFormatWriter().encode(
-                value, BarcodeFormat.CODE_128, 1000, 260, hints);
-        Bitmap bitmap = Bitmap.createBitmap(matrix.getWidth(), matrix.getHeight(), Bitmap.Config.ARGB_8888);
-        for (int x = 0; x < matrix.getWidth(); x++) {
-            for (int y = 0; y < matrix.getHeight(); y++) {
-                bitmap.setPixel(x, y, matrix.get(x, y) ? Color.BLACK : Color.WHITE);
-            }
-        }
-        return bitmap;
     }
 
     private void saveProfile() {
