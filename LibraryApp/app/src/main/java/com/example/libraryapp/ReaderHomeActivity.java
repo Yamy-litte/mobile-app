@@ -15,8 +15,10 @@ import android.widget.Toast;
 import androidx.appcompat.app.AppCompatActivity;
 import com.example.libraryapp.auth.FirebaseAuthManager;
 import com.example.libraryapp.dao.BookDao;
+import com.example.libraryapp.dao.CategoryDao;
 import com.example.libraryapp.database.SampleDataSeeder;
 import com.example.libraryapp.model.Book;
+import com.example.libraryapp.model.Category;
 import com.example.libraryapp.service.CloudLibraryRepository;
 import com.google.firebase.firestore.ListenerRegistration;
 import com.google.firebase.firestore.QueryDocumentSnapshot;
@@ -36,12 +38,14 @@ public class ReaderHomeActivity extends AppCompatActivity {
     private TextView countText;
     private TextView emptyText;
     private BookDao bookDao;
+    private CategoryDao categoryDao;
+    private final List<Category> availableCategories = new ArrayList<>();
+    private final List<Integer> categoryIds = new ArrayList<>();
     private CloudLibraryRepository cloud;
     private ListenerRegistration booksListener;
     private ListenerRegistration notificationsListener;
     private final Set<String> knownNotificationIds = new HashSet<>();
     private boolean notificationSnapshotInitialized = false;
-    private final String[] categories = {"Tất cả danh mục", "Văn học", "Khoa học", "Công nghệ", "Kỹ năng sống", "Lịch sử", "Thiếu nhi"};
 
     @Override protected void onCreate(Bundle state) {
         super.onCreate(state);
@@ -71,9 +75,7 @@ public class ReaderHomeActivity extends AppCompatActivity {
             categorySpinner.setSelection(0);
         });
 
-        ArrayAdapter<String> categoryAdapter = new ArrayAdapter<>(this, android.R.layout.simple_spinner_item, categories);
-        categoryAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
-        categorySpinner.setAdapter(categoryAdapter);
+        loadCategoryOptions();
         bookAdapter = new ReaderBookAdapter(this, visibleBooks);
         bookList.setAdapter(bookAdapter);
         SampleDataSeeder.seed(this);
@@ -163,6 +165,25 @@ public class ReaderHomeActivity extends AppCompatActivity {
         super.onStop();
     }
 
+    private void loadCategoryOptions() {
+        List<String> labels = new ArrayList<>();
+        categoryIds.clear();
+        availableCategories.clear();
+        labels.add("Tất cả danh mục");
+        categoryIds.add(-1);
+        categoryDao = new CategoryDao(this);
+        availableCategories.addAll(categoryDao.getAll());
+        categoryDao.close();
+        for (Category category : availableCategories) {
+            labels.add(category.getCategoryName());
+            categoryIds.add(category.getId());
+        }
+        ArrayAdapter<String> categoryAdapter = new ArrayAdapter<>(
+                this, android.R.layout.simple_spinner_item, labels);
+        categoryAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
+        categorySpinner.setAdapter(categoryAdapter);
+    }
+
     private void filterBooks() {
         if (bookAdapter == null) return;
         String query = searchInput == null ? "" : searchInput.getText().toString().trim().toLowerCase(Locale.ROOT);
@@ -172,7 +193,9 @@ public class ReaderHomeActivity extends AppCompatActivity {
             if (!book.isActive()) continue;
             boolean matchesQuery = query.isEmpty() || contains(book.getTitle(), query)
                     || contains(book.getAuthor(), query) || contains(book.getPublisher(), query);
-            boolean matchesCategory = selectedCategory == 0 || book.getCategoryId() == selectedCategory;
+            int selectedCategoryId = selectedCategory >= 0 && selectedCategory < categoryIds.size()
+                    ? categoryIds.get(selectedCategory) : -1;
+            boolean matchesCategory = selectedCategoryId < 0 || book.getCategoryId() == selectedCategoryId;
             if (matchesQuery && matchesCategory) visibleBooks.add(book);
         }
         bookAdapter.notifyDataSetChanged();
@@ -190,6 +213,7 @@ public class ReaderHomeActivity extends AppCompatActivity {
             booksListener = null;
         }
         if (bookDao != null) bookDao.close();
+        if (categoryDao != null) categoryDao.close();
         super.onDestroy();
     }
 }
