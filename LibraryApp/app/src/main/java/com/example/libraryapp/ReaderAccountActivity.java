@@ -4,6 +4,10 @@ import android.content.Intent;
 import android.os.Bundle;
 import android.widget.Button;
 import android.widget.LinearLayout;
+import android.widget.ImageView;
+import android.graphics.Bitmap;
+import android.graphics.Color;
+import android.view.LayoutInflater;
 import android.text.InputType;
 import androidx.appcompat.app.AlertDialog;
 import android.widget.EditText;
@@ -12,7 +16,13 @@ import android.widget.Toast;
 import androidx.appcompat.app.AppCompatActivity;
 import com.example.libraryapp.auth.FirebaseAuthManager;
 import com.example.libraryapp.dao.CustomerDao;
+import com.example.libraryapp.dao.LibraryCardDao;
 import com.example.libraryapp.model.Customer;
+import com.example.libraryapp.model.LibraryCard;
+import com.google.zxing.BarcodeFormat;
+import com.google.zxing.MultiFormatWriter;
+import com.google.zxing.WriterException;
+import com.google.zxing.common.BitMatrix;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.Locale;
@@ -92,37 +102,70 @@ public class ReaderAccountActivity extends AppCompatActivity {
     }
 
     private void showDigitalCard() {
-        String name = customer == null ? "" : customer.getFullName();
-        String email = customer == null ? "" : customer.getEmail();
-        String cardCode = "LIB-" + (customer == null ? "" : String.valueOf(customer.getId()));
-        LinearLayout card = new LinearLayout(this);
-        card.setOrientation(LinearLayout.VERTICAL);
-        int pad = (int) (24 * getResources().getDisplayMetrics().density);
-        card.setPadding(pad, pad, pad, pad);
-        card.setBackgroundColor(getColor(R.color.mylibrary_cream));
-        TextView brand = new TextView(this);
-        brand.setText("MyLibrary  ·  THẺ ĐỘC GIẢ");
-        brand.setTextSize(16);
-        brand.setTextColor(getColor(R.color.mylibrary_teal));
-        brand.setTypeface(null, android.graphics.Typeface.BOLD);
-        card.addView(brand);
-        TextView nameView = new TextView(this);
-        nameView.setText("\\n" + name);
-        nameView.setTextSize(22);
-        nameView.setTextColor(getColor(R.color.mylibrary_ink));
-        nameView.setTypeface(null, android.graphics.Typeface.BOLD);
-        card.addView(nameView);
-        TextView emailView = new TextView(this);
-        emailView.setText(email);
-        emailView.setTextColor(getColor(R.color.mylibrary_muted));
-        card.addView(emailView);
-        TextView codeView = new TextView(this);
-        codeView.setText("\\nMã độc giả\\n" + cardCode + "\\n\\nĐưa mã này cho thủ thư để đối chiếu tài khoản.");
-        codeView.setTextSize(15);
-        codeView.setTextColor(getColor(R.color.mylibrary_ink));
-        card.addView(codeView);
-        new AlertDialog.Builder(this).setTitle("Thẻ thư viện số").setView(card)
-                .setPositiveButton("Đóng", null).show();
+        FirebaseAuthManager auth = new FirebaseAuthManager();
+        String uid = auth.getCurrentUid();
+        if (customer == null || uid == null) {
+            Toast.makeText(this, "Không tìm thấy thông tin thẻ độc giả.", Toast.LENGTH_LONG).show();
+            return;
+        }
+
+        // A Firebase UID is stable across devices; a SQLite row ID is not.
+        String cardCode = "LIB-" + uid.substring(0, Math.min(10, uid.length())).toUpperCase(Locale.ROOT);
+        LibraryCardDao cardDao = new LibraryCardDao(this);
+        try {
+            LibraryCard savedCard = cardDao.getByCustomerId(customer.getId());
+            String issueDate = new SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(new Date());
+            if (savedCard == null) {
+                savedCard = new LibraryCard();
+                savedCard.setCustomerId(customer.getId());
+                savedCard.setCardNumber(cardCode);
+                savedCard.setStatus("active");
+                savedCard.setIssueDate(issueDate);
+                long insertedId = cardDao.insert(savedCard);
+                if (insertedId <= 0) {
+                    Toast.makeText(this, "Không thể tạo thẻ thư viện. Hãy thử lại.", Toast.LENGTH_LONG).show();
+                    return;
+                }
+            } else if (!cardCode.equals(savedCard.getCardNumber())) {
+                savedCard.setCardNumber(cardCode);
+                savedCard.setStatus("active");
+                cardDao.update(savedCard);
+            }
+
+            android.view.View card = LayoutInflater.from(this).inflate(R.layout.dialog_digital_library_card, null, false);
+            ((TextView) card.findViewById(R.id.digitalCardName)).setText(customer.getFullName());
+            ((TextView) card.findViewById(R.id.digitalCardEmail)).setText(customer.getEmail());
+            ((TextView) card.findViewById(R.id.digitalCardNumber)).setText(cardCode);
+            ((TextView) card.findViewById(R.id.digitalCardIssueDate)).setText("Ngày cấp: " + savedCard.getIssueDate());
+            ImageView barcodeView = card.findViewById(R.id.digitalCardBarcode);
+            try {
+                barcodeView.setImageBitmap(createBarcode(cardCode));
+                barcodeView.setContentDescription("Barcode thẻ độc giả " + cardCode);
+            } catch (WriterException error) {
+                Toast.makeText(this, "Không thể tạo barcode cho thẻ.", Toast.LENGTH_LONG).show();
+                return;
+            }
+
+            new AlertDialog.Builder(this)
+                    .setTitle("Thẻ thư viện số")
+                    .setView(card)
+                    .setPositiveButton("Đóng", null)
+                    .show();
+        } finally {
+            cardDao.close();
+        }
+    }
+
+    private Bitmap createBarcode(String value) throws WriterException {
+        BitMatrix matrix = new MultiFormatWriter().encode(
+                value, BarcodeFormat.CODE_128, 900, 220);
+        Bitmap bitmap = Bitmap.createBitmap(matrix.getWidth(), matrix.getHeight(), Bitmap.Config.ARGB_8888);
+        for (int x = 0; x < matrix.getWidth(); x++) {
+            for (int y = 0; y < matrix.getHeight(); y++) {
+                bitmap.setPixel(x, y, matrix.get(x, y) ? Color.BLACK : Color.WHITE);
+            }
+        }
+        return bitmap;
     }
 
     private void saveProfile() {
