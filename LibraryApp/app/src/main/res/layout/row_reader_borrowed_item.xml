@@ -43,6 +43,17 @@
         android:orientation="horizontal">
 
         <Button
+            android:id="@+id/btnRenewBorrow"
+            android:layout_width="wrap_content"
+            android:layout_height="42dp"
+            android:layout_marginEnd="8dp"
+            android:backgroundTint="@color/mylibrary_teal"
+            android:text="Gia hạn mượn"
+            android:textAllCaps="false"
+            android:textColor="@color/white"
+            android:visibility="gone" />
+
+        <Button
             android:id="@+id/btnCancelBorrowRequest"
             android:layout_width="wrap_content"
             android:layout_height="42dp"
