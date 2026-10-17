@@ -112,6 +112,7 @@ public class BookDao {
         values.put("publish_year", book.getPublishYear());
         values.put("summary", book.getSummary());
         values.put("image_url", book.getImageUrl());
+        values.put("active", book.isActive() ? 1 : 0);
         values.put("pages", book.getPages());
         values.put("total_quantity", book.getTotalQuantity());
         values.put("available_quantity", book.getAvailableQuantity());
@@ -134,6 +135,8 @@ public class BookDao {
         );
         int imageColumn = cursor.getColumnIndex("image_url");
         if (imageColumn >= 0) book.setImageUrl(cursor.getString(imageColumn));
+        int activeColumn = cursor.getColumnIndex("active");
+        if (activeColumn >= 0) book.setActive(cursor.getInt(activeColumn) == 1);
         return book;
     }
 
