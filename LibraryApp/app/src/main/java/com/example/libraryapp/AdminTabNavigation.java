@@ -4,7 +4,7 @@ import android.app.Activity;
 import android.content.Intent;
 import android.view.View;
 
-/** Navigation for the five Admin tabs shown in the project Figma. */
+/** Navigation for Admin tabs. Loan management lives on Home, not in a separate bottom tab. */
 public final class AdminTabNavigation {
     private AdminTabNavigation() {}
 
@@ -12,8 +12,8 @@ public final class AdminTabNavigation {
         bindDestination(activity, R.id.adminTabHome, AdminHomeActivity.class);
         bindDestination(activity, R.id.adminTabBooks, AdminBookInventoryActivity.class);
         bindDestination(activity, R.id.adminTabScan, AdminScanActivity.class);
-        // The Home screen currently contains the live request queue and borrow-request actions.
-        bindDestination(activity, R.id.adminTabLoans, AdminHomeActivity.class);
+        View loansTab = activity.findViewById(R.id.adminTabLoans);
+        if (loansTab != null) loansTab.setVisibility(View.GONE);
         bindDestination(activity, R.id.adminTabAccount, AdminAccountActivity.class);
     }
 
@@ -22,8 +22,7 @@ public final class AdminTabNavigation {
         if (tab == null) return;
         tab.setOnClickListener(v -> {
             if (activity.getClass().equals(destination)) return;
-            Intent intent = new Intent(activity, destination);
-            activity.startActivity(intent);
+            activity.startActivity(new Intent(activity, destination));
         });
     }
 }
