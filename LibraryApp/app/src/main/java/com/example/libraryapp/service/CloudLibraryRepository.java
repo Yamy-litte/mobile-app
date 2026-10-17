@@ -309,13 +309,14 @@ public final class CloudLibraryRepository {
                 DocumentReference ref = firestore.collection(COLLECTION_BOOKS).document(id);
                 Map<String, Object> data = new HashMap<>();
                 if (existing == null || !existing.contains("localBookId")) data.put("localBookId", id);
-                if (existing == null || isBlank(existing.getString("title"))) data.put("title", localBook.getTitle());
-                if (existing == null || isBlank(existing.getString("author"))) data.put("author", localBook.getAuthor());
-                if (existing == null || isBlank(existing.getString("publisher"))) data.put("publisher", localBook.getPublisher());
-                if (existing == null || existing.getLong("publishYear") == null) data.put("publishYear", localBook.getPublishYear());
-                if (existing == null || existing.getLong("pages") == null) data.put("pages", localBook.getPages());
-                if (existing == null || isBlank(existing.getString("summary"))) data.put("summary", localBook.getSummary());
-                if (!isBlank(localBook.getImageUrl()) && (existing == null || !localBook.getImageUrl().equals(existing.getString("imageUrl")))) data.put("imageUrl", localBook.getImageUrl());
+                // Admin edits update catalogue metadata, while cloud inventory quantities remain authoritative.
+                data.put("title", localBook.getTitle());
+                data.put("author", localBook.getAuthor());
+                data.put("publisher", localBook.getPublisher());
+                data.put("publishYear", localBook.getPublishYear());
+                data.put("pages", localBook.getPages());
+                data.put("summary", localBook.getSummary());
+                data.put("imageUrl", localBook.getImageUrl() == null ? "" : localBook.getImageUrl());
                 if (existing == null || existing.getLong("totalQuantity") == null) data.put("totalQuantity", localBook.getTotalQuantity());
                 if (existing == null || existing.getLong("availableQuantity") == null) data.put("availableQuantity", localBook.getAvailableQuantity());
                 data.put("active", localBook.isActive());
