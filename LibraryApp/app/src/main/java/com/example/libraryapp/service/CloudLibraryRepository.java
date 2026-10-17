@@ -118,6 +118,70 @@ public final class CloudLibraryRepository {
         });
     }
 
+    /** Submit one online request containing multiple books and shared pickup/return dates. */
+    public Task<DocumentReference> submitMultiBookReservation(
+            java.util.List<String> bookIds, java.util.List<String> bookTitles,
+            long pickupAt, long dueAt) {
+        com.google.firebase.auth.FirebaseUser user = auth.getCurrentUser();
+        if (user == null) throw new IllegalStateException("Bạn chưa đăng nhập.");
+        if (bookIds == null || bookTitles == null || bookIds.isEmpty()
+                || bookIds.size() != bookTitles.size()) {
+            throw new IllegalArgumentException("Hãy chọn ít nhất một cuốn sách.");
+        }
+        long now = System.currentTimeMillis();
+        if (pickupAt < now - 86400000L || dueAt <= pickupAt) {
+            throw new IllegalArgumentException("Ngày trả phải sau ngày nhận và ngày nhận không được ở quá khứ.");
+        }
+        String uid = user.getUid();
+        String email = user.getEmail() == null ? "" : user.getEmail();
+        return firestore.collection(COLLECTION_RESERVATIONS)
+                .whereEqualTo("customerUid", uid)
+                .whereEqualTo("status", "pending")
+                .get()
+                .continueWithTask(existingTask -> {
+                    if (!existingTask.isSuccessful()) {
+                        Exception error = existingTask.getException();
+                        throw error == null ? new IllegalStateException("Không kiểm tra được yêu cầu đang chờ.") : error;
+                    }
+                    java.util.Set<String> pendingBookIds = new java.util.HashSet<>();
+                    for (DocumentSnapshot doc : existingTask.getResult().getDocuments()) {
+                        String singleId = doc.getString("bookId");
+                        if (!isBlank(singleId)) pendingBookIds.add(singleId);
+                        Object ids = doc.get("bookIds");
+                        if (ids instanceof java.util.List) {
+                            for (Object value : (java.util.List<?>) ids) if (value != null) pendingBookIds.add(String.valueOf(value));
+                        }
+                    }
+                    for (String id : bookIds) {
+                        if (pendingBookIds.contains(id)) {
+                            throw new IllegalStateException("Bạn đã có yêu cầu đang chờ cho một cuốn trong danh sách.");
+                        }
+                    }
+                    return firestore.collection(COLLECTION_CUSTOMERS).document(uid).get()
+                            .continueWithTask(profileTask -> {
+                                if (!profileTask.isSuccessful()) {
+                                    Exception error = profileTask.getException();
+                                    throw error == null ? new IllegalStateException("Không đọc được hồ sơ độc giả.") : error;
+                                }
+                                DocumentSnapshot profile = profileTask.getResult();
+                                Map<String, Object> data = new HashMap<>();
+                                data.put("customerUid", uid);
+                                data.put("customerEmail", email);
+                                data.put("customerName", profile == null ? "" : profile.getString("fullName"));
+                                data.put("bookIds", new java.util.ArrayList<>(bookIds));
+                                data.put("bookTitles", new java.util.ArrayList<>(bookTitles));
+                                data.put("bookTitle", bookTitles.size() == 1 ? bookTitles.get(0) : bookTitles.size() + " cuốn sách");
+                                data.put("status", "pending");
+                                data.put("requestType", "borrow");
+                                data.put("pickupAt", pickupAt);
+                                data.put("dueAt", dueAt);
+                                data.put("createdAt", now);
+                                data.put("updatedAt", now);
+                                return firestore.collection(COLLECTION_RESERVATIONS).add(data);
+                            });
+                });
+    }
+
     public ListenerRegistration listenAvailableBooks(
             com.google.firebase.firestore.EventListener<com.google.firebase.firestore.QuerySnapshot> listener) {
         return firestore.collection(COLLECTION_BOOKS)
