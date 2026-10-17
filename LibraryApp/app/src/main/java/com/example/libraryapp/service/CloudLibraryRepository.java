@@ -315,6 +315,7 @@ public final class CloudLibraryRepository {
                 if (existing == null || existing.getLong("publishYear") == null) data.put("publishYear", localBook.getPublishYear());
                 if (existing == null || existing.getLong("pages") == null) data.put("pages", localBook.getPages());
                 if (existing == null || isBlank(existing.getString("summary"))) data.put("summary", localBook.getSummary());
+                if (!isBlank(localBook.getImageUrl()) && (existing == null || !localBook.getImageUrl().equals(existing.getString("imageUrl")))) data.put("imageUrl", localBook.getImageUrl());
                 if (existing == null || existing.getLong("totalQuantity") == null) data.put("totalQuantity", localBook.getTotalQuantity());
                 if (existing == null || existing.getLong("availableQuantity") == null) data.put("availableQuantity", localBook.getAvailableQuantity());
                 if (existing == null || existing.getBoolean("active") == null) data.put("active", true);
