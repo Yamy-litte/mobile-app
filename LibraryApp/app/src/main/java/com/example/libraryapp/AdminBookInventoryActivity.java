@@ -5,7 +5,6 @@ import android.os.Bundle;
 import android.text.Editable;
 import android.text.TextWatcher;
 import android.view.View;
-import android.widget.ArrayAdapter;
 import android.widget.EditText;
 import android.widget.LinearLayout;
 import android.widget.ListView;
@@ -28,7 +27,7 @@ import java.util.Locale;
 public class AdminBookInventoryActivity extends AppCompatActivity {
     private final List<Book> allBooks = new ArrayList<>();
     private final List<Book> shownBooks = new ArrayList<>();
-    private ArrayAdapter<String> adapter;
+    private AdminBookInventoryAdapter adapter;
     private EditText search;
     private TextView count, empty;
     private BookDao bookDao;
@@ -48,14 +47,26 @@ public class AdminBookInventoryActivity extends AppCompatActivity {
         count = findViewById(R.id.textAdminBookCount);
         empty = findViewById(R.id.textAdminBooksEmpty);
         ListView list = findViewById(R.id.listAdminBooks);
-        adapter = new ArrayAdapter<String>(this, android.R.layout.simple_list_item_1, new ArrayList<>());
+        adapter = new AdminBookInventoryAdapter(this, new AdminBookInventoryAdapter.Actions() {
+            @Override public void onEdit(Book book) { showBookDialog(book); }
+            @Override public void onToggleActive(Book book) {
+                boolean next = !book.isActive();
+                book.setActive(next);
+                if (bookDao.update(book) > 0) {
+                    cloud.setBookActive(String.valueOf(book.getId()), next)
+                            .addOnFailureListener(error -> Toast.makeText(AdminBookInventoryActivity.this,
+                                    "Đã lưu trên máy nhưng chưa đồng bộ trạng thái.", Toast.LENGTH_LONG).show());
+                    syncAndReload();
+                }
+            }
+        });
         list.setAdapter(adapter);
         bookDao = new BookDao(this);
         cloud = new CloudLibraryRepository();
         SampleDataSeeder.seed(this);
         reloadBooks();
         findViewById(R.id.btnAddBook).setOnClickListener(v -> showBookDialog(null));
-        findViewById(R.id.btnBackToAdminRequests).setOnClickListener(v -> finish());
+        AdminTabNavigation.bind(this);
         list.setOnItemClickListener((parent, view, position, id) -> showBookDialog(shownBooks.get(position)));
         list.setOnItemLongClickListener((parent, view, position, id) -> {
             Book book = shownBooks.get(position);
@@ -91,20 +102,15 @@ public class AdminBookInventoryActivity extends AppCompatActivity {
     private void filterBooks() {
         String query = search.getText().toString().trim().toLowerCase(Locale.ROOT);
         shownBooks.clear();
-        adapter.clear();
         for (Book book : allBooks) {
             if (book.getTitle() == null) continue;
             if (query.isEmpty() || book.getTitle().toLowerCase(Locale.ROOT).contains(query)
                     || (book.getAuthor() != null && book.getAuthor().toLowerCase(Locale.ROOT).contains(query))) {
                 shownBooks.add(book);
-                adapter.add((book.isActive() ? "● ĐANG HIỂN THỊ" : "○ ĐÃ ẨN")
-                        + "\n" + book.getTitle() + "\n" + safe(book.getAuthor())
-                        + "\nKho: " + book.getAvailableQuantity() + "/" + book.getTotalQuantity()
-                        + "\n" + (safe(book.getImageUrl()).isEmpty() ? "Chưa có URL ảnh" : "Đã có URL ảnh"));
             }
         }
-        adapter.notifyDataSetChanged();
-        count.setText(shownBooks.size() + " sách · Nhấn để sửa · Nhấn giữ để ẩn/hiện");
+        adapter.replace(shownBooks);
+        count.setText(shownBooks.size() + " sách");
         empty.setVisibility(shownBooks.isEmpty() ? View.VISIBLE : View.GONE);
     }
 
