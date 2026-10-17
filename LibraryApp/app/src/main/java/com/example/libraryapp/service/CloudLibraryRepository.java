@@ -318,7 +318,7 @@ public final class CloudLibraryRepository {
                 if (!isBlank(localBook.getImageUrl()) && (existing == null || !localBook.getImageUrl().equals(existing.getString("imageUrl")))) data.put("imageUrl", localBook.getImageUrl());
                 if (existing == null || existing.getLong("totalQuantity") == null) data.put("totalQuantity", localBook.getTotalQuantity());
                 if (existing == null || existing.getLong("availableQuantity") == null) data.put("availableQuantity", localBook.getAvailableQuantity());
-                if (existing == null || existing.getBoolean("active") == null) data.put("active", true);
+                data.put("active", localBook.isActive());
                 if (!data.isEmpty()) { data.put("updatedAt", System.currentTimeMillis()); batch.set(ref, data, SetOptions.merge()); hasChanges = true; }
             }
             return hasChanges ? batch.commit() : com.google.android.gms.tasks.Tasks.forResult(null);
