@@ -64,7 +64,7 @@ public class AdminScanActivity extends AppCompatActivity {
 
     private void startCardScan() {
         IntentIntegrator integrator = new IntentIntegrator(this);
-        integrator.setDesiredBarcodeFormats(IntentIntegrator.ALL_CODE_TYPES);
+        integrator.setDesiredBarcodeFormats(IntentIntegrator.ONE_D_CODE_TYPES);\n        integrator.setCaptureActivity(PortraitCaptureActivity.class);
         integrator.setPrompt("Quét barcode trên thẻ thư viện số của độc giả");
         integrator.setBeepEnabled(true);
         integrator.setOrientationLocked(true);
