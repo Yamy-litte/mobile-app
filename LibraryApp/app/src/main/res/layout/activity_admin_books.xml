@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent" android:layout_height="match_parent"
+    android:orientation="vertical" android:fitsSystemWindows="true"
+    android:background="@color/mylibrary_cream">
+    <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
+        android:orientation="horizontal" android:gravity="center_vertical"
+        android:paddingStart="18dp" android:paddingEnd="14dp" android:paddingTop="12dp" android:paddingBottom="12dp">
+        <LinearLayout android:layout_width="0dp" android:layout_height="wrap_content"
+            android:layout_weight="1" android:orientation="vertical">
+            <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+                android:text="MyLibrary" android:textSize="25sp" android:textStyle="bold" android:textColor="@color/mylibrary_teal"/>
+            <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+                android:layout_marginTop="4dp" android:text="Kho sách · Quản lý danh mục"
+                android:textSize="17sp" android:textStyle="bold" android:textColor="@color/mylibrary_ink"/>
+        </LinearLayout>
+        <Button android:id="@+id/btnAddBook" android:layout_width="wrap_content" android:layout_height="44dp"
+            android:text="+ Thêm sách" android:textAllCaps="false" android:textColor="@android:color/white"
+            android:backgroundTint="@color/mylibrary_teal"/>
+    </LinearLayout>
+    <EditText android:id="@+id/editAdminBookSearch" android:layout_width="match_parent" android:layout_height="48dp"
+        android:layout_marginStart="16dp" android:layout_marginEnd="16dp" android:layout_marginBottom="8dp"
+        android:paddingStart="12dp" android:paddingEnd="12dp" android:hint="Tìm tên sách hoặc tác giả"
+        android:singleLine="true" android:inputType="text" android:background="@drawable/bg_input"
+        android:textColor="@color/mylibrary_ink"/>
+    <TextView android:id="@+id/textAdminBookCount" android:layout_width="match_parent" android:layout_height="wrap_content"
+        android:paddingStart="18dp" android:paddingEnd="18dp" android:paddingTop="4dp" android:paddingBottom="8dp"
+        android:text="0 sách" android:textColor="@color/mylibrary_muted" android:textSize="13sp"/>
+    <TextView android:id="@+id/textAdminBooksEmpty" android:layout_width="match_parent" android:layout_height="wrap_content"
+        android:gravity="center" android:padding="24dp" android:text="Chưa có sách phù hợp."
+        android:textColor="@color/mylibrary_muted" android:visibility="gone"/>
+    <ListView android:id="@+id/listAdminBooks" android:layout_width="match_parent" android:layout_height="0dp"
+        android:layout_weight="1" android:paddingStart="16dp" android:paddingEnd="16dp"
+        android:divider="@android:color/transparent" android:dividerHeight="8dp"
+        android:clipToPadding="false" android:background="@color/mylibrary_cream"/>
+    <LinearLayout android:layout_width="match_parent" android:layout_height="64dp"
+        android:orientation="horizontal" android:gravity="center" android:background="@android:color/white"
+        android:elevation="8dp">
+        <TextView android:id="@+id/btnBackToAdminRequests" android:layout_width="wrap_content" android:layout_height="match_parent"
+            android:gravity="center" android:paddingStart="24dp" android:paddingEnd="24dp"
+            android:text="← Phiếu mượn" android:textColor="@color/mylibrary_teal" android:textStyle="bold"
+            android:clickable="true" android:focusable="true"/>
+    </LinearLayout>
+</LinearLayout>
