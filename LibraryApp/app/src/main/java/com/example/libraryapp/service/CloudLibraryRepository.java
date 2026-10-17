@@ -332,7 +332,6 @@ public final class CloudLibraryRepository {
                 // Keep the local catalogue relationships available to the cloud clients too.
                 data.put("categoryId", localBook.getCategoryId());
                 data.put("locationId", localBook.getLocationId());
-                data.put("category", localBook.getCategoryId() > 0 ? String.valueOf(localBook.getCategoryId()) : "");
                 if (existing == null || existing.getLong("totalQuantity") == null) data.put("totalQuantity", localBook.getTotalQuantity());
                 if (existing == null || existing.getLong("availableQuantity") == null) data.put("availableQuantity", localBook.getAvailableQuantity());
                 if (existing == null || existing.getBoolean("active") == null) data.put("active", localBook.isActive());
