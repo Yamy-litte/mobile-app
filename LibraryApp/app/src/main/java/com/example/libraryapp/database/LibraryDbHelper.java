@@ -13,7 +13,7 @@ import android.database.sqlite.SQLiteOpenHelper;
  */
 public class LibraryDbHelper extends SQLiteOpenHelper {
     public static final String DATABASE_NAME = "mylibrary.db";
-    public static final int DATABASE_VERSION = 3;
+    public static final int DATABASE_VERSION = 4;
 
     public static final String TABLE_ADMIN = "admin";
     public static final String TABLE_CUSTOMERS = "customers";
@@ -89,6 +89,7 @@ public class LibraryDbHelper extends SQLiteOpenHelper {
                 "publish_year INTEGER, " +
                 "summary TEXT, " +
                 "image_url TEXT, " +
+                "active INTEGER NOT NULL DEFAULT 1, " +
                 "pages INTEGER NOT NULL DEFAULT 0, " +
                 "total_quantity INTEGER NOT NULL DEFAULT 0 CHECK(total_quantity >= 0), " +
                 "available_quantity INTEGER NOT NULL DEFAULT 0 CHECK(available_quantity >= 0 AND available_quantity <= total_quantity), " +
@@ -181,6 +182,9 @@ public class LibraryDbHelper extends SQLiteOpenHelper {
         }
         if (oldVersion < 3) {
             db.execSQL("ALTER TABLE " + TABLE_BOOKS + " ADD COLUMN image_url TEXT");
+        }
+        if (oldVersion < 4) {
+            db.execSQL("ALTER TABLE " + TABLE_BOOKS + " ADD COLUMN active INTEGER NOT NULL DEFAULT 1");
         }
     }
 }
