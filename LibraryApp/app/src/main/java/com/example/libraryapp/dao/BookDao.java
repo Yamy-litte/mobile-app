@@ -111,6 +111,7 @@ public class BookDao {
         values.put("publisher", book.getPublisher());
         values.put("publish_year", book.getPublishYear());
         values.put("summary", book.getSummary());
+        values.put("image_url", book.getImageUrl());
         values.put("pages", book.getPages());
         values.put("total_quantity", book.getTotalQuantity());
         values.put("available_quantity", book.getAvailableQuantity());
@@ -118,7 +119,7 @@ public class BookDao {
     }
 
     private Book fromCursor(Cursor cursor) {
-        return new Book(
+        Book book = new Book(
                 cursor.getInt(cursor.getColumnIndexOrThrow("id")),
                 cursor.getInt(cursor.getColumnIndexOrThrow("category_id")),
                 cursor.getInt(cursor.getColumnIndexOrThrow("location_id")),
@@ -131,6 +132,9 @@ public class BookDao {
                 cursor.getInt(cursor.getColumnIndexOrThrow("total_quantity")),
                 cursor.getInt(cursor.getColumnIndexOrThrow("available_quantity"))
         );
+        int imageColumn = cursor.getColumnIndex("image_url");
+        if (imageColumn >= 0) book.setImageUrl(cursor.getString(imageColumn));
+        return book;
     }
 
     public void close() {
