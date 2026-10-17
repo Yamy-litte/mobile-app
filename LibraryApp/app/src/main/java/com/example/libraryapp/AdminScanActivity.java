@@ -6,6 +6,8 @@ import android.os.Bundle;
 import android.view.View;
 import android.widget.ArrayAdapter;
 import android.widget.Button;
+import android.widget.CheckBox;
+import android.widget.EditText;
 import android.widget.ListView;
 import android.widget.TextView;
 import android.widget.Toast;
@@ -184,37 +186,95 @@ public class AdminScanActivity extends AppCompatActivity {
     }
 
     private void confirmReturn(BorrowItem item) {
-        new AlertDialog.Builder(this)
-                .setTitle("Xác nhận trả sách")
-                .setMessage("Xác nhận độc giả đã trả “" + safe(item.title)
-                        + "”? Chỉ khi xác nhận thành công, trạng thái phiếu và tồn kho mới được cập nhật.")
+        android.view.View form = getLayoutInflater().inflate(R.layout.dialog_return_inspection, null);
+        TextView summary = form.findViewById(R.id.textReturnInspectionSummary);
+        CheckBox damagedBox = form.findViewById(R.id.checkBookDamaged);
+        EditText damageDescription = form.findViewById(R.id.editDamageDescription);
+        EditText lateFeeInput = form.findViewById(R.id.editLateFee);
+        EditText damageFeeInput = form.findViewById(R.id.editDamageFee);
+        CheckBox feeCollectedBox = form.findViewById(R.id.checkFeeCollected);
+        long now = System.currentTimeMillis();
+        long overdueDays = item.dueAt > 0L && now > item.dueAt
+                ? (now - item.dueAt + 86400000L - 1L) / 86400000L : 0L;
+        String due = item.dueAt > 0L
+                ? android.text.format.DateFormat.format("dd/MM/yyyy", item.dueAt).toString()
+                : "Chưa có hạn trả";
+        summary.setText("Sách: " + safe(item.title)
+                + "\nHạn trả: " + due
+                + "\nNgày trả thực tế: " + android.text.format.DateFormat.format("dd/MM/yyyy", now)
+                + "\nSố ngày trả trễ: " + overdueDays
+                + "\n\nKiểm tra tình trạng sách, nhập mức phí theo quy định thư viện và đánh dấu đã thu nếu độc giả thanh toán.");
+        damagedBox.setOnCheckedChangeListener((button, checked) -> {
+            damageDescription.setEnabled(checked);
+            damageFeeInput.setEnabled(checked);
+            if (!checked) {
+                damageDescription.setText("");
+                damageFeeInput.setText("0");
+            }
+        });
+        damageDescription.setEnabled(false);
+        damageFeeInput.setEnabled(false);
+
+        AlertDialog dialog = new AlertDialog.Builder(this)
+                .setTitle("Kiểm tra sách trả")
+                .setView(form)
                 .setNegativeButton("Hủy", null)
-                .setPositiveButton("Xác nhận trả", (dialog, which) -> {
-                    statusText.setText("Đang ghi nhận trả sách...");
-                    cloud.returnBorrowRecord(item.id, adminUid)
-                            .addOnSuccessListener(unused -> {
-                                Toast.makeText(this, "Đã xác nhận trả sách và cập nhật tồn kho.", Toast.LENGTH_LONG).show();
-                                statusText.setText("Trả sách thành công.");
-                                // Reload the currently selected Reader's active loans from the known item context.
-                                if (scannedReaderUid != null) loadActiveLoans(scannedReaderUid);
-                            })
-                            .addOnFailureListener(error -> {
-                                statusText.setText("Không thể xác nhận trả sách: " + safe(error.getMessage()));
-                            });
-                }).show();
+                .setPositiveButton("Xác nhận trả sách", null)
+                .create();
+        dialog.setOnShowListener(unused -> dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener(v -> {
+            String lateText = lateFeeInput.getText().toString().trim();
+            String damageText = damageFeeInput.getText().toString().trim();
+            long lateFee;
+            long damageFee;
+            try {
+                lateFee = lateText.isEmpty() ? 0L : Long.parseLong(lateText);
+                damageFee = damageText.isEmpty() ? 0L : Long.parseLong(damageText);
+            } catch (NumberFormatException ex) {
+                Toast.makeText(this, "Phí phải là số nguyên VNĐ hợp lệ.", Toast.LENGTH_SHORT).show();
+                return;
+            }
+            boolean damaged = damagedBox.isChecked();
+            if (lateFee < 0L || damageFee < 0L) {
+                Toast.makeText(this, "Phí không được âm.", Toast.LENGTH_SHORT).show();
+                return;
+            }
+            if (!damaged && damageFee > 0L) {
+                Toast.makeText(this, "Hãy đánh dấu sách hư hại trước khi nhập phí hư hại.", Toast.LENGTH_SHORT).show();
+                return;
+            }
+            long total = lateFee + damageFee;
+            if (total > 0L && !feeCollectedBox.isChecked()) {
+                new AlertDialog.Builder(this)
+                        .setTitle("Phí chưa được thu")
+                        .setMessage("Tổng phí là " + total + " VNĐ. Xác nhận trả sách mà chưa thu phí sẽ ghi công nợ chưa thanh toán.")
+                        .setNegativeButton("Quay lại", null)
+                        .setPositiveButton("Ghi nhận chưa thanh toán", (d, which) ->
+                                saveReturn(item, damaged, damageDescription.getText().toString(),
+                                        lateFee, damageFee, false, dialog))
+                        .show();
+                return;
+            }
+            saveReturn(item, damaged, damageDescription.getText().toString(),
+                    lateFee, damageFee, feeCollectedBox.isChecked(), dialog);
+        }));
+        dialog.show();
     }
 
-    private String scannedReaderUid;
-
-    private void goToLogin() {
-        Intent intent = new Intent(this, MainActivity.class);
-        intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
-        startActivity(intent);
-        finish();
-    }
-
-    private static String safe(String value) {
-        return value == null || value.trim().isEmpty() ? "Chưa cập nhật" : value;
+    private void saveReturn(BorrowItem item, boolean damaged, String damageDescription,
+                            long lateFee, long damageFee, boolean feeCollected,
+                            AlertDialog dialog) {
+        statusText.setText("Đang ghi nhận trả sách, tình trạng và phí...");
+        cloud.returnBorrowRecord(item.id, adminUid, damaged, damageDescription,
+                        lateFee, damageFee, feeCollected)
+                .addOnSuccessListener(unused -> {
+                    dialog.dismiss();
+                    long total = lateFee + damageFee;
+                    Toast.makeText(this, "Đã ghi nhận trả sách. Tổng phí: " + total + " VNĐ.", Toast.LENGTH_LONG).show();
+                    statusText.setText("Trả sách thành công. Tổng phí: " + total + " VNĐ.");
+                    if (scannedReaderUid != null) loadActiveLoans(scannedReaderUid);
+                })
+                .addOnFailureListener(error -> statusText.setText(
+                        "Không thể xác nhận trả sách: " + safe(error.getMessage())));
     }
 
     private static class BorrowItem {
