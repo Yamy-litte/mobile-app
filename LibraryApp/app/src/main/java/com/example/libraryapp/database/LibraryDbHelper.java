@@ -13,7 +13,7 @@ import android.database.sqlite.SQLiteOpenHelper;
  */
 public class LibraryDbHelper extends SQLiteOpenHelper {
     public static final String DATABASE_NAME = "mylibrary.db";
-    public static final int DATABASE_VERSION = 2;
+    public static final int DATABASE_VERSION = 3;
 
     public static final String TABLE_ADMIN = "admin";
     public static final String TABLE_CUSTOMERS = "customers";
@@ -88,6 +88,7 @@ public class LibraryDbHelper extends SQLiteOpenHelper {
                 "publisher TEXT, " +
                 "publish_year INTEGER, " +
                 "summary TEXT, " +
+                "image_url TEXT, " +
                 "pages INTEGER NOT NULL DEFAULT 0, " +
                 "total_quantity INTEGER NOT NULL DEFAULT 0 CHECK(total_quantity >= 0), " +
                 "available_quantity INTEGER NOT NULL DEFAULT 0 CHECK(available_quantity >= 0 AND available_quantity <= total_quantity), " +
@@ -177,6 +178,9 @@ public class LibraryDbHelper extends SQLiteOpenHelper {
             db.execSQL("CREATE UNIQUE INDEX IF NOT EXISTS idx_admin_firebase_uid ON " + TABLE_ADMIN + "(firebase_uid)");
             db.execSQL("ALTER TABLE " + TABLE_CUSTOMERS + " ADD COLUMN firebase_uid TEXT");
             db.execSQL("CREATE UNIQUE INDEX IF NOT EXISTS idx_customers_firebase_uid ON " + TABLE_CUSTOMERS + "(firebase_uid)");
+        }
+        if (oldVersion < 3) {
+            db.execSQL("ALTER TABLE " + TABLE_BOOKS + " ADD COLUMN image_url TEXT");
         }
     }
 }
