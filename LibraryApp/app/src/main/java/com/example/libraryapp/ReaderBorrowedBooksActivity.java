@@ -36,6 +36,8 @@ public class ReaderBorrowedBooksActivity extends AppCompatActivity {
     private ListenerRegistration borrowRecordsListener;
     private int customerId = -1;
     private final List<BorrowedItem> items = new ArrayList<>();
+    private final List<BorrowedItem> visibleItems = new ArrayList<>();
+    private String filterMode = "all";
     private final List<BorrowedItem> cloudReservationItems = new ArrayList<>();
     private final List<BorrowedItem> cloudBorrowItems = new ArrayList<>();
 
@@ -50,6 +52,10 @@ public class ReaderBorrowedBooksActivity extends AppCompatActivity {
         ListView list = findViewById(R.id.listBorrowedBooks);
         adapter = new ItemAdapter();
         list.setAdapter(adapter);
+        findViewById(R.id.filterAllLoans).setOnClickListener(v -> setFilter("all"));
+        findViewById(R.id.filterActiveLoans).setOnClickListener(v -> setFilter("active"));
+        findViewById(R.id.filterPendingLoans).setOnClickListener(v -> setFilter("requests"));
+        findViewById(R.id.filterHistoryLoans).setOnClickListener(v -> setFilter("history"));
 
         CustomerDao customerDao = new CustomerDao(this);
         Customer customer = customerDao.getByFirebaseUid(auth.getCurrentUid());
@@ -195,9 +201,43 @@ public class ReaderBorrowedBooksActivity extends AppCompatActivity {
         items.addAll(cloudReservationItems);
         items.addAll(cloudBorrowItems);
 
+        applyFilter();
+    }
+
+    private void setFilter(String mode) {
+        filterMode = mode;
+        int[] ids = {R.id.filterAllLoans, R.id.filterActiveLoans, R.id.filterPendingLoans, R.id.filterHistoryLoans};
+        String[] modes = {"all", "active", "requests", "history"};
+        for (int i = 0; i < ids.length; i++) {
+            Button button = findViewById(ids[i]);
+            boolean active = modes[i].equals(mode);
+            button.setBackgroundTintList(android.content.res.ColorStateList.valueOf(
+                    getColor(active ? R.color.mylibrary_teal : R.color.mylibrary_cream)));
+            button.setTextColor(getColor(active ? R.color.white : R.color.mylibrary_ink));
+        }
+        applyFilter();
+    }
+
+    private void applyFilter() {
+        visibleItems.clear();
+        for (BorrowedItem item : items) {
+            boolean request = item.cloudKey != null && item.cloudKey.startsWith("reservation:");
+            boolean localRequest = item.details.contains("Trạng thái yêu cầu:");
+            boolean returned = item.details.contains("Đã trả") || item.details.contains("Ngày trả:");
+            boolean activeLoan = !request && !localRequest && !returned
+                    && ((item.cloudKey != null && item.cloudKey.startsWith("borrow:"))
+                    || item.details.contains("Đang mượn") || item.details.contains("Quá hạn")
+                    || item.details.contains("Còn ") || item.details.contains("Đã quá hạn"));
+            if ("all".equals(filterMode)
+                    || ("active".equals(filterMode) && activeLoan)
+                    || ("requests".equals(filterMode) && (request || localRequest))
+                    || ("history".equals(filterMode) && returned)) visibleItems.add(item);
+        }
         adapter.notifyDataSetChanged();
-        emptyText.setVisibility(items.isEmpty() ? View.VISIBLE : View.GONE);
-        if (items.isEmpty()) emptyText.setText("Bạn chưa có yêu cầu mượn hoặc lịch sử mượn sách.");
+        emptyText.setVisibility(visibleItems.isEmpty() ? View.VISIBLE : View.GONE);
+        if (visibleItems.isEmpty()) emptyText.setText("all".equals(filterMode)
+                ? "Bạn chưa có yêu cầu mượn hoặc lịch sử mượn sách."
+                : "Không có dữ liệu trong mục này.");
     }
 
     private void renewRequest(BorrowedItem item) {
@@ -312,10 +352,10 @@ public class ReaderBorrowedBooksActivity extends AppCompatActivity {
     }
 
     private class ItemAdapter extends BaseAdapter {
-        @Override public int getCount() { return items.size(); }
-        @Override public Object getItem(int position) { return items.get(position); }
+        @Override public int getCount() { return visibleItems.size(); }
+        @Override public Object getItem(int position) { return visibleItems.get(position); }
         @Override public long getItemId(int position) {
-            BorrowedItem item = items.get(position);
+            BorrowedItem item = visibleItems.get(position);
             return item.reservationId > 0 ? item.reservationId : position;
         }
         @Override public View getView(int position, View convertView, ViewGroup parent) {
