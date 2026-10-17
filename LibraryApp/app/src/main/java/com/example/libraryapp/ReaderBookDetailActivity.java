@@ -1,6 +1,7 @@
 package com.example.libraryapp;
 
 import android.content.Intent;
+import android.app.DatePickerDialog;
 import android.os.Bundle;
 import android.view.View;
 import android.widget.TextView;
@@ -21,6 +22,7 @@ import com.example.libraryapp.service.CloudLibraryRepository;
 import com.google.firebase.firestore.ListenerRegistration;
 import java.text.SimpleDateFormat;
 import java.util.Date;
+import java.util.Calendar;
 import java.util.List;
 import java.util.Locale;
 
@@ -69,8 +71,12 @@ public class ReaderBookDetailActivity extends AppCompatActivity {
         updateRequestButtonText(requestButton, book.getAvailableQuantity());
         requestButton.setOnClickListener(v -> {
             if (!v.isEnabled()) return;
-            v.setEnabled(false);
-            submitBorrowRequest(auth.getCurrentUid(), book, requestButton);
+            if (book.getAvailableQuantity() <= 0) {
+                v.setEnabled(false);
+                submitBorrowRequest(auth.getCurrentUid(), book, requestButton, 0L, 0L);
+            } else {
+                choosePickupDate(auth.getCurrentUid(), book, requestButton);
+            }
         });
         bookListener = cloudRepository.listenBookByTitleAndAuthor(book.getTitle(), book.getAuthor(), (snapshot, error) -> {
             if (isFinishing() || isDestroyed() || error != null || snapshot == null || snapshot.isEmpty()) return;
@@ -93,7 +99,38 @@ public class ReaderBookDetailActivity extends AppCompatActivity {
     }
 
 
-    private void submitBorrowRequest(String firebaseUid, Book book, View requestButton) {
+    private void choosePickupDate(String firebaseUid, Book book, View requestButton) {
+        Calendar pickup = Calendar.getInstance();
+        pickup.add(Calendar.DAY_OF_MONTH, 1);
+        chooseDate(pickup.getTimeInMillis(), System.currentTimeMillis(), "Chọn ngày nhận sách", pickupAt -> {
+            Calendar due = Calendar.getInstance();
+            due.setTimeInMillis(pickupAt);
+            due.add(Calendar.DAY_OF_MONTH, 14);
+            chooseDate(due.getTimeInMillis(), pickupAt + 86400000L, "Chọn ngày trả sách", dueAt -> {
+                requestButton.setEnabled(false);
+                submitBorrowRequest(firebaseUid, book, requestButton, pickupAt, dueAt);
+            });
+        });
+    }
+
+    private interface DateSelected { void onSelected(long timestamp); }
+
+    private void chooseDate(long initialAt, long minAt, String title, DateSelected callback) {
+        Calendar initial = Calendar.getInstance();
+        initial.setTimeInMillis(initialAt);
+        DatePickerDialog picker = new DatePickerDialog(this, (view, year, month, day) -> {
+            Calendar selected = Calendar.getInstance();
+            selected.set(year, month, day, 12, 0, 0);
+            selected.set(Calendar.MILLISECOND, 0);
+            callback.onSelected(selected.getTimeInMillis());
+        }, initial.get(Calendar.YEAR), initial.get(Calendar.MONTH), initial.get(Calendar.DAY_OF_MONTH));
+        picker.setTitle(title);
+        picker.getDatePicker().setMinDate(minAt);
+        picker.show();
+    }
+
+    private void submitBorrowRequest(String firebaseUid, Book book, View requestButton,
+                                     long pickupAt, long dueAt) {
         CustomerDao customerDao = new CustomerDao(this);
         Customer customer = customerDao.getByFirebaseUid(firebaseUid);
         customerDao.close();
@@ -115,7 +152,8 @@ public class ReaderBookDetailActivity extends AppCompatActivity {
             String cloudBookId = document.getId();
             Long availableQuantity = document.getLong("availableQuantity");
             boolean preorder = availableQuantity == null || availableQuantity <= 0;
-            cloud.submitReservation(cloudBookId, book.getTitle(), preorder)
+            if (preorder) {
+                cloud.submitReservation(cloudBookId, book.getTitle(), true)
                     .addOnSuccessListener(reference -> {
                         requestButton.setEnabled(true);
                         Toast.makeText(this,
@@ -130,6 +168,19 @@ public class ReaderBookDetailActivity extends AppCompatActivity {
                                 "Không gửi được yêu cầu lên Firestore: " + safe(error.getMessage(), "Lỗi kết nối"),
                                 Toast.LENGTH_LONG).show();
                     });
+            } else {
+                cloud.submitReservation(cloudBookId, book.getTitle(), false, pickupAt, dueAt)
+                    .addOnSuccessListener(reference -> {
+                        requestButton.setEnabled(true);
+                        Toast.makeText(this, "Đã gửi yêu cầu mượn với ngày nhận và ngày trả đã chọn. Vui lòng chờ Admin duyệt.",
+                                Toast.LENGTH_LONG).show();
+                    })
+                    .addOnFailureListener(error -> {
+                        requestButton.setEnabled(true);
+                        Toast.makeText(this, "Không gửi được yêu cầu: " + safe(error.getMessage(), "Lỗi kết nối"),
+                                Toast.LENGTH_LONG).show();
+                    });
+            }
         }).addOnFailureListener(error -> {
             requestButton.setEnabled(true);
             Toast.makeText(this,
