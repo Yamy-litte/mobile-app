@@ -5,6 +5,7 @@ import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.ArrayAdapter;
+import android.widget.ImageView;
 import android.widget.TextView;
 import com.example.libraryapp.model.Book;
 import java.util.List;
@@ -19,6 +20,8 @@ public class ReaderBookAdapter extends ArrayAdapter<Book> {
         if (row == null) row = LayoutInflater.from(getContext()).inflate(R.layout.row_reader_book, parent, false);
         Book book = getItem(position);
         if (book != null) {
+            ImageView cover = row.findViewById(R.id.imageBookCover);
+            BookCoverLoader.load(book.getImageUrl(), cover);
             ((TextView) row.findViewById(R.id.textBookTitle)).setText(book.getTitle());
             ((TextView) row.findViewById(R.id.textBookAuthor)).setText(book.getAuthor());
             String category = categoryName(book.getCategoryId());
