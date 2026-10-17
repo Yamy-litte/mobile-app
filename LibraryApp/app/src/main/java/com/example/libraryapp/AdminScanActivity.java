@@ -101,6 +101,7 @@ public class AdminScanActivity extends AppCompatActivity {
                     }
                     DocumentSnapshot reader = snapshot.getDocuments().get(0);
                     String uid = reader.getId();
+                    scannedReaderUid = uid;
                     String name = reader.getString("fullName");
                     String email = reader.getString("email");
                     String state = reader.getString("status");
@@ -156,8 +157,6 @@ public class AdminScanActivity extends AppCompatActivity {
                                 Toast.makeText(this, "Đã xác nhận trả sách và cập nhật tồn kho.", Toast.LENGTH_LONG).show();
                                 statusText.setText("Trả sách thành công.");
                                 // Reload the currently selected Reader's active loans from the known item context.
-                                String currentUid = cloud.currentUid();
-                                // The Admin is signed in here; refresh the scanned Reader via the saved UID below.
                                 if (scannedReaderUid != null) loadActiveLoans(scannedReaderUid);
                             })
                             .addOnFailureListener(error -> {
