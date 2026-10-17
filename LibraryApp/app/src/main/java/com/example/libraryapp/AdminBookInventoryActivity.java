@@ -67,6 +67,8 @@ public class AdminBookInventoryActivity extends AppCompatActivity {
                     .setPositiveButton("Xác nhận", (dialog, which) -> {
                         book.setActive(willActivate);
                         if (bookDao.update(book) > 0) {
+                            cloud.setBookActive(String.valueOf(book.getId()), willActivate)
+                                    .addOnFailureListener(error -> Toast.makeText(this, "Đã lưu trên máy nhưng chưa đồng bộ trạng thái: " + safe(error.getMessage()), Toast.LENGTH_LONG).show());
                             syncAndReload();
                             Toast.makeText(this, willActivate ? "Đã kích hoạt sách." : "Đã ẩn sách; dữ liệu và lịch sử được giữ lại.", Toast.LENGTH_SHORT).show();
                         }
