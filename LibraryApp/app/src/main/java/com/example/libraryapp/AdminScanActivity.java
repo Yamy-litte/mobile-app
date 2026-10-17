@@ -58,7 +58,11 @@ public class AdminScanActivity extends AppCompatActivity {
         adapter = new ArrayAdapter<>(this, android.R.layout.simple_list_item_1, rowLabels);
         borrowList.setAdapter(adapter);
         scanButton.setOnClickListener(v -> startCardScan());
-        borrowList.setOnItemClickListener((parent, view, position, id) -> confirmReturn(activeLoans.get(position)));
+        borrowList.setOnItemClickListener((parent, view, position, id) -> {
+            BorrowItem item = activeLoans.get(position);
+            if ("awaiting_pickup".equalsIgnoreCase(item.status)) confirmPickup(item);
+            else confirmReturn(item);
+        });
         findViewById(R.id.btnScanBackHome).setOnClickListener(v -> finish());
     }
 
@@ -130,15 +134,22 @@ public class AdminScanActivity extends AppCompatActivity {
                     activeLoans.clear();
                     rowLabels.clear();
                     for (QueryDocumentSnapshot doc : snapshot) {
-                        if (!"borrowed".equalsIgnoreCase(doc.getString("status"))) continue;
+                        String loanStatus = doc.getString("status");
+                        if (!"borrowed".equalsIgnoreCase(loanStatus)
+                                && !"awaiting_pickup".equalsIgnoreCase(loanStatus)) continue;
                         long dueAt = doc.getLong("dueAt") == null ? 0L : doc.getLong("dueAt");
-                        activeLoans.add(new BorrowItem(doc.getId(), doc.getString("bookTitle"), dueAt));
+                        activeLoans.add(new BorrowItem(doc.getId(), doc.getString("bookTitle"), dueAt, loanStatus));
                     }
                     for (BorrowItem item : activeLoans) {
                         String due = item.dueAt > 0
                                 ? android.text.format.DateFormat.format("dd/MM/yyyy", item.dueAt).toString()
                                 : "Chưa có hạn trả";
-                        rowLabels.add(item.title + "\nHạn trả: " + due + "\nChạm để xác nhận trả sách");
+                        String action = "awaiting_pickup".equalsIgnoreCase(item.status)
+                                ? "Chạm để kiểm tra phiếu và xác nhận giao sách"
+                                : "Chạm để xác nhận trả sách";
+                        rowLabels.add(item.title + "\nTrạng thái: "
+                                + ("awaiting_pickup".equalsIgnoreCase(item.status) ? "Đã duyệt, chờ nhận" : "Đang mượn")
+                                + "\nHạn trả: " + due + "\n" + action);
                     }
                     adapter.notifyDataSetChanged();
                     emptyText.setVisibility(activeLoans.isEmpty() ? View.VISIBLE : View.GONE);
@@ -147,6 +158,29 @@ public class AdminScanActivity extends AppCompatActivity {
                 .addOnFailureListener(error -> {
                     statusText.setText("Không tải được phiếu mượn: " + safe(error.getMessage()));
                 });
+    }
+
+    private void confirmPickup(BorrowItem item) {
+        new AlertDialog.Builder(this)
+                .setTitle("Kiểm tra phiếu và giao sách")
+                .setMessage("Độc giả: " + safe(scannedReaderUid)
+                        + "\nSách: " + safe(item.title)
+                        + "\nHạn trả: " + (item.dueAt > 0
+                        ? android.text.format.DateFormat.format("dd/MM/yyyy", item.dueAt).toString()
+                        : "Chưa cập nhật")
+                        + "\n\nChỉ xác nhận sau khi đã đối chiếu thông tin phiếu và giao sách thực tế.")
+                .setNegativeButton("Quay lại", null)
+                .setPositiveButton("Xác nhận đã giao", (dialog, which) -> {
+                    statusText.setText("Đang xác nhận giao sách...");
+                    cloud.confirmBorrowPickup(item.id, adminUid)
+                            .addOnSuccessListener(unused -> {
+                                Toast.makeText(this, "Đã xác nhận giao sách. Phiếu chuyển sang ĐANG MƯỢN.", Toast.LENGTH_LONG).show();
+                                statusText.setText("Giao sách thành công.");
+                                if (scannedReaderUid != null) loadActiveLoans(scannedReaderUid);
+                            })
+                            .addOnFailureListener(error -> statusText.setText(
+                                    "Không thể xác nhận giao sách: " + safe(error.getMessage())));
+                }).show();
     }
 
     private void confirmReturn(BorrowItem item) {
@@ -187,10 +221,12 @@ public class AdminScanActivity extends AppCompatActivity {
         final String id;
         final String title;
         final long dueAt;
-        BorrowItem(String id, String title, long dueAt) {
+        final String status;
+        BorrowItem(String id, String title, long dueAt, String status) {
             this.id = id;
             this.title = title == null ? "Sách chưa có tên" : title;
             this.dueAt = dueAt;
+            this.status = status == null ? "" : status;
         }
     }
 }
