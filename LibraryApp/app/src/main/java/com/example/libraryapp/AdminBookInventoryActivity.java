@@ -69,7 +69,7 @@ public class AdminBookInventoryActivity extends AppCompatActivity {
                 book.setActive(next);
                 if (bookDao.update(book) > 0) {
                     cloud.syncAdminBook(book)
-                            .addOnSuccessListener(unused -> Toast.makeText(this, "Đã đồng bộ trạng thái sách.", Toast.LENGTH_SHORT).show())
+                            .addOnSuccessListener(unused -> Toast.makeText(AdminBookInventoryActivity.this, "Đã đồng bộ trạng thái sách.", Toast.LENGTH_SHORT).show())
                             .addOnFailureListener(error -> Toast.makeText(AdminBookInventoryActivity.this,
                                     "Đã lưu trên máy nhưng chưa đồng bộ trạng thái: " + safe(error.getMessage()), Toast.LENGTH_LONG).show());
                     reloadBooks();
