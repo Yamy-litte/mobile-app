@@ -64,7 +64,7 @@ public class AdminScanActivity extends AppCompatActivity {
 
     private void startCardScan() {
         IntentIntegrator integrator = new IntentIntegrator(this);
-        integrator.setDesiredBarcodeFormats(IntentIntegrator.ONE_D_CODE_TYPES);
+        integrator.setDesiredBarcodeFormats(IntentIntegrator.ALL_CODE_TYPES);
         integrator.setCaptureActivity(PortraitCaptureActivity.class);
         integrator.setPrompt("Quét barcode trên thẻ thư viện số của độc giả");
         integrator.setBeepEnabled(true);
@@ -87,7 +87,7 @@ public class AdminScanActivity extends AppCompatActivity {
     }
 
     private void lookupReader(String cardNumber) {
-        statusText.setText("Đang tìm thẻ " + cardNumber + "...");
+        statusText.setText("Đã đọc barcode: [" + cardNumber + "]. Đang đối chiếu mã thẻ...");
         cloud.findReaderByCardNumber(cardNumber)
                 .addOnSuccessListener(snapshot -> {
                     if (isFinishing() || isDestroyed()) return;
