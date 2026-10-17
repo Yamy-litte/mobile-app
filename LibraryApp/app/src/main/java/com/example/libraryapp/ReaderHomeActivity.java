@@ -130,6 +130,7 @@ public class ReaderHomeActivity extends AppCompatActivity {
             }
             if (snapshot == null) return;
             for (QueryDocumentSnapshot doc : snapshot) {
+                if (Boolean.FALSE.equals(doc.getBoolean("active"))) continue;
                 String title = doc.getString("title");
                 String author = doc.getString("author");
                 Long total = doc.getLong("totalQuantity");
@@ -165,6 +166,7 @@ public class ReaderHomeActivity extends AppCompatActivity {
         int selectedCategory = categorySpinner == null ? 0 : categorySpinner.getSelectedItemPosition();
         visibleBooks.clear();
         for (Book book : allBooks) {
+            if (!book.isActive()) continue;
             boolean matchesQuery = query.isEmpty() || contains(book.getTitle(), query)
                     || contains(book.getAuthor(), query) || contains(book.getPublisher(), query);
             boolean matchesCategory = selectedCategory == 0 || book.getCategoryId() == selectedCategory;
