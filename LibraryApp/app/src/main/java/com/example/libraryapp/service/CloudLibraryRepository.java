@@ -409,6 +409,35 @@ public final class CloudLibraryRepository {
         });
     }
 
+    /** Extend an active cloud loan by seven days, only while it is not overdue or returned. */
+    public Task<Void> renewBorrowRecord(String borrowRecordId) {
+        if (isBlank(borrowRecordId)) throw new IllegalArgumentException("Mã phiếu mượn không hợp lệ.");
+        DocumentReference ref = firestore.collection(COLLECTION_BORROW_RECORDS).document(borrowRecordId);
+        return firestore.runTransaction(transaction -> {
+            DocumentSnapshot record = transaction.get(ref);
+            if (!record.exists()) throw new IllegalStateException("Không tìm thấy phiếu mượn.");
+            String status = record.getString("status");
+            if (!"borrowed".equalsIgnoreCase(status)) {
+                throw new IllegalStateException("Chỉ có thể gia hạn sách đang mượn.");
+            }
+            Long dueAt = record.getLong("dueAt");
+            long now = System.currentTimeMillis();
+            if (dueAt == null || dueAt < now) {
+                throw new IllegalStateException("Sách đã quá hạn hoặc chưa có hạn trả, không thể gia hạn trực tuyến.");
+            }
+            Long renewals = record.getLong("renewalCount");
+            if (renewals != null && renewals >= 1L) {
+                throw new IllegalStateException("Mỗi phiếu mượn chỉ được gia hạn một lần trong bản demo.");
+            }
+            Map<String, Object> update = new HashMap<>();
+            update.put("dueAt", dueAt + 7L * 24L * 60L * 60L * 1000L);
+            update.put("renewalCount", renewals == null ? 1L : renewals + 1L);
+            update.put("renewedAt", now);
+            transaction.update(ref, update);
+            return null;
+        });
+    }
+
     public ListenerRegistration listenMyBorrowRecords(
             com.google.firebase.firestore.EventListener<com.google.firebase.firestore.QuerySnapshot> listener) {
         String uid = currentUid();
