@@ -35,6 +35,7 @@
         <activity android:name=".DigitalLibraryCardActivity" android:exported="false" />
         <activity android:name=".ReaderNotificationsActivity" android:exported="false" />
         <activity android:name=".ReaderBorrowedBooksActivity" android:exported="false" />
+        <activity android:name=".ReaderMultiBookRequestActivity" android:exported="false" />
         <activity android:name=".ReaderBookDetailActivity" android:exported="false" />
         <activity android:name=".ReaderHomeActivity" android:exported="false" />
         <activity
