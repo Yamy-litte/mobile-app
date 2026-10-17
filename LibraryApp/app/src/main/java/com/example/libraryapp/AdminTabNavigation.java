@@ -1,6 +1,7 @@
 package com.example.libraryapp;
 
 import android.app.Activity;
+import android.content.Intent;
 import android.widget.Toast;
 import android.view.View;
 
@@ -10,13 +11,13 @@ public final class AdminTabNavigation {
 
     public static void bind(Activity activity) {
         bindMessage(activity, R.id.adminTabHome, "Trang chủ", true);
-        bindMessage(activity, R.id.adminTabBooks, "Kho sách", false);
+        bindBooks(activity);
         bindMessage(activity, R.id.adminTabScan, "Quét mã", false);
         bindMessage(activity, R.id.adminTabLoans, "Phiếu mượn", true);
         bindMessage(activity, R.id.adminTabAccount, "Tài khoản", false);
     }
 
-    private static void bindMessage(Activity activity, int id, String label, boolean currentScreen) {
+    private static void bindBooks(Activity activity) {\n        View tab = activity.findViewById(R.id.adminTabBooks);\n        if (tab != null) tab.setOnClickListener(v -> activity.startActivity(new Intent(activity, AdminBookInventoryActivity.class)));\n    }\n\n    private static void bindMessage(Activity activity, int id, String label, boolean currentScreen) {
         View tab = activity.findViewById(id);
         if (tab == null) return;
         tab.setOnClickListener(v -> {
