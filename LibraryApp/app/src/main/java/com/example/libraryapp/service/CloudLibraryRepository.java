@@ -55,7 +55,10 @@ public final class CloudLibraryRepository {
             throw new IllegalArgumentException("Mã thẻ độc giả không hợp lệ.");
         }
         Map<String, Object> update = new HashMap<>();
-        update.put("libraryCardNumber", cardNumber);
+        // Keep the document identity and barcode value explicit and canonical.
+        // This also allows a newly created profile document to pass rules requiring uid.
+        update.put("uid", uid);
+        update.put("libraryCardNumber", cardNumber.trim());
         update.put("updatedAt", System.currentTimeMillis());
         return firestore.collection(COLLECTION_CUSTOMERS).document(uid)
                 .set(update, SetOptions.merge());
