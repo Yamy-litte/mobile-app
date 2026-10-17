@@ -21,7 +21,8 @@
                 <action android:name="com.google.firebase.MESSAGING_EVENT" />
             </intent-filter>
         </service>
-        <activity android:name=".AdminHomeActivity" android:exported="false" />\n        <activity android:name=".AdminBookInventoryActivity" android:exported="false" />
+        <activity android:name=".AdminHomeActivity" android:exported="false" />
+        <activity android:name=".AdminBookInventoryActivity" android:exported="false" />
         <activity android:name=".RoleSelectionActivity" android:exported="false" />
         <activity
             android:name=".LoginActivity" android:exported="false" />
