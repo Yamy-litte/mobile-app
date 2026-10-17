@@ -102,7 +102,8 @@ public class AdminHomeActivity extends AppCompatActivity {
                             doc.getString("customerUid"),
                             doc.getString("bookTitle"),
                             doc.getLong("borrowedAt") == null ? 0L : doc.getLong("borrowedAt"),
-                            doc.getLong("dueAt") == null ? 0L : doc.getLong("dueAt")));
+                            doc.getLong("dueAt") == null ? 0L : doc.getLong("dueAt"),
+                            doc.getString("status")));
                 }
             }
             if (showingLoans) refreshList();
@@ -174,6 +175,10 @@ public class AdminHomeActivity extends AppCompatActivity {
     }
 
     private void processReturn(LoanItem item) {
+        if ("awaiting_pickup".equalsIgnoreCase(item.status)) {
+            Toast.makeText(this, "Phiếu đã duyệt nhưng độc giả chưa nhận sách. Vào mục Quét mã để đối chiếu thẻ và xác nhận giao sách.", Toast.LENGTH_LONG).show();
+            return;
+        }
         new AlertDialog.Builder(this)
                 .setTitle("Xác nhận trả sách")
                 .setMessage("Xác nhận đã nhận lại sách “" + safe(item.bookTitle)
@@ -192,12 +197,14 @@ public class AdminHomeActivity extends AppCompatActivity {
     private static class LoanItem {
         final String id, customerUid, bookTitle;
         final long borrowedAt, dueAt;
-        LoanItem(String id, String customerUid, String bookTitle, long borrowedAt, long dueAt) {
+        final String status;
+        LoanItem(String id, String customerUid, String bookTitle, long borrowedAt, long dueAt, String status) {
             this.id = id;
             this.customerUid = customerUid;
             this.bookTitle = bookTitle;
             this.borrowedAt = borrowedAt;
             this.dueAt = dueAt;
+            this.status = status == null ? "" : status;
         }
     }
 
