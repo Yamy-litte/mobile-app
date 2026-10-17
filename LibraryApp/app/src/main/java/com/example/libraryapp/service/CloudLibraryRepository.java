@@ -39,10 +39,19 @@ public final class CloudLibraryRepository {
     }
 
     public Task<Void> upsertReaderProfile(String uid, String email, String fullName) {
+        return upsertReaderProfile(uid, email, fullName, null, null);
+    }
+
+    /** Syncs the Reader's profile fields while preserving existing values not supplied by the caller. */
+    public Task<Void> upsertReaderProfile(String uid, String email, String fullName,
+                                          String phoneNumber, String avatarUrl) {
+        if (isBlank(uid)) throw new IllegalArgumentException("UID độc giả không hợp lệ.");
         Map<String, Object> profile = new HashMap<>();
         profile.put("uid", uid);
-        profile.put("email", email);
-        profile.put("fullName", fullName);
+        if (email != null) profile.put("email", email.trim());
+        if (fullName != null) profile.put("fullName", fullName.trim());
+        if (phoneNumber != null) profile.put("phoneNumber", phoneNumber.trim());
+        if (avatarUrl != null) profile.put("avatarUrl", avatarUrl.trim());
         profile.put("status", "active");
         profile.put("updatedAt", System.currentTimeMillis());
         return firestore.collection(COLLECTION_CUSTOMERS).document(uid)
