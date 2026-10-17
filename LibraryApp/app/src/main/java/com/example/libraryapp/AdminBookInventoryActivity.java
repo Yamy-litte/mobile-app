@@ -373,6 +373,8 @@ public class AdminBookInventoryActivity extends AppCompatActivity {
                 Long availableValue = doc.getLong("availableQuantity");
                 if (availableValue != null && availableValue >= 0)
                     local.setAvailableQuantity(Math.min(availableValue.intValue(), local.getTotalQuantity()));
+                else
+                    local.setAvailableQuantity(Math.min(local.getAvailableQuantity(), local.getTotalQuantity()));
                 Boolean activeValue = doc.getBoolean("active");
                 if (activeValue != null) local.setActive(activeValue);
                 if (local.getId() > 0 && local.getCategoryId() > 0 && local.getLocationId() > 0
