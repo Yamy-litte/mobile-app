@@ -19,6 +19,7 @@ import com.example.libraryapp.dao.CustomerDao;
 import com.example.libraryapp.dao.LibraryCardDao;
 import com.example.libraryapp.model.Customer;
 import com.example.libraryapp.model.LibraryCard;
+import com.example.libraryapp.service.CloudLibraryRepository;
 import com.google.zxing.BarcodeFormat;
 import com.google.zxing.MultiFormatWriter;
 import com.google.zxing.WriterException;
@@ -137,6 +138,11 @@ public class ReaderAccountActivity extends AppCompatActivity {
             ((TextView) card.findViewById(R.id.digitalCardEmail)).setText(customer.getEmail());
             ((TextView) card.findViewById(R.id.digitalCardNumber)).setText(cardCode);
             ((TextView) card.findViewById(R.id.digitalCardIssueDate)).setText("Ngày cấp: " + savedCard.getIssueDate());
+            new CloudLibraryRepository().upsertReaderCardNumber(uid, cardCode)
+                    .addOnFailureListener(error -> Toast.makeText(this,
+                            "Thẻ đã tạo trên máy này nhưng chưa đồng bộ mã thẻ lên hệ thống chung.",
+                            Toast.LENGTH_LONG).show());
+
             ImageView barcodeView = card.findViewById(R.id.digitalCardBarcode);
             try {
                 barcodeView.setImageBitmap(createBarcode(cardCode));
