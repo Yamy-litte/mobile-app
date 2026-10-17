@@ -14,6 +14,7 @@ public class Book {
     private int publishYear;
     private String summary;
     private String imageUrl;
+    private boolean active = true;
     private int pages;
     private int totalQuantity;
     private int availableQuantity;
@@ -34,6 +35,9 @@ public class Book {
         this.totalQuantity = totalQuantity;
         this.availableQuantity = availableQuantity;
     }
+
+    public boolean isActive() { return active; }
+    public void setActive(boolean active) { this.active = active; }
 
     public String getImageUrl() { return imageUrl; }
 
