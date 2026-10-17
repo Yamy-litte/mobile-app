@@ -17,7 +17,12 @@ public final class AdminTabNavigation {
         bindMessage(activity, R.id.adminTabAccount, "Tài khoản", false);
     }
 
-    private static void bindBooks(Activity activity) {\n        View tab = activity.findViewById(R.id.adminTabBooks);\n        if (tab != null) tab.setOnClickListener(v -> activity.startActivity(new Intent(activity, AdminBookInventoryActivity.class)));\n    }\n\n    private static void bindMessage(Activity activity, int id, String label, boolean currentScreen) {
+    private static void bindBooks(Activity activity) {
+        View tab = activity.findViewById(R.id.adminTabBooks);
+        if (tab != null) tab.setOnClickListener(v -> activity.startActivity(new Intent(activity, AdminBookInventoryActivity.class)));
+    }
+
+    private static void bindMessage(Activity activity, int id, String label, boolean currentScreen) {
         View tab = activity.findViewById(id);
         if (tab == null) return;
         tab.setOnClickListener(v -> {
