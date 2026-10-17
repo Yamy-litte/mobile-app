@@ -29,6 +29,10 @@ public class AdminHomeActivity extends AppCompatActivity {
     private RequestAdapter adapter;
     private CloudLibraryRepository cloud;
     private ListenerRegistration requestsListener;
+    private ListenerRegistration loansListener;
+    private final List<LoanItem> activeLoans = new ArrayList<>();
+    private boolean showingLoans = false;
+    private ListView requestList;
     private String adminUid;
 
     @Override protected void onCreate(Bundle state) {
@@ -50,9 +54,14 @@ public class AdminHomeActivity extends AppCompatActivity {
         AdminTabNavigation.bind(this);
         emptyText = findViewById(R.id.textAdminRequestsEmpty);
         countText = findViewById(R.id.textAdminRequestCount);
-        ListView list = findViewById(R.id.listAdminRequests);
+        requestList = findViewById(R.id.listAdminRequests);
         adapter = new RequestAdapter();
-        list.setAdapter(adapter);
+        requestList.setAdapter(adapter);
+        findViewById(R.id.btnShowRequests).setOnClickListener(v -> showRequests());
+        findViewById(R.id.btnShowLoans).setOnClickListener(v -> showActiveLoans());
+        requestList.setOnItemClickListener((parent, view, position, id) -> {
+            if (showingLoans && position < activeLoans.size()) processReturn(activeLoans.get(position));
+        });
         findViewById(R.id.btnAdminLogout).setOnClickListener(v -> {
             auth.logout();
             goToLogin();
@@ -79,6 +88,25 @@ public class AdminHomeActivity extends AppCompatActivity {
                 .addOnFailureListener(error -> Toast.makeText(this,
                         "Không đồng bộ được danh mục sách SQLite lên Firestore: " + safe(error.getMessage()),
                         Toast.LENGTH_LONG).show());
+        loansListener = cloud.listenActiveBorrowRecords((snapshot, error) -> {
+            if (isFinishing() || isDestroyed()) return;
+            if (error != null) {
+                Toast.makeText(this, "Không tải được phiếu mượn: " + safe(error.getMessage()), Toast.LENGTH_LONG).show();
+                return;
+            }
+            activeLoans.clear();
+            if (snapshot != null) {
+                for (QueryDocumentSnapshot doc : snapshot) {
+                    activeLoans.add(new LoanItem(
+                            doc.getId(),
+                            doc.getString("customerUid"),
+                            doc.getString("bookTitle"),
+                            doc.getLong("borrowedAt") == null ? 0L : doc.getLong("borrowedAt"),
+                            doc.getLong("dueAt") == null ? 0L : doc.getLong("dueAt")));
+                }
+            }
+            if (showingLoans) refreshList();
+        });
         requestsListener = cloud.listenPendingReservations((snapshot, error) -> {
             if (isFinishing() || isDestroyed()) return;
             if (error != null) {
@@ -99,9 +127,7 @@ public class AdminHomeActivity extends AppCompatActivity {
                             doc.getString("requestType")));
                 }
             }
-            adapter.notifyDataSetChanged();
-            countText.setText("Yêu cầu đang chờ: " + requests.size());
-            emptyText.setVisibility(requests.isEmpty() ? View.VISIBLE : View.GONE);
+            if (!showingLoans) refreshList();
         });
     }
 
@@ -123,6 +149,58 @@ public class AdminHomeActivity extends AppCompatActivity {
                 }).show();
     }
 
+    private void showRequests() {
+        showingLoans = false;
+        refreshList();
+    }
+
+    private void showActiveLoans() {
+        showingLoans = true;
+        refreshList();
+    }
+
+    private void refreshList() {
+        if (adapter == null) return;
+        adapter.notifyDataSetChanged();
+        if (showingLoans) {
+            countText.setText("Phiếu đang mượn: " + activeLoans.size());
+            emptyText.setText("Hiện không có phiếu mượn đang hoạt động.");
+            emptyText.setVisibility(activeLoans.isEmpty() ? View.VISIBLE : View.GONE);
+        } else {
+            countText.setText("Yêu cầu đang chờ: " + requests.size());
+            emptyText.setText("Hiện không có yêu cầu mượn đang chờ.");
+            emptyText.setVisibility(requests.isEmpty() ? View.VISIBLE : View.GONE);
+        }
+    }
+
+    private void processReturn(LoanItem item) {
+        new AlertDialog.Builder(this)
+                .setTitle("Xác nhận trả sách")
+                .setMessage("Xác nhận đã nhận lại sách “" + safe(item.bookTitle)
+                        + "” từ độc giả có UID " + safe(item.customerUid) + "?"
+                        + "\nTrạng thái phiếu và tồn kho chỉ thay đổi khi giao dịch thành công.")
+                .setNegativeButton("Hủy", null)
+                .setPositiveButton("Xác nhận trả", (dialog, which) -> {
+                    cloud.returnBorrowRecord(item.id, adminUid)
+                            .addOnSuccessListener(unused -> Toast.makeText(this,
+                                    "Đã xác nhận trả sách và cập nhật tồn kho.", Toast.LENGTH_LONG).show())
+                            .addOnFailureListener(error -> Toast.makeText(this,
+                                    "Không thể trả sách: " + safe(error.getMessage()), Toast.LENGTH_LONG).show());
+                }).show();
+    }
+
+    private static class LoanItem {
+        final String id, customerUid, bookTitle;
+        final long borrowedAt, dueAt;
+        LoanItem(String id, String customerUid, String bookTitle, long borrowedAt, long dueAt) {
+            this.id = id;
+            this.customerUid = customerUid;
+            this.bookTitle = bookTitle;
+            this.borrowedAt = borrowedAt;
+            this.dueAt = dueAt;
+        }
+    }
+
     private void goToLogin() {
         Intent i = new Intent(this, MainActivity.class);
         i.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
@@ -134,6 +212,10 @@ public class AdminHomeActivity extends AppCompatActivity {
         if (requestsListener != null) {
             requestsListener.remove();
             requestsListener = null;
+        }
+        if (loansListener != null) {
+            loansListener.remove();
+            loansListener = null;
         }
         super.onStop();
     }
@@ -156,27 +238,51 @@ public class AdminHomeActivity extends AppCompatActivity {
     }
 
     private class RequestAdapter extends BaseAdapter {
-        @Override public int getCount() { return requests.size(); }
-        @Override public Object getItem(int position) { return requests.get(position); }
+        @Override public int getCount() { return showingLoans ? activeLoans.size() : requests.size(); }
+        @Override public Object getItem(int position) { return showingLoans ? activeLoans.get(position) : requests.get(position); }
         @Override public long getItemId(int position) { return position; }
+        @Override public int getViewTypeCount() { return 2; }
+        @Override public int getItemViewType(int position) { return showingLoans ? 1 : 0; }
         @Override public View getView(int position, View convertView, ViewGroup parent) {
-            View row = convertView;
-            if (row == null) row = LayoutInflater.from(AdminHomeActivity.this)
+            if (showingLoans) {
+                View row = LayoutInflater.from(AdminHomeActivity.this)
+                        .inflate(R.layout.row_admin_borrow_request, parent, false);
+                LoanItem item = activeLoans.get(position);
+                ((TextView) row.findViewById(R.id.textAdminRequestTitle)).setText(safe(item.bookTitle));
+                String borrowed = item.borrowedAt > 0
+                        ? android.text.format.DateFormat.format("dd/MM/yyyy", item.borrowedAt).toString()
+                        : "Chưa cập nhật";
+                String due = item.dueAt > 0
+                        ? android.text.format.DateFormat.format("dd/MM/yyyy", item.dueAt).toString()
+                        : "Chưa có hạn trả";
+                ((TextView) row.findViewById(R.id.textAdminRequestDetails)).setText(
+                        "Trạng thái: ĐANG MƯỢN\nMã độc giả: " + safe(item.customerUid)
+                                + "\nNgày mượn: " + borrowed + "\nHạn trả: " + due
+                                + "\nChạm vào phiếu để xác nhận trả sách.");
+                row.findViewById(R.id.btnApproveRequest).setVisibility(View.GONE);
+                Button reject = row.findViewById(R.id.btnRejectRequest);
+                reject.setText("Xác nhận trả");
+                reject.setOnClickListener(v -> processReturn(item));
+                return row;
+            }
+            View row = LayoutInflater.from(AdminHomeActivity.this)
                     .inflate(R.layout.row_admin_borrow_request, parent, false);
             RequestItem item = requests.get(position);
             ((TextView) row.findViewById(R.id.textAdminRequestTitle)).setText(safe(item.bookTitle));
             String date = item.createdAt > 0
                     ? android.text.format.DateFormat.format("dd/MM/yyyy HH:mm", item.createdAt).toString()
                     : "Chưa cập nhật";
-            String requestType = item.requestType;
-            String requestLabel = "preorder".equalsIgnoreCase(requestType)
+            String requestLabel = "preorder".equalsIgnoreCase(item.requestType)
                     ? "ĐẶT TRƯỚC (chờ có sách)" : "MƯỢN SÁCH";
             ((TextView) row.findViewById(R.id.textAdminRequestDetails)).setText(
-                    "Loại yêu cầu: " + requestLabel
-                            + "\nĐộc giả: " + safe(item.customerName) + "\nEmail: " + safe(item.customerEmail)
-                            + "\nNgày gửi: " + date);
+                    "Loại yêu cầu: " + requestLabel + "\nĐộc giả: " + safe(item.customerName)
+                            + "\nEmail: " + safe(item.customerEmail) + "\nNgày gửi: " + date);
+            row.findViewById(R.id.btnApproveRequest).setVisibility(View.VISIBLE);
+            row.findViewById(R.id.btnRejectRequest).setVisibility(View.VISIBLE);
             Button approve = row.findViewById(R.id.btnApproveRequest);
             Button reject = row.findViewById(R.id.btnRejectRequest);
+            approve.setText("Duyệt");
+            reject.setText("Từ chối");
             approve.setOnClickListener(v -> processRequest(item, true));
             reject.setOnClickListener(v -> processRequest(item, false));
             return row;
