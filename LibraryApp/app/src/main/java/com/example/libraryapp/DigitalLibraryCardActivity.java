@@ -62,7 +62,7 @@ public class DigitalLibraryCardActivity extends AppCompatActivity {
         // Keep clear white space at both ends so the scanner can detect Code 128.
         hints.put(EncodeHintType.MARGIN, 24);
         BitMatrix matrix = new MultiFormatWriter().encode(
-                value, BarcodeFormat.CODE_128, 1400, 320, hints);
+                value, BarcodeFormat.CODE_128, 1800, 460, hints);
         Bitmap bitmap = Bitmap.createBitmap(matrix.getWidth(), matrix.getHeight(), Bitmap.Config.ARGB_8888);
         for (int x = 0; x < matrix.getWidth(); x++) {
             for (int y = 0; y < matrix.getHeight(); y++) {
