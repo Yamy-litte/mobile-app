@@ -161,6 +161,12 @@ public class ReaderAccountActivity extends AppCompatActivity {
         customer.setPhoneNumber(phone);
         customer.setUpdatedAt(new SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault()).format(new Date()));
         if (customerDao.updateProfile(customer) > 0) {
+            String uid = customer.getFirebaseUid();
+            new CloudLibraryRepository().upsertReaderProfile(
+                    uid, customer.getEmail(), customer.getFullName(),
+                    customer.getPhoneNumber(), customer.getAvatarUrl())
+                    .addOnFailureListener(error -> android.util.Log.e(
+                            "ReaderAccount", "Unable to sync Reader profile to Firestore", error));
             Toast.makeText(this, "Đã cập nhật thông tin tài khoản.", Toast.LENGTH_SHORT).show();
         } else {
             Toast.makeText(this, "Không thể cập nhật. Hãy thử lại.", Toast.LENGTH_SHORT).show();
