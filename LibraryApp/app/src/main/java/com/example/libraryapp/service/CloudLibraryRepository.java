@@ -460,6 +460,76 @@ public final class CloudLibraryRepository {
     }
 
 
+    /** Finds a Reader profile using the stable barcode printed on the digital library card. */
+    public Task<com.google.firebase.firestore.QuerySnapshot> findReaderByCardNumber(String cardNumber) {
+        if (isBlank(cardNumber)) throw new IllegalArgumentException("Mã thẻ không hợp lệ.");
+        return firestore.collection(COLLECTION_CUSTOMERS)
+                .whereEqualTo("libraryCardNumber", cardNumber.trim())
+                .limit(2)
+                .get();
+    }
+
+    /** Loads the scanned Reader's borrowing history without requiring a composite index. */
+    public Task<com.google.firebase.firestore.QuerySnapshot> getReaderBorrowRecords(String customerUid) {
+        if (isBlank(customerUid)) throw new IllegalArgumentException("Không xác định được độc giả.");
+        return firestore.collection(COLLECTION_BORROW_RECORDS)
+                .whereEqualTo("customerUid", customerUid)
+                .get();
+    }
+
+    /**
+     * Marks a borrow record as returned and restores one available copy atomically.
+     * No inventory change is made unless the record is still actively borrowed.
+     */
+    public Task<Void> returnBorrowRecord(String borrowRecordId, String adminUid) {
+        if (isBlank(borrowRecordId) || isBlank(adminUid)) {
+            throw new IllegalArgumentException("Thiếu mã phiếu mượn hoặc tài khoản Admin.");
+        }
+        DocumentReference borrowRef = firestore.collection(COLLECTION_BORROW_RECORDS)
+                .document(borrowRecordId);
+        return firestore.runTransaction(transaction -> {
+            DocumentSnapshot record = transaction.get(borrowRef);
+            if (!record.exists()) throw new IllegalStateException("Không tìm thấy phiếu mượn.");
+            if (!"borrowed".equalsIgnoreCase(record.getString("status"))) {
+                throw new IllegalStateException("Phiếu này đã được trả hoặc không còn hiệu lực.");
+            }
+            String bookId = record.getString("bookId");
+            if (isBlank(bookId)) throw new IllegalStateException("Phiếu mượn thiếu mã sách.");
+            DocumentReference bookRef = firestore.collection(COLLECTION_BOOKS).document(bookId);
+            DocumentSnapshot book = transaction.get(bookRef);
+            if (!book.exists()) throw new IllegalStateException("Không tìm thấy sách để cập nhật tồn kho.");
+            Long available = book.getLong("availableQuantity");
+            Long total = book.getLong("totalQuantity");
+            if (available == null) available = 0L;
+            long max = total == null ? Long.MAX_VALUE : Math.max(0L, total);
+            long restored = Math.min(max, available + 1L);
+            long now = System.currentTimeMillis();
+
+            Map<String, Object> update = new HashMap<>();
+            update.put("status", "returned");
+            update.put("returnedAt", now);
+            update.put("returnedByUid", adminUid);
+            update.put("updatedAt", now);
+            transaction.update(borrowRef, update);
+            transaction.update(bookRef, "availableQuantity", restored);
+
+            String customerUid = record.getString("customerUid");
+            if (!isBlank(customerUid)) {
+                DocumentReference notificationRef = firestore.collection(COLLECTION_NOTIFICATIONS).document();
+                Map<String, Object> notification = new HashMap<>();
+                notification.put("customerUid", customerUid);
+                notification.put("title", "Đã ghi nhận trả sách");
+                notification.put("content", "Admin đã xác nhận trả sách “"
+                        + (record.getString("bookTitle") == null ? "sách" : record.getString("bookTitle"))
+                        + "”.");
+                notification.put("isRead", false);
+                notification.put("createdAt", now);
+                transaction.set(notificationRef, notification);
+            }
+            return null;
+        });
+    }
+
     /** Resolve by title first, then let the caller verify the author. */
     public Task<com.google.firebase.firestore.QuerySnapshot> findBookByTitleAndAuthor(String title, String author) {
         return firestore.collection(COLLECTION_BOOKS)
