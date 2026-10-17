@@ -27,6 +27,8 @@ import com.example.libraryapp.model.Book;
 import com.example.libraryapp.model.Category;
 import com.example.libraryapp.model.Location;
 import com.example.libraryapp.service.CloudLibraryRepository;
+import com.google.firebase.firestore.DocumentSnapshot;
+import com.google.firebase.firestore.ListenerRegistration;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
@@ -43,6 +45,7 @@ public class AdminBookInventoryActivity extends AppCompatActivity {
     private final List<Location> locations = new ArrayList<>();
     private int selectedCategoryId = -1;
     private LinearLayout categoryFilterContainer;
+    private ListenerRegistration booksListener;
 
     @Override protected void onCreate(Bundle state) {
         super.onCreate(state);
@@ -65,10 +68,11 @@ public class AdminBookInventoryActivity extends AppCompatActivity {
                 boolean next = !book.isActive();
                 book.setActive(next);
                 if (bookDao.update(book) > 0) {
-                    cloud.setBookActive(String.valueOf(book.getId()), next)
+                    cloud.syncAdminBook(book)
+                            .addOnSuccessListener(unused -> Toast.makeText(this, "Đã đồng bộ trạng thái sách.", Toast.LENGTH_SHORT).show())
                             .addOnFailureListener(error -> Toast.makeText(AdminBookInventoryActivity.this,
-                                    "Đã lưu trên máy nhưng chưa đồng bộ trạng thái.", Toast.LENGTH_LONG).show());
-                    syncAndReload();
+                                    "Đã lưu trên máy nhưng chưa đồng bộ trạng thái: " + safe(error.getMessage()), Toast.LENGTH_LONG).show());
+                    reloadBooks();
                 }
             }
         });
@@ -91,9 +95,10 @@ public class AdminBookInventoryActivity extends AppCompatActivity {
                     .setPositiveButton("Xác nhận", (dialog, which) -> {
                         book.setActive(willActivate);
                         if (bookDao.update(book) > 0) {
-                            cloud.setBookActive(String.valueOf(book.getId()), willActivate)
+                            cloud.syncAdminBook(book)
+                                    .addOnSuccessListener(unused -> Toast.makeText(this, "Đã đồng bộ trạng thái sách.", Toast.LENGTH_SHORT).show())
                                     .addOnFailureListener(error -> Toast.makeText(this, "Đã lưu trên máy nhưng chưa đồng bộ trạng thái: " + safe(error.getMessage()), Toast.LENGTH_LONG).show());
-                            syncAndReload();
+                            reloadBooks();
                             Toast.makeText(this, willActivate ? "Đã kích hoạt sách." : "Đã ẩn sách; dữ liệu và lịch sử được giữ lại.", Toast.LENGTH_SHORT).show();
                         }
                     }).show();
@@ -235,8 +240,15 @@ public class AdminBookInventoryActivity extends AppCompatActivity {
                     book.setAvailableQuantity(availableValue);
                     book.setImageUrl(imageUrl);
                     book.setSummary(summary.getText().toString().trim());
-                    if (editing) bookDao.update(book); else bookDao.insert(book);
-                    syncAndReload();
+                    long localResult = editing ? bookDao.update(book) : bookDao.insert(book);
+                    if (localResult > 0) {
+                        reloadBooks();
+                        cloud.syncAdminBook(book)
+                                .addOnSuccessListener(unused -> Toast.makeText(this, "Đã lưu và đồng bộ sách lên Firestore.", Toast.LENGTH_SHORT).show())
+                                .addOnFailureListener(error -> Toast.makeText(this, "Đã lưu trên máy, nhưng đồng bộ Firestore lỗi: " + safe(error.getMessage()), Toast.LENGTH_LONG).show());
+                    } else {
+                        Toast.makeText(this, "Không lưu được sách vào SQLite.", Toast.LENGTH_LONG).show();
+                    }
                 }).show();
     }
 
@@ -305,11 +317,88 @@ public class AdminBookInventoryActivity extends AppCompatActivity {
 
     private void syncAndReload() {
         reloadBooks();
-        List<Book> activeBooks = new ArrayList<>();
-        for (Book book : allBooks) activeBooks.add(book);
-        cloud.syncLocalBooks(activeBooks)
-                .addOnSuccessListener(unused -> Toast.makeText(this, "Đã lưu kho sách và đồng bộ thông tin lên Firestore.", Toast.LENGTH_SHORT).show())
-                .addOnFailureListener(error -> Toast.makeText(this, "Đã lưu trên máy, nhưng đồng bộ Firestore lỗi: " + safe(error.getMessage()), Toast.LENGTH_LONG).show());
+    }
+
+    @Override protected void onStart() {
+        super.onStart();
+        if (cloud == null || bookDao == null) return;
+        booksListener = cloud.listenAllBooks((snapshot, error) -> {
+            if (isFinishing() || isDestroyed()) return;
+            if (error != null) {
+                Toast.makeText(this, "Không tải được kho sách từ Firestore: " + safe(error.getMessage()), Toast.LENGTH_LONG).show();
+                return;
+            }
+            if (snapshot == null) return;
+            for (DocumentSnapshot doc : snapshot.getDocuments()) {
+                int cloudId = parseBookId(doc.getId(), doc.getString("localBookId"));
+                Book local = cloudId > 0 ? bookDao.getById(cloudId) : null;
+                String titleValue = doc.getString("title");
+                String authorValue = doc.getString("author");
+                if (local == null && titleValue != null && authorValue != null) {
+                    for (Book candidate : bookDao.getAll()) {
+                        if (titleValue.equals(candidate.getTitle()) && authorValue.equals(candidate.getAuthor())) {
+                            local = candidate;
+                            break;
+                        }
+                    }
+                }
+                if (local == null) {
+                    Long categoryValue = doc.getLong("categoryId");
+                    Long locationValue = doc.getLong("locationId");
+                    if (cloudId <= 0 || categoryValue == null || locationValue == null
+                            || categoryValue <= 0 || locationValue <= 0) continue;
+                    local = new Book();
+                    local.setId(cloudId);
+                    local.setCategoryId(categoryValue.intValue());
+                    local.setLocationId(locationValue.intValue());
+                }
+                if (titleValue != null) local.setTitle(titleValue);
+                if (authorValue != null) local.setAuthor(authorValue);
+                String publisherValue = doc.getString("publisher");
+                if (publisherValue != null) local.setPublisher(publisherValue);
+                Long yearValue = doc.getLong("publishYear");
+                if (yearValue != null) local.setPublishYear(yearValue.intValue());
+                Long pagesValue = doc.getLong("pages");
+                if (pagesValue != null) local.setPages(pagesValue.intValue());
+                String summaryValue = doc.getString("summary");
+                if (summaryValue != null) local.setSummary(summaryValue);
+                String imageValue = doc.getString("imageUrl");
+                if (imageValue != null) local.setImageUrl(imageValue);
+                Long categoryValue = doc.getLong("categoryId");
+                if (categoryValue != null && categoryValue > 0) local.setCategoryId(categoryValue.intValue());
+                Long locationValue = doc.getLong("locationId");
+                if (locationValue != null && locationValue > 0) local.setLocationId(locationValue.intValue());
+                Long totalValue = doc.getLong("totalQuantity");
+                if (totalValue != null && totalValue >= 0) local.setTotalQuantity(totalValue.intValue());
+                Long availableValue = doc.getLong("availableQuantity");
+                if (availableValue != null && availableValue >= 0)
+                    local.setAvailableQuantity(Math.min(availableValue.intValue(), local.getTotalQuantity()));
+                Boolean activeValue = doc.getBoolean("active");
+                if (activeValue != null) local.setActive(activeValue);
+                if (local.getId() > 0 && local.getCategoryId() > 0 && local.getLocationId() > 0
+                        && local.getTitle() != null && local.getAuthor() != null) {
+                    bookDao.upsertCloudBook(local);
+                }
+            }
+            reloadBooks();
+        });
+    }
+
+    private int parseBookId(String documentId, String localBookId) {
+        try {
+            if (localBookId != null) return Integer.parseInt(localBookId);
+            return Integer.parseInt(documentId);
+        } catch (NumberFormatException ignored) {
+            return -1;
+        }
+    }
+
+    @Override protected void onStop() {
+        if (booksListener != null) {
+            booksListener.remove();
+            booksListener = null;
+        }
+        super.onStop();
     }
 
     private String safe(String value) { return value == null ? "" : value.trim(); }
@@ -320,6 +409,10 @@ public class AdminBookInventoryActivity extends AppCompatActivity {
         finish();
     }
     @Override protected void onDestroy() {
+        if (booksListener != null) {
+            booksListener.remove();
+            booksListener = null;
+        }
         if (bookDao != null) bookDao.close();
         super.onDestroy();
     }
