@@ -2,7 +2,6 @@ package com.example.libraryapp;
 
 import android.app.Activity;
 import android.content.Intent;
-import android.widget.Toast;
 import android.view.View;
 
 /** Navigation for the five Admin tabs shown in the project Figma. */
@@ -10,29 +9,21 @@ public final class AdminTabNavigation {
     private AdminTabNavigation() {}
 
     public static void bind(Activity activity) {
-        bindMessage(activity, R.id.adminTabHome, "Trang chủ", true);
-        bindBooks(activity);
-        bindMessage(activity, R.id.adminTabScan, "Quét mã", false);
-        bindMessage(activity, R.id.adminTabLoans, "Phiếu mượn", true);
-        bindMessage(activity, R.id.adminTabAccount, "Tài khoản", false);
+        bindDestination(activity, R.id.adminTabHome, AdminHomeActivity.class);
+        bindDestination(activity, R.id.adminTabBooks, AdminBookInventoryActivity.class);
+        bindDestination(activity, R.id.adminTabScan, AdminScanActivity.class);
+        // The Home screen currently contains the live request queue and borrow-request actions.
+        bindDestination(activity, R.id.adminTabLoans, AdminHomeActivity.class);
+        bindDestination(activity, R.id.adminTabAccount, AdminAccountActivity.class);
     }
 
-    private static void bindBooks(Activity activity) {
-        View tab = activity.findViewById(R.id.adminTabBooks);
-        if (tab != null) tab.setOnClickListener(v -> activity.startActivity(new Intent(activity, AdminBookInventoryActivity.class)));
-    }
-
-    private static void bindMessage(Activity activity, int id, String label, boolean currentScreen) {
+    private static void bindDestination(Activity activity, int id, Class<?> destination) {
         View tab = activity.findViewById(id);
         if (tab == null) return;
         tab.setOnClickListener(v -> {
-            if (currentScreen) {
-                if ("Trang chủ".equals(label)) {
-                    Toast.makeText(activity, "Trang chủ Admin đang được hoàn thiện.", Toast.LENGTH_SHORT).show();
-                }
-                return;
-            }
-            Toast.makeText(activity, "Màn hình " + label + " sẽ được kết nối ở bước tiếp theo.", Toast.LENGTH_SHORT).show();
+            if (activity.getClass().equals(destination)) return;
+            Intent intent = new Intent(activity, destination);
+            activity.startActivity(intent);
         });
     }
 }
