@@ -77,6 +77,54 @@ public final class CloudLibraryRepository {
         return submitReservation(bookCloudId, bookTitle, false);
     }
 
+    public Task<DocumentReference> submitReservation(String bookCloudId, String bookTitle,
+                                                        boolean preorder, long pickupAt, long dueAt) {
+        if (!preorder && (pickupAt <= 0L || dueAt <= pickupAt)) {
+            throw new IllegalArgumentException("Ngày trả phải sau ngày nhận.");
+        }
+        com.google.firebase.auth.FirebaseUser user = auth.getCurrentUser();
+        if (user == null) throw new IllegalStateException("Bạn chưa đăng nhập.");
+        String uid = user.getUid();
+        String email = user.getEmail() == null ? "" : user.getEmail();
+        Query pendingRequests = firestore.collection(COLLECTION_RESERVATIONS)
+                .whereEqualTo("customerUid", uid)
+                .whereEqualTo("bookId", bookCloudId)
+                .whereEqualTo("status", "pending");
+        return pendingRequests.get().continueWithTask(queryTask -> {
+            if (!queryTask.isSuccessful()) {
+                Exception error = queryTask.getException();
+                throw error == null ? new IllegalStateException("Không kiểm tra được yêu cầu mượn hiện có.") : error;
+            }
+            if (!queryTask.getResult().isEmpty()) {
+                throw new IllegalStateException("Bạn đã có yêu cầu đang chờ duyệt cho cuốn sách này.");
+            }
+            return firestore.collection(COLLECTION_CUSTOMERS).document(uid).get()
+                    .continueWithTask(profileTask -> {
+                        if (!profileTask.isSuccessful()) {
+                            Exception error = profileTask.getException();
+                            throw error == null ? new IllegalStateException("Không đọc được hồ sơ độc giả.") : error;
+                        }
+                        DocumentSnapshot profile = profileTask.getResult();
+                        long now = System.currentTimeMillis();
+                        Map<String, Object> data = new HashMap<>();
+                        data.put("customerUid", uid);
+                        data.put("customerEmail", email);
+                        data.put("customerName", profile == null ? "" : profile.getString("fullName"));
+                        data.put("bookId", bookCloudId);
+                        data.put("bookTitle", bookTitle);
+                        data.put("status", "pending");
+                        data.put("requestType", preorder ? "preorder" : "borrow");
+                        if (!preorder) {
+                            data.put("pickupAt", pickupAt);
+                            data.put("dueAt", dueAt);
+                        }
+                        data.put("createdAt", now);
+                        data.put("updatedAt", now);
+                        return firestore.collection(COLLECTION_RESERVATIONS).add(data);
+                    });
+        });
+    }
+
     /** A preorder remains pending until Admin can allocate an available copy. */
     public Task<DocumentReference> submitReservation(String bookCloudId, String bookTitle, boolean preorder) {
         com.google.firebase.auth.FirebaseUser user = auth.getCurrentUser();
