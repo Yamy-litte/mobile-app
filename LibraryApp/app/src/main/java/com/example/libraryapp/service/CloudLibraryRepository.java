@@ -747,8 +747,22 @@ public final class CloudLibraryRepository {
      * No inventory change is made unless the record is still actively borrowed.
      */
     public Task<Void> returnBorrowRecord(String borrowRecordId, String adminUid) {
+        return returnBorrowRecord(borrowRecordId, adminUid, false, "", 0L, 0L, false);
+    }
+
+    /** Records the physical condition, overdue days, assessed fees, and whether payment was collected. */
+    public Task<Void> returnBorrowRecord(String borrowRecordId, String adminUid,
+                                         boolean damaged, String damageDescription,
+                                         long lateFeeAmount, long damageFeeAmount,
+                                         boolean feeCollected) {
         if (isBlank(borrowRecordId) || isBlank(adminUid)) {
             throw new IllegalArgumentException("Thiếu mã phiếu mượn hoặc tài khoản Admin.");
+        }
+        if (lateFeeAmount < 0L || damageFeeAmount < 0L) {
+            throw new IllegalArgumentException("Phí không được âm.");
+        }
+        if (!damaged && damageFeeAmount > 0L) {
+            throw new IllegalArgumentException("Đánh dấu sách hư hại trước khi nhập phí hư hại.");
         }
         DocumentReference borrowRef = firestore.collection(COLLECTION_BORROW_RECORDS)
                 .document(borrowRecordId);
@@ -769,11 +783,28 @@ public final class CloudLibraryRepository {
             long max = total == null ? Long.MAX_VALUE : Math.max(0L, total);
             long restored = Math.min(max, available + 1L);
             long now = System.currentTimeMillis();
+            Long dueAtValue = record.getLong("dueAt");
+            long dueAt = dueAtValue == null ? 0L : dueAtValue;
+            long overdueDays = dueAt > 0L && now > dueAt
+                    ? (now - dueAt + 86400000L - 1L) / 86400000L : 0L;
+            long totalFee = lateFeeAmount + damageFeeAmount;
+            if (totalFee < lateFeeAmount) throw new IllegalArgumentException("Tổng phí vượt giới hạn cho phép.");
 
             Map<String, Object> update = new HashMap<>();
             update.put("status", "returned");
             update.put("returnedAt", now);
             update.put("returnedByUid", adminUid);
+            update.put("physicalConditionOnReturn", damaged ? "damaged" : "good");
+            update.put("damageDescription", damageDescription == null ? "" : damageDescription.trim());
+            update.put("overdueDays", overdueDays);
+            update.put("lateFeeAmount", lateFeeAmount);
+            update.put("damageFeeAmount", damageFeeAmount);
+            update.put("fineAmount", totalFee);
+            update.put("fineReason", overdueDays > 0 && damaged
+                    ? "Trả trễ và hư hại sách" : overdueDays > 0
+                    ? "Trả trễ" : damaged ? "Hư hại sách" : "");
+            update.put("fineStatus", totalFee == 0L ? "none" : feeCollected ? "paid" : "unpaid");
+            update.put("feeCollectedAt", totalFee > 0L && feeCollected ? now : 0L);
             update.put("updatedAt", now);
             transaction.update(borrowRef, update);
             transaction.update(bookRef, "availableQuantity", restored);
@@ -783,10 +814,12 @@ public final class CloudLibraryRepository {
                 DocumentReference notificationRef = firestore.collection(COLLECTION_NOTIFICATIONS).document();
                 Map<String, Object> notification = new HashMap<>();
                 notification.put("customerUid", customerUid);
-                notification.put("title", "Đã ghi nhận trả sách");
+                notification.put("title", totalFee > 0L ? "Đã ghi nhận trả sách và phí" : "Đã ghi nhận trả sách");
                 notification.put("content", "Admin đã xác nhận trả sách “"
                         + (record.getString("bookTitle") == null ? "sách" : record.getString("bookTitle"))
-                        + "”.");
+                        + "”. Số ngày trả trễ: " + overdueDays + ". Tổng phí: "
+                        + totalFee + " VNĐ. Trạng thái phí: "
+                        + (totalFee == 0L ? "không phát sinh" : feeCollected ? "đã thu" : "chưa thanh toán") + ".");
                 notification.put("isRead", false);
                 notification.put("createdAt", now);
                 transaction.set(notificationRef, notification);
