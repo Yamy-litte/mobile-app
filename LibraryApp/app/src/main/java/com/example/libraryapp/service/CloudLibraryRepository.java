@@ -401,68 +401,142 @@ public final class CloudLibraryRepository {
      * Reviews a cloud reservation atomically so two Admin devices cannot
      * approve the same request or allocate the same final copy.
      */
+
     public Task<Void> reviewReservation(String reservationId, boolean approve, String adminUid) {
+        if (isBlank(reservationId) || isBlank(adminUid)) {
+            throw new IllegalArgumentException("Thiếu mã yêu cầu hoặc tài khoản Admin.");
+        }
         final DocumentReference reservationRef =
                 firestore.collection(COLLECTION_RESERVATIONS).document(reservationId);
         final DocumentReference notificationRef =
                 firestore.collection(COLLECTION_NOTIFICATIONS).document();
         return firestore.runTransaction(transaction -> {
-            DocumentSnapshot reservation = transaction.get(reservationRef);
-            if (!reservation.exists()) {
-                throw new IllegalStateException("Không tìm thấy yêu cầu mượn.");
-            }
-            if (!"pending".equals(reservation.getString("status"))) {
+            DocumentSnapshot request = transaction.get(reservationRef);
+            if (!request.exists()) throw new IllegalStateException("Không tìm thấy yêu cầu mượn.");
+            if (!"pending".equalsIgnoreCase(request.getString("status"))) {
                 throw new IllegalStateException("Yêu cầu này đã được xử lý.");
             }
-            String customerUid = reservation.getString("customerUid");
-            String bookId = reservation.getString("bookId");
-            String bookTitle = reservation.getString("bookTitle");
+            String customerUid = request.getString("customerUid");
+            if (isBlank(customerUid)) throw new IllegalStateException("Yêu cầu thiếu UID độc giả.");
             long now = System.currentTimeMillis();
+            String requestType = request.getString("requestType");
+            boolean preorder = "preorder".equalsIgnoreCase(requestType);
+            java.util.List<String> bookIds = new java.util.ArrayList<>();
+            java.util.List<String> bookTitles = new java.util.ArrayList<>();
+            Object rawIds = request.get("bookIds");
+            Object rawTitles = request.get("bookTitles");
+            if (rawIds instanceof java.util.List) {
+                for (Object value : (java.util.List<?>) rawIds) if (value != null) bookIds.add(String.valueOf(value));
+                if (rawTitles instanceof java.util.List) {
+                    for (Object value : (java.util.List<?>) rawTitles) if (value != null) bookTitles.add(String.valueOf(value));
+                }
+            } else {
+                String id = request.getString("bookId");
+                if (!isBlank(id)) bookIds.add(id);
+                String title = request.getString("bookTitle");
+                if (!isBlank(title)) bookTitles.add(title);
+            }
+            if (bookIds.isEmpty()) throw new IllegalStateException("Yêu cầu chưa có danh sách sách.");
 
-            if (approve) {
-                if (bookId == null || customerUid == null) {
-                    throw new IllegalStateException("Yêu cầu thiếu thông tin độc giả hoặc sách.");
+            java.util.List<DocumentReference> bookRefs = new java.util.ArrayList<>();
+            java.util.List<DocumentSnapshot> bookDocs = new java.util.ArrayList<>();
+            if (approve && !preorder) {
+                for (String bookId : bookIds) {
+                    DocumentReference bookRef = firestore.collection(COLLECTION_BOOKS).document(bookId);
+                    bookRefs.add(bookRef);
+                    bookDocs.add(transaction.get(bookRef));
                 }
-                DocumentReference bookRef = firestore.collection(COLLECTION_BOOKS).document(bookId);
-                DocumentSnapshot book = transaction.get(bookRef);
-                if (!book.exists()) {
-                    throw new IllegalStateException("Sách chưa được đồng bộ lên hệ thống chung.");
+                for (int i = 0; i < bookDocs.size(); i++) {
+                    DocumentSnapshot book = bookDocs.get(i);
+                    if (!book.exists()) throw new IllegalStateException("Không tìm thấy sách trong kho.");
+                    Long available = book.getLong("availableQuantity");
+                    if (available == null || available <= 0L) {
+                        throw new IllegalStateException("Một cuốn trong yêu cầu đã hết bản có thể mượn.");
+                    }
                 }
-                Long available = book.getLong("availableQuantity");
-                if (available == null || available <= 0) {
-                    throw new IllegalStateException("Sách đã hết bản có thể mượn.");
+            }
+
+            if (approve && !preorder) {
+                Long pickupAtValue = request.getLong("pickupAt");
+                Long dueAtValue = request.getLong("dueAt");
+                long pickupAt = pickupAtValue == null ? now : pickupAtValue;
+                long dueAt = dueAtValue == null ? pickupAt + 14L * 86400000L : dueAtValue;
+                if (dueAt <= pickupAt) throw new IllegalStateException("Ngày trả phải sau ngày nhận.");
+                for (int i = 0; i < bookRefs.size(); i++) {
+                    DocumentSnapshot book = bookDocs.get(i);
+                    long available = book.getLong("availableQuantity");
+                    String title = i < bookTitles.size() ? bookTitles.get(i) : book.getString("title");
+                    DocumentReference borrowRef = firestore.collection(COLLECTION_BORROW_RECORDS).document();
+                    Map<String, Object> borrow = new HashMap<>();
+                    borrow.put("customerUid", customerUid);
+                    borrow.put("bookId", bookIds.get(i));
+                    borrow.put("bookTitle", title == null ? "Sách" : title);
+                    borrow.put("reservationId", reservationId);
+                    borrow.put("adminUid", adminUid);
+                    borrow.put("status", "awaiting_pickup");
+                    borrow.put("pickupAt", pickupAt);
+                    borrow.put("dueAt", dueAt);
+                    borrow.put("borrowedAt", 0L);
+                    borrow.put("renewalCount", 0L);
+                    borrow.put("createdAt", now);
+                    transaction.set(borrowRef, borrow);
+                    transaction.update(bookRefs.get(i), "availableQuantity", available - 1L);
                 }
-                DocumentReference borrowRef = firestore.collection(COLLECTION_BORROW_RECORDS).document();
-                Map<String, Object> borrow = new HashMap<>();
-                borrow.put("customerUid", customerUid);
-                borrow.put("bookId", bookId);
-                borrow.put("bookTitle", bookTitle);
-                borrow.put("reservationId", reservationId);
-                borrow.put("adminUid", adminUid);
-                borrow.put("status", "borrowed");
-                borrow.put("borrowedAt", now);
-                borrow.put("dueAt", now + 14L * 24L * 60L * 60L * 1000L);
-                transaction.set(borrowRef, borrow);
-                transaction.update(bookRef, "availableQuantity", available - 1L);
             }
 
             String status = approve ? "approved" : "rejected";
-            Map<String, Object> reservationUpdate = new HashMap<>();
-            reservationUpdate.put("status", status);
-            reservationUpdate.put("reviewedByUid", adminUid);
-            reservationUpdate.put("reviewedAt", now);
-            reservationUpdate.put("updatedAt", now);
-            transaction.update(reservationRef, reservationUpdate);
+            Map<String, Object> requestUpdate = new HashMap<>();
+            requestUpdate.put("status", status);
+            requestUpdate.put("reviewedByUid", adminUid);
+            requestUpdate.put("reviewedAt", now);
+            requestUpdate.put("updatedAt", now);
+            transaction.update(reservationRef, requestUpdate);
 
             Map<String, Object> notification = new HashMap<>();
             notification.put("customerUid", customerUid);
-            notification.put("title", approve ? "Yêu cầu mượn đã được duyệt" : "Yêu cầu mượn bị từ chối");
-            notification.put("content", "Yêu cầu mượn sách “" + (bookTitle == null ? "sách" : bookTitle)
-                    + "” " + (approve ? "đã được duyệt. Hạn trả dự kiến sau 14 ngày."
-                    : "đã bị Admin từ chối."));
+            notification.put("title", approve
+                    ? (preorder ? "Đặt trước đã được duyệt" : "Yêu cầu mượn đã được duyệt")
+                    : "Yêu cầu mượn bị từ chối");
+            notification.put("content", approve
+                    ? (preorder
+                        ? "Yêu cầu đặt trước đã được ghi nhận. Bạn sẽ được thông báo khi có sách."
+                        : "Yêu cầu mượn đã được duyệt. Sách đã được giữ chỗ, vui lòng đến thư viện để nhận.")
+                    : "Yêu cầu mượn/đặt trước đã bị Admin từ chối.");
+            notification.put("action", preorder ? "preorder_status" : "pickup_books");
+            notification.put("reservationId", reservationId);
             notification.put("isRead", false);
             notification.put("createdAt", now);
-            notificationRef.set(notification);
+            transaction.set(notificationRef, notification);
+            return null;
+        });
+    }
+
+    /** Admin confirms that the Reader physically received a book reserved by an approved request. */
+    public Task<Void> confirmBorrowPickup(String borrowRecordId, String adminUid) {
+        if (isBlank(borrowRecordId) || isBlank(adminUid)) {
+            throw new IllegalArgumentException("Thiếu mã phiếu hoặc tài khoản Admin.");
+        }
+        DocumentReference ref = firestore.collection(COLLECTION_BORROW_RECORDS).document(borrowRecordId);
+        return firestore.runTransaction(transaction -> {
+            DocumentSnapshot record = transaction.get(ref);
+            if (!record.exists()) throw new IllegalStateException("Không tìm thấy phiếu mượn.");
+            if (!"awaiting_pickup".equalsIgnoreCase(record.getString("status"))) {
+                throw new IllegalStateException("Phiếu không ở trạng thái chờ nhận sách.");
+            }
+            long now = System.currentTimeMillis();
+            transaction.update(ref, "status", "borrowed",
+                    "borrowedAt", now, "handedOverByUid", adminUid, "updatedAt", now);
+            String customerUid = record.getString("customerUid");
+            if (!isBlank(customerUid)) {
+                DocumentReference notificationRef = firestore.collection(COLLECTION_NOTIFICATIONS).document();
+                Map<String, Object> notification = new HashMap<>();
+                notification.put("customerUid", customerUid);
+                notification.put("title", "Đã nhận sách");
+                notification.put("content", "Admin đã xác nhận giao sách và ghi nhận phiếu mượn.");
+                notification.put("isRead", false);
+                notification.put("createdAt", now);
+                transaction.set(notificationRef, notification);
+            }
             return null;
         });
     }
@@ -500,7 +574,6 @@ public final class CloudLibraryRepository {
     public ListenerRegistration listenActiveBorrowRecords(
             com.google.firebase.firestore.EventListener<com.google.firebase.firestore.QuerySnapshot> listener) {
         return firestore.collection(COLLECTION_BORROW_RECORDS)
-                .whereEqualTo("status", "borrowed")
                 .addSnapshotListener(listener);
     }
 
