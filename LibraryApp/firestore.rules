@@ -32,7 +32,16 @@ service cloud.firestore {
       allow create: if signedIn()
         && request.resource.data.customerUid == request.auth.uid
         && request.resource.data.status == "pending";
-      allow update: if isAdmin();
+      // Readers may only cancel their own pending request. They cannot
+      // approve/reject requests or change the book, owner, dates, or other fields.
+      allow update: if isAdmin()
+        || (signedIn()
+          && resource.data.customerUid == request.auth.uid
+          && resource.data.status == "pending"
+          && request.resource.data.customerUid == resource.data.customerUid
+          && request.resource.data.status == "cancelled"
+          && request.resource.data.diff(resource.data).affectedKeys()
+            .hasOnly(['status', 'updatedAt']));
       allow delete: if isAdmin()
         || (signedIn() && resource.data.customerUid == request.auth.uid
           && resource.data.status == "pending");
