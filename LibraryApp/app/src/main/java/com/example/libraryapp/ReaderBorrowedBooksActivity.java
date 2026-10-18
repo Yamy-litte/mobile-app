@@ -122,20 +122,31 @@ public class ReaderBorrowedBooksActivity extends AppCompatActivity {
             if (snapshot != null) {
                 for (QueryDocumentSnapshot doc : snapshot) {
                     String status = doc.getString("status");
-                    String statusText = "returned".equalsIgnoreCase(status) ? "Đã trả"
-                            : ("overdue".equalsIgnoreCase(status) ? "Quá hạn" : "Đang mượn");
+                    String normalizedStatus = status == null ? "" : status.trim().toLowerCase(Locale.ROOT);
+                    String statusText;
+                    if ("awaiting_pickup".equals(normalizedStatus)) statusText = "Chờ nhận sách";
+                    else if ("returned".equals(normalizedStatus)) statusText = "Đã trả";
+                    else if ("overdue".equals(normalizedStatus)) statusText = "Quá hạn";
+                    else if ("borrowed".equals(normalizedStatus)) statusText = "Đang mượn";
+                    else statusText = isBlank(status) ? "Chưa cập nhật" : status;
                     Long borrowedAt = doc.getLong("borrowedAt");
+                    Long pickupAt = doc.getLong("pickupAt");
                     Long dueAt = doc.getLong("dueAt");
+                    String dateDetails = "awaiting_pickup".equals(normalizedStatus)
+                            ? "\nNgày nhận sách dự kiến: " + formatTime(pickupAt)
+                            : "\nNgày mượn: " + formatTime(borrowedAt);
                     String details = "Trạng thái phiếu mượn: " + statusText
-                            + "\nNgày mượn: " + formatTime(borrowedAt)
+                            + dateDetails
                             + "\nHạn trả: " + formatTime(dueAt);
-                    if (dueAt != null && !"returned".equalsIgnoreCase(status)) {
+                    if (dueAt != null && dueAt > 0L
+                            && !"returned".equals(normalizedStatus)
+                            && !"awaiting_pickup".equals(normalizedStatus)) {
                         long daysLeft = (dueAt - System.currentTimeMillis() + 86399999L) / 86400000L;
                         details += daysLeft < 0 ? "\nĐã quá hạn " + Math.abs(daysLeft) + " ngày"
                                 : "\nCòn " + daysLeft + " ngày đến hạn trả";
                     }
-                    boolean canRenew = "borrowed".equalsIgnoreCase(status) && dueAt != null
-                            && dueAt >= System.currentTimeMillis();
+                    boolean canRenew = "borrowed".equals(normalizedStatus) && dueAt != null
+                            && dueAt > 0L && dueAt >= System.currentTimeMillis();
                     cloudBorrowItems.add(new BorrowedItem(safe(doc.getString("bookTitle")),
                             details, 0, "borrow:" + doc.getId(), false, canRenew,
                             borrowedAt == null ? 0L : borrowedAt, dueAt == null ? 0L : dueAt));
@@ -146,7 +157,9 @@ public class ReaderBorrowedBooksActivity extends AppCompatActivity {
     }
 
     private String formatTime(Long timestamp) {
-        return timestamp == null ? "Chưa cập nhật"
+        // Firestore uses 0 as a placeholder until the reader actually picks up the book.
+        // Never render zero as 01/01/1970.
+        return timestamp == null || timestamp <= 0L ? "Chưa cập nhật"
                 : android.text.format.DateFormat.format("dd/MM/yyyy HH:mm", timestamp).toString();
     }
 
