@@ -100,9 +100,8 @@
                 android:gravity="center_vertical">
                 <EditText
                     android:id="@+id/editRegisterEmail"
-                    android:layout_width="0dp"
+                    android:layout_width="match_parent"
                     android:layout_height="52dp"
-                    android:layout_weight="1"
                     android:background="@drawable/bg_auth_input"
                     android:paddingStart="14dp"
                     android:paddingEnd="14dp"
@@ -112,15 +111,7 @@
                     android:singleLine="true"
                     android:textColor="@color/library_text"
                     android:textColorHint="@color/library_muted" />
-                <Button
-                    android:id="@+id/buttonVerifyEmail"
-                    android:layout_width="wrap_content"
-                    android:layout_height="52dp"
-                    android:layout_marginStart="8dp"
-                    android:backgroundTint="@color/library_blue"
-                    android:text="Xác thực email"
-                    android:textAllCaps="false"
-                    android:textSize="12sp" />
+
             </LinearLayout>
             <CheckBox
                 android:buttonTintMode="src_in"
