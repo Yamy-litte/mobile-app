@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "899949552581",
+    "project_id": "libraryonline-dd3a0",
+    "storage_bucket": "libraryonline-dd3a0.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:899949552581:android:af7065f82ef4382f3361ac",
+        "android_client_info": {
+          "package_name": "com.example.libraryonline"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCEQKZTwhBAyzL7tvrwY7BvK8sPnl72w9s"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
