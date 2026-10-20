@@ -1,4 +1,4 @@
-package com.example.libraryonline.data.local;
+package com.example.libraryonline.data.local.db;
 
 import android.content.Context;
 import android.database.sqlite.SQLiteDatabase;
