@@ -3,11 +3,15 @@ package com.example.libraryonline.ui.auth;
 import android.app.AlertDialog;
 import android.app.DatePickerDialog;
 import android.content.Intent;
+import android.graphics.Color;
 import android.os.Bundle;
+import android.os.CountDownTimer;
+import android.text.Editable;
+import android.text.TextWatcher;
 import android.widget.Button;
 import android.widget.CheckBox;
 import android.widget.EditText;
-import android.widget.LinearLayout;
+import android.widget.TextView;
 import android.widget.Toast;
 
 import androidx.appcompat.app.AppCompatActivity;
@@ -28,11 +32,17 @@ import java.util.Map;
 import java.security.SecureRandom;
 
 public class RegisterActivity extends AppCompatActivity {
-    private EditText nameInput, birthDateInput, emailInput, phoneInput;
+    private EditText nameInput, birthDateInput, emailInput, phoneInput, otpInput;
     private CheckBox acceptTerms;
-    private Button submitButton;
+    private Button submitButton, sendOtpButton;
+    private TextView otpStatus;
     private FirebaseFirestore firestore;
     private String birthDateIso = "";
+    private String expectedOtp = "";
+    private String otpEmail = "";
+    private long otpExpiresAt = 0L;
+    private boolean emailVerified = false;
+    private CountDownTimer resendTimer;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -43,11 +53,30 @@ public class RegisterActivity extends AppCompatActivity {
         birthDateInput = findViewById(R.id.editBirthDate);
         emailInput = findViewById(R.id.editRegisterEmail);
         phoneInput = findViewById(R.id.editPhone);
+        otpInput = findViewById(R.id.editRegisterOtp);
+        otpStatus = findViewById(R.id.textOtpStatus);
+        sendOtpButton = findViewById(R.id.buttonSendOtp);
         acceptTerms = findViewById(R.id.checkAcceptTerms);
         submitButton = findViewById(R.id.buttonSubmitRegistration);
         submitButton.setEnabled(true);
+
         birthDateInput.setOnClickListener(v -> chooseBirthDate());
+        sendOtpButton.setOnClickListener(v -> sendRegistrationOtp());
         submitButton.setOnClickListener(v -> submitRequest());
+        emailInput.addTextChangedListener(new TextWatcher() {
+            @Override public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
+            @Override public void onTextChanged(CharSequence s, int start, int before, int count) {
+                String currentEmail = InputValidator.normalizeEmail(s.toString());
+                if (!otpEmail.isEmpty() && !otpEmail.equals(currentEmail)) {
+                    expectedOtp = "";
+                    otpExpiresAt = 0L;
+                    emailVerified = false;
+                    otpInput.setText("");
+                    otpStatus.setText("Email đã thay đổi. Vui lòng gửi OTP mới.");
+                }
+            }
+            @Override public void afterTextChanged(Editable s) {}
+        });
     }
 
     private void chooseBirthDate() {
@@ -62,6 +91,76 @@ public class RegisterActivity extends AppCompatActivity {
         }, initial.get(Calendar.YEAR) - 18, initial.get(Calendar.MONTH), initial.get(Calendar.DAY_OF_MONTH));
         picker.getDatePicker().setMaxDate(System.currentTimeMillis());
         picker.show();
+    }
+
+    private void sendRegistrationOtp() {
+        String email = InputValidator.normalizeEmail(emailInput.getText().toString());
+        if (!InputValidator.isValidEmail(email)) {
+            emailInput.setError("Vui lòng nhập địa chỉ email/Gmail hợp lệ");
+            emailInput.requestFocus();
+            return;
+        }
+        if (resendTimer != null) {
+            Toast.makeText(this, "Vui lòng đợi hết thời gian đếm ngược trước khi gửi lại OTP.", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        sendOtpButton.setEnabled(false);
+        sendOtpButton.setText("Đang gửi...");
+        String fullName = nameInput.getText().toString().trim();
+        String otp = String.format(Locale.ROOT, "%06d", new SecureRandom().nextInt(1_000_000));
+        EmailSender.send(email,
+                "Library Online - Mã OTP xác minh email",
+                "Xin chào " + (fullName.isEmpty() ? "bạn" : fullName) + ",\n\n"
+                        + "Mã OTP xác minh email của bạn là: " + otp + "\n"
+                        + "Mã có hiệu lực trong 60 giây và chỉ dùng một lần.\n\n"
+                        + "Nếu bạn không thực hiện đăng ký, hãy bỏ qua email này.",
+                (success, message) -> {
+                    if (isFinishing() || isDestroyed()) return;
+                    if (!success) {
+                        sendOtpButton.setEnabled(true);
+                        sendOtpButton.setText("Gửi OTP");
+                        otpStatus.setText("Không gửi được email. Hãy kiểm tra địa chỉ Gmail, kết nối mạng và thư mục Spam.");
+                        new AlertDialog.Builder(this)
+                                .setTitle("Không gửi được mã OTP")
+                                .setMessage("Vui lòng kiểm tra địa chỉ Gmail đã nhập có chính xác không, kiểm tra kết nối mạng và thư mục Spam/Thư rác, sau đó thử gửi lại.\n\nChi tiết: " + message)
+                                .setPositiveButton("Đã hiểu", (dialog, which) -> dialog.dismiss())
+                                .show();
+                        return;
+                    }
+                    expectedOtp = otp;
+                    otpEmail = email;
+                    otpExpiresAt = System.currentTimeMillis() + 60_000L;
+                    emailVerified = false;
+                    otpInput.setText("");
+                    otpStatus.setText("Đã gửi mã đến " + email + ". Mã có hiệu lực 60 giây.");
+                    startResendCountdown();
+                    Toast.makeText(this, "Đã gửi mã OTP đến email.", Toast.LENGTH_SHORT).show();
+                });
+    }
+
+    private void startResendCountdown() {
+        if (resendTimer != null) {
+            resendTimer.cancel();
+        }
+        sendOtpButton.setEnabled(false);
+        sendOtpButton.setBackgroundTintList(android.content.res.ColorStateList.valueOf(Color.GRAY));
+        resendTimer = new CountDownTimer(60_000L, 1_000L) {
+            @Override public void onTick(long millisUntilFinished) {
+                sendOtpButton.setText("Gửi lại (" + ((millisUntilFinished + 999) / 1000) + "s)");
+            }
+            @Override public void onFinish() {
+                resendTimer = null;
+                sendOtpButton.setEnabled(true);
+                sendOtpButton.setText("Gửi OTP");
+                sendOtpButton.setBackgroundTintList(android.content.res.ColorStateList.valueOf(
+                        androidx.core.content.ContextCompat.getColor(RegisterActivity.this, R.color.library_blue)));
+                if (!emailVerified && System.currentTimeMillis() >= otpExpiresAt) {
+                    expectedOtp = "";
+                    otpStatus.setText("Mã OTP đã hết hạn. Nhấn Gửi OTP để nhận mã mới.");
+                }
+            }
+        }.start();
     }
 
     private void submitRequest() {
@@ -84,6 +183,29 @@ public class RegisterActivity extends AppCompatActivity {
             emailInput.requestFocus();
             return;
         }
+        if (!email.equals(otpEmail) || expectedOtp.isEmpty()) {
+            otpInput.setError("Vui lòng gửi OTP đến email này");
+            otpInput.requestFocus();
+            return;
+        }
+        if (System.currentTimeMillis() > otpExpiresAt) {
+            emailVerified = false;
+            expectedOtp = "";
+            otpInput.setError("Mã OTP đã hết hạn. Vui lòng gửi lại.");
+            otpStatus.setText("Mã OTP đã hết hạn. Nhấn Gửi OTP để nhận mã mới.");
+            otpInput.requestFocus();
+            return;
+        }
+        if (!emailVerified) {
+            String enteredOtp = otpInput.getText().toString().trim();
+            if (!enteredOtp.matches("[0-9]{6}") || !enteredOtp.equals(expectedOtp)) {
+                otpInput.setError("Mã OTP không đúng. Vui lòng kiểm tra lại email.");
+                otpInput.requestFocus();
+                return;
+            }
+            emailVerified = true;
+            otpStatus.setText("Email đã được xác minh.");
+        }
         if (!InputValidator.isValidVietnamPhone(phone)) {
             phoneInput.setError("Số điện thoại Việt Nam không đúng định dạng");
             phoneInput.requestFocus();
@@ -96,80 +218,7 @@ public class RegisterActivity extends AppCompatActivity {
         }
         acceptTerms.setError(null);
         setSubmitting(true);
-        sendRegistrationOtp(fullName, email, phone);
-    }
-
-    private void sendRegistrationOtp(String fullName, String email, String phone) {
-        String otp = String.format(Locale.ROOT, "%06d", new SecureRandom().nextInt(1_000_000));
-        long expiresAt = System.currentTimeMillis() + 5 * 60 * 1000L;
-        EmailSender.send(email,
-                "Library Online - Mã OTP xác minh email",
-                "Xin chào " + fullName + ",\n\n"
-                        + "Mã OTP xác minh email của bạn là: " + otp + "\n"
-                        + "Mã có hiệu lực trong 5 phút và chỉ dùng một lần.\n\n"
-                        + "Nếu bạn không thực hiện đăng ký, hãy bỏ qua email này.",
-                (success, message) -> {
-                    if (!success) {
-                        setSubmitting(false);
-                        new AlertDialog.Builder(this)
-                                .setTitle("Không gửi được mã OTP")
-                                .setMessage("Ứng dụng chưa gửi được email xác minh. Vui lòng kiểm tra địa chỉ Gmail "
-                                        + "đã nhập có chính xác không, kiểm tra kết nối mạng và thư mục Spam/Thư rác, "
-                                        + "sau đó thử gửi lại.\n\nChi tiết: " + message)
-                                .setPositiveButton("Đã hiểu", (dialog, which) -> dialog.dismiss())
-                                .show();
-                        return;
-                    }
-                    showOtpDialog(fullName, email, phone, otp, expiresAt);
-                });
-    }
-
-    private void showOtpDialog(String fullName, String email, String phone,
-                               String expectedOtp, long expiresAt) {
-        EditText otpInput = new EditText(this);
-        otpInput.setHint("Nhập mã OTP gồm 6 chữ số");
-        otpInput.setInputType(android.text.InputType.TYPE_CLASS_NUMBER);
-        otpInput.setSingleLine(true);
-        int pad = (int) (20 * getResources().getDisplayMetrics().density + 0.5f);
-        otpInput.setPadding(pad, pad / 2, pad, pad / 2);
-        LinearLayout container = new LinearLayout(this);
-        container.setOrientation(LinearLayout.VERTICAL);
-        container.setPadding(pad, pad / 2, pad, 0);
-        container.addView(otpInput);
-
-        AlertDialog dialog = new AlertDialog.Builder(this)
-                .setTitle("Xác minh email")
-                .setMessage("Mã OTP đã được gửi đến " + email
-                        + ". Vui lòng kiểm tra cả thư mục Spam/Thư rác. Mã hết hạn sau 5 phút.")
-                .setView(container)
-                .setNegativeButton("Hủy", (d, which) -> {
-                    setSubmitting(false);
-                    d.dismiss();
-                })
-                .setPositiveButton("Xác minh", null)
-                .create();
-        dialog.setOnShowListener(unused -> dialog.getButton(AlertDialog.BUTTON_POSITIVE)
-                .setOnClickListener(v -> {
-                    String enteredOtp = otpInput.getText().toString().trim();
-                    if (System.currentTimeMillis() > expiresAt) {
-                        dialog.dismiss();
-                        setSubmitting(false);
-                        new AlertDialog.Builder(this)
-                                .setTitle("Mã OTP đã hết hạn")
-                                .setMessage("Vui lòng gửi lại yêu cầu đăng ký để nhận mã OTP mới.")
-                                .setPositiveButton("Đóng", (d, which) -> d.dismiss())
-                                .show();
-                        return;
-                    }
-                    if (!enteredOtp.matches("[0-9]{6}") || !enteredOtp.equals(expectedOtp)) {
-                        otpInput.setError("Mã OTP không đúng. Vui lòng kiểm tra lại email.");
-                        return;
-                    }
-                    dialog.dismiss();
-                    createRegistrationRequest(fullName, email, phone);
-                }));
-        dialog.setOnCancelListener(d -> setSubmitting(false));
-        dialog.show();
+        createRegistrationRequest(fullName, email, phone);
     }
 
     private void createRegistrationRequest(String fullName, String email, String phone) {
@@ -190,8 +239,6 @@ public class RegisterActivity extends AppCompatActivity {
         Map<String, Object> emailIndex = indexData(email, requestRef.getId());
         Map<String, Object> phoneIndex = indexData(phone, requestRef.getId());
 
-        // Reserve email and phone in the same atomic batch as the request. The rules
-        // permit index creation only once, preventing simultaneous duplicate submissions.
         WriteBatch batch = firestore.batch();
         batch.set(requestRef, request);
         batch.set(firestore.collection("RegistrationEmailIndex").document(email), emailIndex);
@@ -238,5 +285,14 @@ public class RegisterActivity extends AppCompatActivity {
     private void setSubmitting(boolean submitting) {
         submitButton.setEnabled(!submitting);
         submitButton.setText(submitting ? "Đang gửi..." : "Gửi yêu cầu đăng ký");
+    }
+
+    @Override
+    protected void onDestroy() {
+        if (resendTimer != null) {
+            resendTimer.cancel();
+            resendTimer = null;
+        }
+        super.onDestroy();
     }
 }
