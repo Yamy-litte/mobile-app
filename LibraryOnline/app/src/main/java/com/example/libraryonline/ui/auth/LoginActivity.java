@@ -14,6 +14,7 @@ import androidx.appcompat.app.AppCompatActivity;
 import com.example.libraryonline.R;
 import com.example.libraryonline.ui.admin.AdminMainActivity;
 import com.example.libraryonline.ui.reader.ReaderMainActivity;
+import com.example.libraryonline.ui.auth.ChangePasswordActivity;
 import com.example.libraryonline.utils.InputValidator;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.firestore.FirebaseFirestore;
@@ -110,6 +111,12 @@ public class LoginActivity extends AppCompatActivity {
                                 }
                                 if (!"Reader".equalsIgnoreCase(role)) {
                                     rejectLogin("Vai trò tài khoản không hợp lệ.");
+                                    return;
+                                }
+                                if (Boolean.TRUE.equals(userDoc.getBoolean("mustChangePassword"))) {
+                                    setLoading(false);
+                                    startActivity(new Intent(this, ChangePasswordActivity.class));
+                                    finish();
                                     return;
                                 }
 
