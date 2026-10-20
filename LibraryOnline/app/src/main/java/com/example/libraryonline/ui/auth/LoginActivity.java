@@ -29,7 +29,7 @@ public class LoginActivity extends AppCompatActivity {
     private Button loginButton;
     private CheckBox rememberLogin;
     private TextView registerLink;
-    private TextView forgotPasswordLink;
+    private TextView forgotPasswordLink;\n    private TextView adminLoginLink;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -43,7 +43,7 @@ public class LoginActivity extends AppCompatActivity {
         loginButton = findViewById(R.id.buttonLogin);
         rememberLogin = findViewById(R.id.checkRememberLogin);
         registerLink = findViewById(R.id.textRegister);
-        forgotPasswordLink = findViewById(R.id.textForgotPassword);
+        forgotPasswordLink = findViewById(R.id.textForgotPassword);\n        adminLoginLink = findViewById(R.id.textAdminLogin);
 
         SharedPreferences preferences = getSharedPreferences(PREFS_NAME, MODE_PRIVATE);
         String savedEmail = preferences.getString(KEY_REMEMBER_EMAIL, "");
@@ -55,7 +55,7 @@ public class LoginActivity extends AppCompatActivity {
         loginButton.setOnClickListener(v -> login());
         registerLink.setOnClickListener(v ->
                 startActivity(new Intent(this, RegisterActivity.class)));
-        forgotPasswordLink.setOnClickListener(v -> sendPasswordReset());
+        forgotPasswordLink.setOnClickListener(v -> sendPasswordReset());\n        adminLoginLink.setOnClickListener(v ->\n                startActivity(new Intent(this, AdminLoginActivity.class)));
     }
 
     private void login() {
