@@ -1,0 +1,39 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    function isAdmin() {
+      return signedIn()
+        && exists(/databases/$(database)/documents/Admins/$(request.auth.uid))
+        && get(/databases/$(database)/documents/Admins/$(request.auth.uid)).data.adminStatus in ['Active', 'HoatDong'];
+    }
+
+    match /Admins/{adminId} {
+      // The admin can read their own role record for login validation.
+      allow read: if signedIn() && request.auth.uid == adminId;
+      allow write: if false;
+    }
+
+    match /Users/{userId} {
+      // Readers can read their own profile; active admins can review profiles.
+      allow read: if (signedIn() && request.auth.uid == userId) || isAdmin();
+      // Trusted Cloud Functions use the Admin SDK to create/update user records.
+      allow create, update, delete: if false;
+    }
+
+    match /RegistrationRequests/{requestId} {
+      // Only active admins can see submitted applications.
+      // Submission and review changes are performed by trusted Cloud Functions.
+      allow read: if isAdmin();
+      allow create, update, delete: if false;
+    }
+
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}
