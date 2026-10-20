@@ -4,7 +4,7 @@
         <item name="colorOnPrimary">@color/white</item>
         <item name="colorSecondary">@color/library_navy</item>
         <item name="android:colorAccent">@color/library_blue</item>
-        <item name="android:fontFamily">sans</item>
+        <item name="android:fontFamily">sans-serif</item>
         <item name="android:statusBarColor">@color/library_background</item>
         <item name="android:navigationBarColor">@color/library_background</item>
         <item name="android:windowLightStatusBar">true</item>

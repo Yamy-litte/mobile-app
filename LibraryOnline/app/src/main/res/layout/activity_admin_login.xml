@@ -78,6 +78,18 @@
                 android:singleLine="true"
                 android:textColor="@color/library_text"
                 android:textColorHint="@color/library_muted" />
+
+            <CheckBox
+                android:id="@+id/checkAdminLogin"
+                android:layout_width="match_parent"
+                android:layout_height="52dp"
+                android:layout_marginTop="12dp"
+                android:buttonTint="@color/library_blue"
+                android:buttonTintMode="src_in"
+                android:paddingEnd="4dp"
+                android:text="Ghi nhớ đăng nhập"
+                android:textColor="@color/library_muted"
+                android:textSize="13sp" />
             <Button
                 android:id="@+id/buttonAdminLogin"
                 android:layout_width="match_parent"

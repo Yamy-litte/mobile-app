@@ -106,6 +106,7 @@
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
                     android:layout_weight="1"
+                    android:buttonTintMode="src_in"
                     android:buttonTint="@color/library_blue"
                     android:paddingEnd="4dp"
                     android:text="Ghi nhớ đăng nhập"
