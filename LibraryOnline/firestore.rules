@@ -98,102 +98,12 @@ service cloud.firestore {
         && request.resource.data.fullName.size() >= 2
         && request.resource.data.fullName.size() <= 120
         && request.resource.data.birthDate is string
-        && request.resource.data.birthDate.matches('^[0-9]{4}-[0-9]{2}-[0-9]{2}
-      allow create: if validRegistrationRequest(requestId);
-      allow read: if isAdmin();
-      allow update: if isAdmin()
-        && resource.data.status in ['Pending', 'PendingVerification']
-        && request.resource.data.status in ['Approved', 'Rejected']
-        && request.resource.data.reviewedBy == request.auth.uid
-        && request.resource.data.reviewedAt == request.time
-        && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
-          'status', 'rejectionReason', 'reviewedBy', 'reviewedAt', 'userId', 'barcode'
-        ])
-        && (
-          (request.resource.data.status == 'Approved'
-            && request.resource.data.userId is string
-            && request.resource.data.barcode is string
-            && request.resource.data.rejectionReason == resource.data.rejectionReason)
-          ||
-          (request.resource.data.status == 'Rejected'
-            && request.resource.data.rejectionReason is string
-            && request.resource.data.rejectionReason.size() >= 3
-            && request.resource.data.rejectionReason.size() <= 500
-            && !request.resource.data.keys().hasAny(['userId', 'barcode']))
-        );
-      allow delete: if false;
-    }
-
-    match /{document=**} {
-      allow read, write: if false;
-    }
-  }
-})
+        && request.resource.data.birthDate.matches('^[0-9]{4}-[0-9]{2}-[0-9]{2}$')
         && request.resource.data.email is string
         && request.resource.data.email.size() <= 254
-        && request.resource.data.email.matches('^[^\\s@]+@[^\\s@]+\\.[^\\s@]+
-      allow create: if validRegistrationRequest(requestId);
-      allow read: if isAdmin();
-      allow update: if isAdmin()
-        && resource.data.status in ['Pending', 'PendingVerification']
-        && request.resource.data.status in ['Approved', 'Rejected']
-        && request.resource.data.reviewedBy == request.auth.uid
-        && request.resource.data.reviewedAt == request.time
-        && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
-          'status', 'rejectionReason', 'reviewedBy', 'reviewedAt', 'userId', 'barcode'
-        ])
-        && (
-          (request.resource.data.status == 'Approved'
-            && request.resource.data.userId is string
-            && request.resource.data.barcode is string
-            && request.resource.data.rejectionReason == resource.data.rejectionReason)
-          ||
-          (request.resource.data.status == 'Rejected'
-            && request.resource.data.rejectionReason is string
-            && request.resource.data.rejectionReason.size() >= 3
-            && request.resource.data.rejectionReason.size() <= 500
-            && !request.resource.data.keys().hasAny(['userId', 'barcode']))
-        );
-      allow delete: if false;
-    }
-
-    match /{document=**} {
-      allow read, write: if false;
-    }
-  }
-})
+        && request.resource.data.email.matches('^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$')
         && request.resource.data.phone is string
-        && request.resource.data.phone.matches('^0(3|5|7|8|9)[0-9]{8}
-      allow create: if validRegistrationRequest(requestId);
-      allow read: if isAdmin();
-      allow update: if isAdmin()
-        && resource.data.status in ['Pending', 'PendingVerification']
-        && request.resource.data.status in ['Approved', 'Rejected']
-        && request.resource.data.reviewedBy == request.auth.uid
-        && request.resource.data.reviewedAt == request.time
-        && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
-          'status', 'rejectionReason', 'reviewedBy', 'reviewedAt', 'userId', 'barcode'
-        ])
-        && (
-          (request.resource.data.status == 'Approved'
-            && request.resource.data.userId is string
-            && request.resource.data.barcode is string
-            && request.resource.data.rejectionReason == resource.data.rejectionReason)
-          ||
-          (request.resource.data.status == 'Rejected'
-            && request.resource.data.rejectionReason is string
-            && request.resource.data.rejectionReason.size() >= 3
-            && request.resource.data.rejectionReason.size() <= 500
-            && !request.resource.data.keys().hasAny(['userId', 'barcode']))
-        );
-      allow delete: if false;
-    }
-
-    match /{document=**} {
-      allow read, write: if false;
-    }
-  }
-})
+        && request.resource.data.phone.matches('^0(3|5|7|8|9)[0-9]{8}$')
         && request.resource.data.status == 'Pending'
         && request.resource.data.rejectionReason == ''
         && request.resource.data.createdAt == request.time;
