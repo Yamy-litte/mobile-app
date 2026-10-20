@@ -98,7 +98,6 @@ public class ChangePasswordActivity extends AppCompatActivity {
     @Override
     public void onBackPressed() {
         // The first-login password change is mandatory.
-        super.onBackPressed();
         auth.signOut();
         startActivity(new Intent(this, LoginActivity.class));
         finish();
