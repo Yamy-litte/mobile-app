@@ -10,21 +10,28 @@ public final class InputValidator {
                 && Patterns.EMAIL_ADDRESS.matcher(email.trim()).matches();
     }
 
-    /**
-     * Basic format validation for Vietnamese mobile numbers.
-     * This does not prove that a number is active or belongs to the user.
-     */
-    public static boolean isValidVietnamPhone(String phone) {
-        if (phone == null) return false;
+    public static String normalizeEmail(String email) {
+        return email == null ? "" : email.trim().toLowerCase(java.util.Locale.ROOT);
+    }
 
-        String normalized = phone.trim().replaceAll("[\\s.-]", "");
+    /**
+     * Returns a canonical Vietnamese mobile number in 0xxxxxxxxx format.
+     * Formatting validation does not prove that the number is active or belongs to the user.
+     */
+    public static String normalizeVietnamPhone(String phone) {
+        if (phone == null) return "";
+
+        String normalized = phone.trim().replaceAll("[\\s().-]", "");
         if (normalized.startsWith("+84")) {
             normalized = "0" + normalized.substring(3);
         } else if (normalized.startsWith("84")) {
             normalized = "0" + normalized.substring(2);
         }
+        return normalized;
+    }
 
-        return normalized.matches("0(3|5|7|8|9)[0-9]{8}");
+    public static boolean isValidVietnamPhone(String phone) {
+        return normalizeVietnamPhone(phone).matches("0(3|5|7|8|9)[0-9]{8}");
     }
 
     public static boolean isValidPassword(String password) {
