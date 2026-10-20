@@ -1,7 +1,9 @@
 package com.example.libraryonline.ui.auth;
 
+import android.app.DatePickerDialog;
 import android.os.Bundle;
 import android.widget.Button;
+import android.widget.CheckBox;
 import android.widget.EditText;
 import android.widget.Toast;
 
@@ -14,13 +16,19 @@ import com.google.firebase.firestore.FieldValue;
 import com.google.firebase.firestore.FirebaseFirestore;
 import com.google.firebase.firestore.QuerySnapshot;
 
+import java.text.SimpleDateFormat;
+import java.util.Calendar;
 import java.util.HashMap;
+import java.util.Locale;
 import java.util.Map;
+import java.util.Date;
 
 public class RegisterActivity extends AppCompatActivity {
-    private EditText nameInput, emailInput, phoneInput;
+    private EditText nameInput, birthDateInput, emailInput, phoneInput;
+    private CheckBox acceptTerms;
     private Button submitButton;
     private FirebaseFirestore firestore;
+    private String birthDateIso = "";
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -29,10 +37,28 @@ public class RegisterActivity extends AppCompatActivity {
 
         firestore = FirebaseFirestore.getInstance();
         nameInput = findViewById(R.id.editFullName);
+        birthDateInput = findViewById(R.id.editBirthDate);
         emailInput = findViewById(R.id.editRegisterEmail);
         phoneInput = findViewById(R.id.editPhone);
+        acceptTerms = findViewById(R.id.checkAcceptTerms);
         submitButton = findViewById(R.id.buttonSubmitRegistration);
+
+        birthDateInput.setOnClickListener(v -> chooseBirthDate());
         submitButton.setOnClickListener(v -> submitRequest());
+    }
+
+    private void chooseBirthDate() {
+        Calendar initial = Calendar.getInstance();
+        DatePickerDialog picker = new DatePickerDialog(this, (view, year, month, day) -> {
+            Calendar chosen = Calendar.getInstance();
+            chosen.set(year, month, day, 0, 0, 0);
+            chosen.set(Calendar.MILLISECOND, 0);
+            birthDateIso = new SimpleDateFormat("yyyy-MM-dd", Locale.ROOT).format(chosen.getTime());
+            birthDateInput.setText(new SimpleDateFormat("dd/MM/yyyy", new Locale("vi", "VN"))
+                    .format(chosen.getTime()));
+        }, initial.get(Calendar.YEAR) - 18, initial.get(Calendar.MONTH), initial.get(Calendar.DAY_OF_MONTH));
+        picker.getDatePicker().setMaxDate(System.currentTimeMillis());
+        picker.show();
     }
 
     private void submitRequest() {
@@ -45,6 +71,11 @@ public class RegisterActivity extends AppCompatActivity {
             nameInput.requestFocus();
             return;
         }
+        if (birthDateIso.isEmpty()) {
+            birthDateInput.setError("Vui lòng chọn ngày sinh");
+            birthDateInput.requestFocus();
+            return;
+        }
         if (!InputValidator.isValidEmail(email)) {
             emailInput.setError("Email không đúng định dạng");
             emailInput.requestFocus();
@@ -55,6 +86,12 @@ public class RegisterActivity extends AppCompatActivity {
             phoneInput.requestFocus();
             return;
         }
+        if (!acceptTerms.isChecked()) {
+            acceptTerms.setError("Bạn cần đồng ý với điều khoản để tiếp tục");
+            acceptTerms.requestFocus();
+            return;
+        }
+        acceptTerms.setError(null);
 
         setSubmitting(true);
         // UX-level duplicate checks only. Firestore rules/backend must also enforce access
@@ -71,7 +108,7 @@ public class RegisterActivity extends AppCompatActivity {
                                     finishWithMessage("Số điện thoại đã được sử dụng.", false);
                                     return;
                                 }
-                                checkPendingRequests(fullName, email, phone);
+                                checkPendingRequests(fullName, birthDateIso, email, phone);
                             })
                             .addOnFailureListener(e ->
                                     finishWithMessage("Không thể kiểm tra số điện thoại. Thử lại sau.", false));
@@ -80,7 +117,7 @@ public class RegisterActivity extends AppCompatActivity {
                         finishWithMessage("Không thể kiểm tra email. Thử lại sau.", false));
     }
 
-    private void checkPendingRequests(String fullName, String email, String phone) {
+    private void checkPendingRequests(String fullName, String birthDate, String email, String phone) {
         firestore.collection("RegistrationRequests").whereEqualTo("email", email).get()
                 .addOnSuccessListener(emailResults -> {
                     if (containsActiveRequest(emailResults)) {
@@ -93,7 +130,7 @@ public class RegisterActivity extends AppCompatActivity {
                                     finishWithMessage("Số điện thoại đã có yêu cầu đăng ký đang xử lý.", false);
                                     return;
                                 }
-                                savePendingRequest(fullName, email, phone);
+                                savePendingRequest(fullName, birthDate, email, phone);
                             })
                             .addOnFailureListener(e ->
                                     finishWithMessage("Không thể kiểm tra số điện thoại. Thử lại sau.", false));
@@ -114,11 +151,14 @@ public class RegisterActivity extends AppCompatActivity {
         return false;
     }
 
-    private void savePendingRequest(String fullName, String email, String phone) {
+    private void savePendingRequest(String fullName, String birthDate, String email, String phone) {
         Map<String, Object> request = new HashMap<>();
         request.put("fullName", fullName);
+        request.put("birthDate", birthDate);
         request.put("email", email);
         request.put("phone", phone);
+        request.put("termsAccepted", true);
+        request.put("termsAcceptedAt", FieldValue.serverTimestamp());
         request.put("status", "PendingVerification");
         request.put("emailVerified", false);
         request.put("phoneVerified", false);
@@ -127,7 +167,7 @@ public class RegisterActivity extends AppCompatActivity {
 
         firestore.collection("RegistrationRequests").add(request)
                 .addOnSuccessListener(ref -> finishWithMessage(
-                        "Đã lưu yêu cầu chờ xác minh. Email và số điện thoại chưa được xác minh; quản trị viên không được phê duyệt trước khi hoàn tất xác minh.",
+                        "Đã gửi yêu cầu đăng ký thẻ. Hồ sơ đang chờ xác minh và Admin duyệt; bạn chưa thể đăng nhập lúc này.",
                         true))
                 .addOnFailureListener(e ->
                         finishWithMessage("Không gửi được yêu cầu. Kiểm tra quyền Firestore.", false));
