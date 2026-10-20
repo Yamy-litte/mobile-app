@@ -1,6 +1,7 @@
 package com.example.libraryonline.ui.auth;
 
 import android.app.DatePickerDialog;
+import android.content.Intent;
 import android.os.Bundle;
 import android.widget.Button;
 import android.widget.CheckBox;
@@ -21,7 +22,6 @@ import java.util.Calendar;
 import java.util.HashMap;
 import java.util.Locale;
 import java.util.Map;
-import java.util.Date;
 
 public class RegisterActivity extends AppCompatActivity {
     private EditText nameInput, birthDateInput, emailInput, phoneInput;
@@ -94,49 +94,50 @@ public class RegisterActivity extends AppCompatActivity {
         acceptTerms.setError(null);
 
         setSubmitting(true);
-        // UX-level duplicate checks only. Firestore rules/backend must also enforce access
-        // and uniqueness because two clients can submit at the same time.
+        // Client-side duplicate checks improve UX; trusted backend/rules must enforce uniqueness too.
         firestore.collection("Users").whereEqualTo("email", email).get()
                 .addOnSuccessListener(usersByEmail -> {
                     if (!usersByEmail.isEmpty()) {
-                        finishWithMessage("Email đã được sử dụng cho tài khoản độc giả.", false);
+                        finishWithMessage("Email đã được sử dụng cho tài khoản độc giả.");
                         return;
                     }
                     firestore.collection("Users").whereEqualTo("phone", phone).get()
                             .addOnSuccessListener(usersByPhone -> {
                                 if (!usersByPhone.isEmpty()) {
-                                    finishWithMessage("Số điện thoại đã được sử dụng.", false);
+                                    finishWithMessage("Số điện thoại đã được sử dụng.");
                                     return;
                                 }
-                                checkPendingRequests(fullName, birthDateIso, email, phone);
+                                checkPendingRequests(fullName, birthDateIso,
+                                        birthDateInput.getText().toString(), email, phone);
                             })
                             .addOnFailureListener(e ->
-                                    finishWithMessage("Không thể kiểm tra số điện thoại. Thử lại sau.", false));
+                                    finishWithMessage("Không thể kiểm tra số điện thoại. Thử lại sau."));
                 })
                 .addOnFailureListener(e ->
-                        finishWithMessage("Không thể kiểm tra email. Thử lại sau.", false));
+                        finishWithMessage("Không thể kiểm tra email. Thử lại sau."));
     }
 
-    private void checkPendingRequests(String fullName, String birthDate, String email, String phone) {
+    private void checkPendingRequests(String fullName, String birthDate, String birthDateDisplay,
+                                      String email, String phone) {
         firestore.collection("RegistrationRequests").whereEqualTo("email", email).get()
                 .addOnSuccessListener(emailResults -> {
                     if (containsActiveRequest(emailResults)) {
-                        finishWithMessage("Email đã có yêu cầu đăng ký đang xử lý.", false);
+                        finishWithMessage("Email đã có yêu cầu đăng ký đang xử lý.");
                         return;
                     }
                     firestore.collection("RegistrationRequests").whereEqualTo("phone", phone).get()
                             .addOnSuccessListener(phoneResults -> {
                                 if (containsActiveRequest(phoneResults)) {
-                                    finishWithMessage("Số điện thoại đã có yêu cầu đăng ký đang xử lý.", false);
+                                    finishWithMessage("Số điện thoại đã có yêu cầu đăng ký đang xử lý.");
                                     return;
                                 }
-                                savePendingRequest(fullName, birthDate, email, phone);
+                                savePendingRequest(fullName, birthDate, birthDateDisplay, email, phone);
                             })
                             .addOnFailureListener(e ->
-                                    finishWithMessage("Không thể kiểm tra số điện thoại. Thử lại sau.", false));
+                                    finishWithMessage("Không thể kiểm tra số điện thoại. Thử lại sau."));
                 })
                 .addOnFailureListener(e ->
-                        finishWithMessage("Không thể kiểm tra email. Thử lại sau.", false));
+                        finishWithMessage("Không thể kiểm tra email. Thử lại sau."));
     }
 
     private boolean containsActiveRequest(QuerySnapshot results) {
@@ -151,7 +152,8 @@ public class RegisterActivity extends AppCompatActivity {
         return false;
     }
 
-    private void savePendingRequest(String fullName, String birthDate, String email, String phone) {
+    private void savePendingRequest(String fullName, String birthDate, String birthDateDisplay,
+                                    String email, String phone) {
         Map<String, Object> request = new HashMap<>();
         request.put("fullName", fullName);
         request.put("birthDate", birthDate);
@@ -166,11 +168,17 @@ public class RegisterActivity extends AppCompatActivity {
         request.put("createdAt", FieldValue.serverTimestamp());
 
         firestore.collection("RegistrationRequests").add(request)
-                .addOnSuccessListener(ref -> finishWithMessage(
-                        "Đã gửi yêu cầu đăng ký thẻ. Hồ sơ đang chờ xác minh và Admin duyệt; bạn chưa thể đăng nhập lúc này.",
-                        true))
+                .addOnSuccessListener(ref -> {
+                    Intent intent = new Intent(this, RegistrationSubmittedActivity.class);
+                    intent.putExtra("fullName", fullName);
+                    intent.putExtra("birthDateDisplay", birthDateDisplay);
+                    intent.putExtra("phone", phone);
+                    intent.putExtra("email", email);
+                    startActivity(intent);
+                    finish();
+                })
                 .addOnFailureListener(e ->
-                        finishWithMessage("Không gửi được yêu cầu. Kiểm tra quyền Firestore.", false));
+                        finishWithMessage("Không gửi được yêu cầu. Kiểm tra quyền Firestore."));
     }
 
     private void setSubmitting(boolean submitting) {
@@ -178,9 +186,8 @@ public class RegisterActivity extends AppCompatActivity {
         submitButton.setText(submitting ? "Đang gửi..." : "Gửi yêu cầu đăng ký");
     }
 
-    private void finishWithMessage(String message, boolean success) {
+    private void finishWithMessage(String message) {
         setSubmitting(false);
         Toast.makeText(this, message, Toast.LENGTH_LONG).show();
-        if (success) finish();
     }
 }
