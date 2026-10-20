@@ -104,9 +104,9 @@ public class RegisterActivity extends AppCompatActivity {
         long expiresAt = System.currentTimeMillis() + 5 * 60 * 1000L;
         EmailSender.send(email,
                 "Library Online - Mã OTP xác minh email",
-                "Xin chào " + fullName + ",\\n\\n"
-                        + "Mã OTP xác minh email của bạn là: " + otp + "\\n"
-                        + "Mã có hiệu lực trong 5 phút và chỉ dùng một lần.\\n\\n"
+                "Xin chào " + fullName + ",\n\n"
+                        + "Mã OTP xác minh email của bạn là: " + otp + "\n"
+                        + "Mã có hiệu lực trong 5 phút và chỉ dùng một lần.\n\n"
                         + "Nếu bạn không thực hiện đăng ký, hãy bỏ qua email này.",
                 (success, message) -> {
                     if (!success) {
@@ -115,7 +115,7 @@ public class RegisterActivity extends AppCompatActivity {
                                 .setTitle("Không gửi được mã OTP")
                                 .setMessage("Ứng dụng chưa gửi được email xác minh. Vui lòng kiểm tra địa chỉ Gmail "
                                         + "đã nhập có chính xác không, kiểm tra kết nối mạng và thư mục Spam/Thư rác, "
-                                        + "sau đó thử gửi lại.\\n\\nChi tiết: " + message)
+                                        + "sau đó thử gửi lại.\n\nChi tiết: " + message)
                                 .setPositiveButton("Đã hiểu", (dialog, which) -> dialog.dismiss())
                                 .show();
                         return;
