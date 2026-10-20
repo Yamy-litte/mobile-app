@@ -166,12 +166,28 @@ public class RegisterActivity extends AppCompatActivity {
     }
 
     private void markEmailVerified(String email) {
-        verifiedEmail = email;
-        submitButton.setEnabled(true);
-        verifyEmailButton.setText("Email đã xác thực");
-        verificationInProgress = false;
-        verifyEmailButton.setEnabled(true);
-        Toast.makeText(this, "Xác thực email thành công.", Toast.LENGTH_SHORT).show();
+        FirebaseUser user = auth.getCurrentUser();
+        if (user == null) {
+            verificationInProgress = false;
+            verifyEmailButton.setEnabled(true);
+            return;
+        }
+        user.getIdToken(true).addOnCompleteListener(tokenTask -> {
+            verificationInProgress = false;
+            verifyEmailButton.setEnabled(true);
+            FirebaseUser refreshed = auth.getCurrentUser();
+            if (tokenTask.isSuccessful() && refreshed != null && refreshed.isEmailVerified()
+                    && refreshed.getEmail() != null && email.equalsIgnoreCase(refreshed.getEmail())) {
+                verifiedEmail = email;
+                submitButton.setEnabled(true);
+                verifyEmailButton.setText("Email đã xác thực");
+                Toast.makeText(this, "Xác thực email thành công.", Toast.LENGTH_SHORT).show();
+            } else {
+                verifiedEmail = "";
+                submitButton.setEnabled(false);
+                Toast.makeText(this, "Chưa xác nhận được email đã xác thực. Hãy thử lại.", Toast.LENGTH_LONG).show();
+            }
+        });
     }
 
     @Override
