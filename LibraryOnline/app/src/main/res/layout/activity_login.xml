@@ -143,6 +143,20 @@
                 android:textColor="@color/library_muted"
                 android:textSize="14sp" />
             <TextView
+                android:id="@+id/textAdminLogin"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="12dp"
+                android:gravity="center"
+                android:padding="10dp"
+                android:text="Đăng nhập với quyền Admin"
+                android:textColor="@color/library_navy"
+                android:textSize="15sp"
+                android:textStyle="bold"
+                android:background="@drawable/bg_auth_input"
+                android:clickable="true"
+                android:focusable="true" />
+            <TextView
                 android:id="@+id/textRegister"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
