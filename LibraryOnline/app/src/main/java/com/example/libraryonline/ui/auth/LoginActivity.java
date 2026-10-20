@@ -103,13 +103,6 @@ public class LoginActivity extends AppCompatActivity {
                                     return;
                                 }
 
-                                if (Boolean.TRUE.equals(userDoc.getBoolean("mustChangePassword"))) {
-                                    setLoading(false);
-                                    startActivity(new Intent(this, ChangePasswordActivity.class));
-                                    finish();
-                                    return;
-                                }
-
                                 String role = userDoc.getString("role");
                                 String cardStatus = userDoc.getString("cardStatus");
                                 if (!"HoatDong".equals(cardStatus)) {
@@ -118,6 +111,12 @@ public class LoginActivity extends AppCompatActivity {
                                 }
                                 if (!"Reader".equalsIgnoreCase(role)) {
                                     rejectLogin("Vai trò tài khoản không hợp lệ.");
+                                    return;
+                                }
+                                if (Boolean.TRUE.equals(userDoc.getBoolean("mustChangePassword"))) {
+                                    setLoading(false);
+                                    startActivity(new Intent(this, ChangePasswordActivity.class));
+                                    finish();
                                     return;
                                 }
 
