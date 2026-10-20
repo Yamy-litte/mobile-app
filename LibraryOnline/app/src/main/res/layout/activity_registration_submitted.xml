@@ -9,6 +9,13 @@
         android:layout_height="wrap_content"
         android:orientation="vertical"
         android:padding="24dp">
+        <ImageView
+            android:layout_width="64dp"
+            android:layout_height="64dp"
+            android:layout_marginBottom="8dp"
+            android:contentDescription="Logo MyLibrary"
+            android:src="@drawable/mylibrary_logo"
+            android:scaleType="fitCenter" />
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
