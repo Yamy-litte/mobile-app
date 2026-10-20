@@ -12,7 +12,7 @@ service cloud.firestore {
         && get(/databases/$(database)/documents/Admins/$(request.auth.uid)).data.adminStatus in ['Active', 'HoatDong'];
     }
 
-    function validRegistrationRequest() {
+    function validRegistrationRequest(requestId) {
       return request.resource.data.keys().hasAll([
           'fullName', 'birthDate', 'email', 'phone', 'termsAccepted',
           'termsAcceptedAt', 'status', 'emailVerified', 'phoneVerified',
@@ -39,18 +39,21 @@ service cloud.firestore {
         && request.resource.data.emailVerified == false
         && request.resource.data.phoneVerified == false
         && request.resource.data.rejectionReason == ''
-        && request.resource.data.createdAt == request.time;
+        && request.resource.data.createdAt == request.time
+        && getAfter(/databases/$(database)/documents/RegistrationEmailIndex/$(request.resource.data.email)).data.value == request.resource.data.email
+        && getAfter(/databases/$(database)/documents/RegistrationEmailIndex/$(request.resource.data.email)).data.requestId == requestId
+        && getAfter(/databases/$(database)/documents/RegistrationPhoneIndex/$(request.resource.data.phone)).data.value == request.resource.data.phone
+        && getAfter(/databases/$(database)/documents/RegistrationPhoneIndex/$(request.resource.data.phone)).data.requestId == requestId;
     }
 
     match /Admins/{adminId} {
-      // An administrator can read their own role record; role records are provisioned manually.
+      // Provision administrator records manually in Firebase Console.
       allow read: if signedIn() && request.auth.uid == adminId;
       allow write: if false;
     }
 
     match /Users/{userId} {
       allow read: if (signedIn() && request.auth.uid == userId) || isAdmin();
-      // Only active administrators may create a reader profile. The client cannot change roles/status.
       allow create: if isAdmin()
         && request.resource.data.userId == userId
         && request.resource.data.role == 'Reader'
@@ -60,8 +63,28 @@ service cloud.firestore {
       allow update, delete: if false;
     }
 
+    match /RegistrationEmailIndex/{email} {
+      allow create: if !exists(/databases/$(database)/documents/RegistrationEmailIndex/$(email))
+        && request.resource.data.keys().hasOnly(['value', 'requestId', 'createdAt'])
+        && request.resource.data.value == email
+        && request.resource.data.requestId is string
+        && request.resource.data.createdAt == request.time
+        && getAfter(/databases/$(database)/documents/RegistrationRequests/$(request.resource.data.requestId)).data.email == email;
+      allow read, update, delete: if false;
+    }
+
+    match /RegistrationPhoneIndex/{phone} {
+      allow create: if !exists(/databases/$(database)/documents/RegistrationPhoneIndex/$(phone))
+        && request.resource.data.keys().hasOnly(['value', 'requestId', 'createdAt'])
+        && request.resource.data.value == phone
+        && request.resource.data.requestId is string
+        && request.resource.data.createdAt == request.time
+        && getAfter(/databases/$(database)/documents/RegistrationRequests/$(request.resource.data.requestId)).data.phone == phone;
+      allow read, update, delete: if false;
+    }
+
     match /RegistrationRequests/{requestId} {
-      allow create: if validRegistrationRequest();
+      allow create: if validRegistrationRequest(requestId);
       allow read: if isAdmin();
       allow update: if isAdmin()
         && resource.data.status in ['Pending', 'PendingVerification']
@@ -86,8 +109,8 @@ service cloud.firestore {
       allow delete: if false;
     }
 
-    // Keep unspecified collections closed. Add explicit least-privilege rules for each
-    // existing library feature before deploying this file to a live project.
+    // Keep unspecified collections closed. Add least-privilege rules for every other
+    // collection before deploying these rules to a live project.
     match /{document=**} {
       allow read, write: if false;
     }
