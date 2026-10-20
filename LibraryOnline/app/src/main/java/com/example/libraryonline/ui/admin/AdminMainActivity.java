@@ -190,8 +190,8 @@ public class AdminMainActivity extends AppCompatActivity {
 
         new AlertDialog.Builder(this)
                 .setTitle("Duyệt hồ sơ thành viên")
-                .setMessage("Tạo tài khoản độc giả cho " + email
-                        + " và gửi email đặt mật khẩu. Tiếp tục?")
+                .setMessage("Duyệt hồ sơ đã xác thực email cho " + email
+                        + ". Tài khoản dùng mật khẩu tạm ban đầu và bắt buộc đổi ở lần đăng nhập đầu tiên. Tiếp tục?")
                 .setNegativeButton("Hủy", (dialog, which) -> dialog.dismiss())
                 .setPositiveButton("Duyệt", (dialog, which) -> {
                     setCardActionsEnabled(reject, approve, false);
@@ -224,73 +224,48 @@ public class AdminMainActivity extends AppCompatActivity {
 
     private void createApprovedAccount(DocumentSnapshot request, String fullName, String email,
                                        String phone, Button reject, Button approve) {
-        secondaryAuth.createUserWithEmailAndPassword(email, createTemporaryPassword())
-                .addOnSuccessListener(result -> {
-                    FirebaseUser newUser = result.getUser();
-                    if (newUser == null) {
-                        failAction(reject, approve, "Firebase không trả về tài khoản vừa tạo.");
-                        return;
-                    }
-                    String uid = newUser.getUid();
-                    String barcode = "TV-" + uid.substring(0, Math.min(8, uid.length())).toUpperCase(Locale.ROOT);
-                    Map<String, Object> userData = new HashMap<>();
-                    userData.put("userId", uid);
-                    userData.put("fullName", fullName);
-                    userData.put("dateOfBirth", value(request, "birthDate", ""));
-                    userData.put("email", email);
-                    userData.put("phone", phone);
-                    userData.put("barcode", barcode);
-                    userData.put("role", "Reader");
-                    userData.put("cardStatus", "HoatDong");
-                    userData.put("createdAt", FieldValue.serverTimestamp());
-                    userData.put("updatedAt", FieldValue.serverTimestamp());
+        String uid = value(request, "uid", "").trim();
+        if (uid.isEmpty() || !Boolean.TRUE.equals(request.getBoolean("emailVerified"))) {
+            failAction(reject, approve, "Hồ sơ chưa có tài khoản xác thực email hợp lệ. Yêu cầu đăng ký lại.");
+            return;
+        }
+        String requestEmail = value(request, "email", "").trim();
+        if (!email.equalsIgnoreCase(requestEmail)) {
+            failAction(reject, approve, "Email hồ sơ không khớp.");
+            return;
+        }
+        String barcode = "TV-" + uid.substring(0, Math.min(8, uid.length())).toUpperCase(Locale.ROOT);
+        Map<String, Object> userData = new HashMap<>();
+        userData.put("userId", uid);
+        userData.put("fullName", fullName);
+        userData.put("dateOfBirth", value(request, "birthDate", ""));
+        userData.put("email", email);
+        userData.put("phone", phone);
+        userData.put("barcode", barcode);
+        userData.put("role", "Reader");
+        userData.put("cardStatus", "HoatDong");
+        userData.put("mustChangePassword", true);
+        userData.put("createdAt", FieldValue.serverTimestamp());
+        userData.put("updatedAt", FieldValue.serverTimestamp());
 
-                    Map<String, Object> requestChanges = new HashMap<>();
-                    requestChanges.put("status", "Approved");
-                    requestChanges.put("reviewedBy", auth.getCurrentUser() == null ? "" : auth.getCurrentUser().getUid());
-                    requestChanges.put("reviewedAt", FieldValue.serverTimestamp());
-                    requestChanges.put("userId", uid);
-                    requestChanges.put("barcode", barcode);
+        Map<String, Object> requestChanges = new HashMap<>();
+        requestChanges.put("status", "Approved");
+        requestChanges.put("reviewedBy", auth.getCurrentUser() == null ? "" : auth.getCurrentUser().getUid());
+        requestChanges.put("reviewedAt", FieldValue.serverTimestamp());
+        requestChanges.put("userId", uid);
+        requestChanges.put("barcode", barcode);
 
-                    WriteBatch batch = firestore.batch();
-                    batch.set(firestore.collection("Users").document(uid), userData);
-                    batch.update(firestore.collection("RegistrationRequests").document(request.getId()), requestChanges);
-                    batch.commit()
-                            .addOnSuccessListener(unused -> secondaryAuth.sendPasswordResetEmail(email)
-                                    .addOnSuccessListener(ignored -> {
-                                        Toast.makeText(this, "Đã duyệt hồ sơ, tạo tài khoản và gửi email đặt mật khẩu.",
-                                                Toast.LENGTH_LONG).show();
-                                    })
-                                    .addOnFailureListener(error -> Toast.makeText(this,
-                                            "Tài khoản đã tạo nhưng chưa gửi được email đặt mật khẩu. Người dùng có thể dùng Quên mật khẩu. "
-                                                    + error.getLocalizedMessage(),
-                                            Toast.LENGTH_LONG).show())
-                            )
-                            .addOnFailureListener(error -> {
-                                FirebaseUser createdUser = secondaryAuth.getCurrentUser();
-                                if (createdUser == null) {
-                                    failAction(reject, approve, "Không lưu được hồ sơ: " + error.getLocalizedMessage());
-                                } else {
-                                    createdUser.delete().addOnCompleteListener(cleanup ->
-                                            failAction(reject, approve,
-                                                    "Không lưu được hồ sơ; đã thử dọn tài khoản vừa tạo. "
-                                                            + error.getLocalizedMessage()));
-                                }
-                            });
+        WriteBatch batch = firestore.batch();
+        batch.set(firestore.collection("Users").document(uid), userData);
+        batch.update(firestore.collection("RegistrationRequests").document(request.getId()), requestChanges);
+        batch.commit()
+                .addOnSuccessListener(unused -> {
+                    setCardActionsEnabled(reject, approve, true);
+                    Toast.makeText(this, "Đã duyệt hồ sơ. Mật khẩu tạm ban đầu là 123456; độc giả phải đổi ngay lần đăng nhập đầu tiên.",
+                            Toast.LENGTH_LONG).show();
                 })
-                .addOnFailureListener(error -> {
-                    String message = error.getLocalizedMessage();
-                    if (message != null && message.toLowerCase(Locale.ROOT).contains("already")) {
-                        message = "Email đã tồn tại trong Firebase Authentication.";
-                    }
-                    failAction(reject, approve, "Không thể tạo tài khoản: " + message);
-                });
-    }
-
-    private String createTemporaryPassword() {
-        // A random initial secret is immediately replaced through Firebase's password-reset email.
-        return java.util.UUID.randomUUID().toString().replace("-", "")
-                + "aA1!";
+                .addOnFailureListener(error -> failAction(reject, approve,
+                        "Không thể lưu hồ sơ đã duyệt: " + error.getLocalizedMessage()));
     }
 
     private void failAction(Button reject, Button approve, String message) {
