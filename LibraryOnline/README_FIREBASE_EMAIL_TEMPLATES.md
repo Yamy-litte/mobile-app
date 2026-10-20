@@ -68,3 +68,9 @@ Ban quản lý Library Online
 5. Chạy firebase deploy --only functions.
 
 Tài khoản Gmail gửi SMTP cần bật xác minh hai bước và dùng App Password nếu nhà cung cấp yêu cầu. Tốt hơn nữa là dùng nhà cung cấp email giao dịch cho môi trường thật.
+
+## 6. Lưu ý về Firestore Rules hiện có trong repository
+
+File firestore.rules đang là bộ rules bảo vệ luồng đăng ký và duyệt thẻ: người chưa đăng nhập gửi hồ sơ thông qua callable function; chỉ Admin đang hoạt động đọc danh sách yêu cầu. Các collection nghiệp vụ khác chưa được cấp rule trong file này và sẽ bị từ chối nếu deploy nguyên trạng. Trước khi deploy Rules, cần bổ sung rule riêng cho các collection sách, bản sao sách, phiếu mượn, hàng đợi, tiền phạt và cấu hình hệ thống. Không bật quyền đọc/ghi toàn bộ database để chữa lỗi đăng ký.
+
+Luồng đăng ký hiện kiểm tra định dạng và trùng email/số điện thoại ở backend. Template Email address verification đã có nội dung để lưu trong Firebase Console, nhưng chưa được gửi tự động trong luồng đăng ký vì đặc tả nghiệp vụ yêu cầu admin duyệt trước rồi mới tạo tài khoản Auth. Hiện tại sau khi duyệt, app gửi email đặt mật khẩu. Muốn xác minh hộp thư trước khi duyệt cần bổ sung quy trình xác minh riêng phù hợp với kiến trúc này.
