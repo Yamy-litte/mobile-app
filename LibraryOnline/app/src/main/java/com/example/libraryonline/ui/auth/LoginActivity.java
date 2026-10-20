@@ -12,6 +12,7 @@ import android.widget.Toast;
 import androidx.appcompat.app.AppCompatActivity;
 
 import com.example.libraryonline.R;
+import com.example.libraryonline.utils.PasswordVisibilityToggle;
 import com.example.libraryonline.ui.admin.AdminMainActivity;
 import com.example.libraryonline.ui.reader.ReaderMainActivity;
 import com.example.libraryonline.ui.auth.ChangePasswordActivity;
@@ -42,6 +43,7 @@ public class LoginActivity extends AppCompatActivity {
         firestore = FirebaseFirestore.getInstance();
         emailInput = findViewById(R.id.editEmail);
         passwordInput = findViewById(R.id.editPassword);
+        PasswordVisibilityToggle.attach(passwordInput);
         loginButton = findViewById(R.id.buttonLogin);
         rememberLogin = findViewById(R.id.checkRememberLogin);
         registerLink = findViewById(R.id.textRegister);
