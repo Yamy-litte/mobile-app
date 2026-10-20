@@ -40,7 +40,7 @@ android {
 
     packaging {
         resources {
-            excludes += "/META-INF/NOTICE.md"
+            excludes += setOf("/META-INF/NOTICE.md", "/META-INF/LICENSE.md")
         }
     }
 
