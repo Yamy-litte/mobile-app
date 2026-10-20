@@ -30,6 +30,7 @@ import java.text.DateFormat;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.Locale;
+import java.security.SecureRandom;
 import java.util.Map;
 
 public class AdminMainActivity extends AppCompatActivity {
@@ -239,60 +240,104 @@ public class AdminMainActivity extends AppCompatActivity {
 
     private void createApprovedAccount(DocumentSnapshot request, String fullName, String email,
                                        String phone, Button reject, Button approve) {
-        String uid = value(request, "uid", "").trim();
-        if (uid.isEmpty()) {
-            failAction(reject, approve, "Hồ sơ chưa có tài khoản Firebase hợp lệ. Yêu cầu đăng ký lại.");
-            return;
-        }
         String requestEmail = value(request, "email", "").trim();
         if (!email.equalsIgnoreCase(requestEmail)) {
             failAction(reject, approve, "Email hồ sơ không khớp.");
             return;
         }
-        String barcode = "TV-" + uid.substring(0, Math.min(8, uid.length())).toUpperCase(Locale.ROOT);
-        Map<String, Object> userData = new HashMap<>();
-        userData.put("userId", uid);
-        userData.put("fullName", fullName);
-        userData.put("dateOfBirth", value(request, "birthDate", ""));
-        userData.put("email", email);
-        userData.put("phone", phone);
-        userData.put("barcode", barcode);
-        userData.put("role", "Reader");
-        userData.put("cardStatus", "HoatDong");
-        userData.put("mustChangePassword", true);
-        userData.put("createdAt", FieldValue.serverTimestamp());
-        userData.put("updatedAt", FieldValue.serverTimestamp());
 
-        Map<String, Object> requestChanges = new HashMap<>();
-        requestChanges.put("status", "Approved");
-        requestChanges.put("reviewedBy", auth.getCurrentUser() == null ? "" : auth.getCurrentUser().getUid());
-        requestChanges.put("reviewedAt", FieldValue.serverTimestamp());
-        requestChanges.put("userId", uid);
-        requestChanges.put("barcode", barcode);
+        // Chỉ tạo tài khoản Firebase Auth sau khi admin đã bấm duyệt.
+        // Mỗi độc giả nhận một mật khẩu tạm ngẫu nhiên, không dùng chung mật khẩu cố định.
+        String temporaryPassword = generateTemporaryPassword();
+        secondaryAuth.createUserWithEmailAndPassword(email, temporaryPassword)
+                .addOnSuccessListener(result -> {
+                    FirebaseUser createdUser = result.getUser();
+                    if (createdUser == null) {
+                        secondaryAuth.signOut();
+                        failAction(reject, approve, "Firebase không trả về tài khoản vừa tạo.");
+                        return;
+                    }
+                    String uid = createdUser.getUid();
+                    String barcode = "TV-" + uid.substring(0, Math.min(8, uid.length()))
+                            .toUpperCase(Locale.ROOT);
 
-        WriteBatch batch = firestore.batch();
-        batch.set(firestore.collection("Users").document(uid), userData);
-        batch.update(firestore.collection("RegistrationRequests").document(request.getId()), requestChanges);
-        batch.commit()
-                .addOnSuccessListener(unused -> {
-                    setCardActionsEnabled(reject, approve, true);
-                    EmailSender.send(email,
-                            "Library Online - Hồ sơ đã được duyệt",
-                            "Xin chào " + fullName + ",\\n\\n"
-                                    + "Hồ sơ đăng ký thư viện của bạn đã được duyệt.\\n"
-                                    + "Bạn có thể đăng nhập bằng email này với mật khẩu tạm ban đầu đã được thông báo trong quy trình đăng ký. "
-                                    + "Vì lý do bảo mật, hãy đổi mật khẩu ngay lần đăng nhập đầu tiên.\\n\\n"
-                                    + "Đây là email tự động, vui lòng không trả lời.",
-                            (success, message) -> {
-                                if (!success) Toast.makeText(this,
-                                        "Đã duyệt hồ sơ nhưng gửi email thất bại: " + message,
+                    Map<String, Object> userData = new HashMap<>();
+                    userData.put("userId", uid);
+                    userData.put("fullName", fullName);
+                    userData.put("dateOfBirth", value(request, "birthDate", ""));
+                    userData.put("email", email);
+                    userData.put("phone", phone);
+                    userData.put("barcode", barcode);
+                    userData.put("role", "Reader");
+                    userData.put("cardStatus", "HoatDong");
+                    userData.put("mustChangePassword", true);
+                    userData.put("createdAt", FieldValue.serverTimestamp());
+                    userData.put("updatedAt", FieldValue.serverTimestamp());
+
+                    Map<String, Object> requestChanges = new HashMap<>();
+                    requestChanges.put("status", "Approved");
+                    requestChanges.put("reviewedBy",
+                            auth.getCurrentUser() == null ? "" : auth.getCurrentUser().getUid());
+                    requestChanges.put("reviewedAt", FieldValue.serverTimestamp());
+                    requestChanges.put("userId", uid);
+                    requestChanges.put("barcode", barcode);
+
+                    WriteBatch batch = firestore.batch();
+                    batch.set(firestore.collection("Users").document(uid), userData);
+                    batch.update(firestore.collection("RegistrationRequests").document(request.getId()),
+                            requestChanges);
+                    batch.commit()
+                            .addOnSuccessListener(unused -> {
+                                secondaryAuth.signOut();
+                                setCardActionsEnabled(reject, approve, true);
+                                EmailSender.send(email,
+                                        "Library Online - Hồ sơ đã được duyệt",
+                                        "Xin chào " + fullName + ",\\n\\n"
+                                                + "Hồ sơ đăng ký thư viện của bạn đã được duyệt.\\n"
+                                                + "Thông tin đăng nhập:\\n"
+                                                + "Email: " + email + "\\n"
+                                                + "Mật khẩu tạm: " + temporaryPassword + "\\n\\n"
+                                                + "Vì lý do bảo mật, vui lòng đổi mật khẩu ngay ở lần đăng nhập đầu tiên.\\n\\n"
+                                                + "Đây là email tự động, vui lòng không trả lời.",
+                                        (success, message) -> {
+                                            if (!success) Toast.makeText(this,
+                                                    "Đã tạo tài khoản và duyệt hồ sơ nhưng gửi email thất bại: "
+                                                            + message,
+                                                    Toast.LENGTH_LONG).show();
+                                        });
+                                Toast.makeText(this,
+                                        "Đã duyệt hồ sơ và tạo tài khoản Firebase. Mật khẩu tạm đã được gửi qua email.",
                                         Toast.LENGTH_LONG).show();
+                            })
+                            .addOnFailureListener(error -> {
+                                // Nếu không lưu được hồ sơ Firestore, xóa tài khoản Auth vừa tạo
+                                // để lần duyệt lại không bị kẹt vì email đã tồn tại.
+                                createdUser.delete().addOnCompleteListener(deleteTask -> {
+                                    secondaryAuth.signOut();
+                                    failAction(reject, approve,
+                                            "Không thể lưu hồ sơ đã duyệt: " + error.getLocalizedMessage()
+                                                    + (deleteTask.isSuccessful() ? ""
+                                                    : ". Không xóa được tài khoản Auth tạm; cần kiểm tra Firebase."));
+                                });
                             });
-                    Toast.makeText(this, "Đã duyệt hồ sơ. Độc giả phải đổi mật khẩu ở lần đăng nhập đầu tiên.",
-                            Toast.LENGTH_LONG).show();
                 })
-                .addOnFailureListener(error -> failAction(reject, approve,
-                        "Không thể lưu hồ sơ đã duyệt: " + error.getLocalizedMessage()));
+                .addOnFailureListener(error -> {
+                    secondaryAuth.signOut();
+                    String detail = error.getLocalizedMessage() == null ? "" : error.getLocalizedMessage();
+                    failAction(reject, approve,
+                            "Không thể tạo tài khoản Firebase sau khi duyệt. Email có thể đã có tài khoản Auth. "
+                                    + detail);
+                });
+    }
+
+    private String generateTemporaryPassword() {
+        final String alphabet = "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789!@#$%";
+        SecureRandom random = new SecureRandom();
+        StringBuilder password = new StringBuilder(14);
+        for (int i = 0; i < 14; i++) {
+            password.append(alphabet.charAt(random.nextInt(alphabet.length())));
+        }
+        return password.toString();
     }
 
     private void failAction(Button reject, Button approve, String message) {
