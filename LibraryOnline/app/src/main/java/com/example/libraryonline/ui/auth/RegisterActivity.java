@@ -7,14 +7,14 @@ import android.widget.Button;
 import android.widget.CheckBox;
 import android.widget.EditText;
 import android.widget.Toast;
-import android.util.Log;
 
 import androidx.appcompat.app.AppCompatActivity;
 
 import com.example.libraryonline.R;
 import com.example.libraryonline.utils.InputValidator;
-import com.google.firebase.functions.FirebaseFunctions;
-import com.google.firebase.functions.FirebaseFunctionsException;
+import com.google.firebase.Timestamp;
+import com.google.firebase.firestore.FieldValue;
+import com.google.firebase.firestore.FirebaseFirestore;
 
 import java.text.SimpleDateFormat;
 import java.util.Calendar;
@@ -26,7 +26,7 @@ public class RegisterActivity extends AppCompatActivity {
     private EditText nameInput, birthDateInput, emailInput, phoneInput;
     private CheckBox acceptTerms;
     private Button submitButton;
-    private FirebaseFunctions functions;
+    private FirebaseFirestore firestore;
     private String birthDateIso = "";
 
     @Override
@@ -34,7 +34,7 @@ public class RegisterActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_register);
 
-        functions = FirebaseFunctions.getInstance("us-central1");
+        firestore = FirebaseFirestore.getInstance();
         nameInput = findViewById(R.id.editFullName);
         birthDateInput = findViewById(R.id.editBirthDate);
         emailInput = findViewById(R.id.editRegisterEmail);
@@ -93,16 +93,22 @@ public class RegisterActivity extends AppCompatActivity {
         acceptTerms.setError(null);
 
         setSubmitting(true);
-        Map<String, Object> payload = new HashMap<>();
-        payload.put("fullName", fullName);
-        payload.put("birthDate", birthDateIso);
-        payload.put("birthDateDisplay", birthDateInput.getText().toString());
-        payload.put("email", email);
-        payload.put("phone", phone);
-        payload.put("termsAccepted", true);
+        Map<String, Object> request = new HashMap<>();
+        request.put("fullName", fullName);
+        request.put("birthDate", birthDateIso);
+        request.put("email", email);
+        request.put("phone", phone);
+        request.put("termsAccepted", true);
+        request.put("termsAcceptedAt", FieldValue.serverTimestamp());
+        request.put("status", "Pending");
+        request.put("emailVerified", false);
+        request.put("phoneVerified", false);
+        request.put("rejectionReason", "");
+        request.put("createdAt", FieldValue.serverTimestamp());
 
-        functions.getHttpsCallable("submitRegistration").call(payload)
-                .addOnSuccessListener(result -> {
+        firestore.collection("RegistrationRequests")
+                .add(request)
+                .addOnSuccessListener(reference -> {
                     Intent intent = new Intent(this, RegistrationSubmittedActivity.class);
                     intent.putExtra("fullName", fullName);
                     intent.putExtra("birthDateDisplay", birthDateInput.getText().toString());
@@ -113,14 +119,9 @@ public class RegisterActivity extends AppCompatActivity {
                 })
                 .addOnFailureListener(error -> {
                     setSubmitting(false);
-                    String message = error.getLocalizedMessage();
-                    String errorCode = error instanceof FirebaseFunctionsException
-                            ? ((FirebaseFunctionsException) error).getCode().name()
-                            : error.getClass().getSimpleName();
-                    Log.e("RegisterActivity", "submitRegistration failed [" + errorCode + "]", error);
-                    Toast.makeText(this, "Không gửi được yêu cầu đăng ký ("
-                            + errorCode + "): "
-                            + (message == null ? "Vui lòng kiểm tra kết nối Firebase." : message),
+                    Toast.makeText(this,
+                            "Không gửi được yêu cầu. Kiểm tra Firestore Rules và kết nối mạng: "
+                                    + error.getLocalizedMessage(),
                             Toast.LENGTH_LONG).show();
                 });
     }
@@ -129,5 +130,4 @@ public class RegisterActivity extends AppCompatActivity {
         submitButton.setEnabled(!submitting);
         submitButton.setText(submitting ? "Đang gửi..." : "Gửi yêu cầu đăng ký");
     }
-
 }

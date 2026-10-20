@@ -12,26 +12,82 @@ service cloud.firestore {
         && get(/databases/$(database)/documents/Admins/$(request.auth.uid)).data.adminStatus in ['Active', 'HoatDong'];
     }
 
+    function validRegistrationRequest() {
+      return request.resource.data.keys().hasAll([
+          'fullName', 'birthDate', 'email', 'phone', 'termsAccepted',
+          'termsAcceptedAt', 'status', 'emailVerified', 'phoneVerified',
+          'rejectionReason', 'createdAt'
+        ])
+        && request.resource.data.keys().hasOnly([
+          'fullName', 'birthDate', 'email', 'phone', 'termsAccepted',
+          'termsAcceptedAt', 'status', 'emailVerified', 'phoneVerified',
+          'rejectionReason', 'createdAt'
+        ])
+        && request.resource.data.fullName is string
+        && request.resource.data.fullName.size() >= 2
+        && request.resource.data.fullName.size() <= 120
+        && request.resource.data.birthDate is string
+        && request.resource.data.birthDate.matches('^[0-9]{4}-[0-9]{2}-[0-9]{2}$')
+        && request.resource.data.email is string
+        && request.resource.data.email.size() <= 254
+        && request.resource.data.email.matches('^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$')
+        && request.resource.data.phone is string
+        && request.resource.data.phone.matches('^(\\+?84[0-9]{9,10}|0[0-9]{9})$')
+        && request.resource.data.termsAccepted == true
+        && request.resource.data.termsAcceptedAt == request.time
+        && request.resource.data.status == 'Pending'
+        && request.resource.data.emailVerified == false
+        && request.resource.data.phoneVerified == false
+        && request.resource.data.rejectionReason == ''
+        && request.resource.data.createdAt == request.time;
+    }
+
     match /Admins/{adminId} {
-      // The admin can read their own role record for login validation.
+      // An administrator can read their own role record; role records are provisioned manually.
       allow read: if signedIn() && request.auth.uid == adminId;
       allow write: if false;
     }
 
     match /Users/{userId} {
-      // Readers can read their own profile; active admins can review profiles.
       allow read: if (signedIn() && request.auth.uid == userId) || isAdmin();
-      // Trusted Cloud Functions use the Admin SDK to create/update user records.
-      allow create, update, delete: if false;
+      // Only active administrators may create a reader profile. The client cannot change roles/status.
+      allow create: if isAdmin()
+        && request.resource.data.userId == userId
+        && request.resource.data.role == 'Reader'
+        && request.resource.data.cardStatus == 'HoatDong'
+        && request.resource.data.email is string
+        && request.resource.data.phone is string;
+      allow update, delete: if false;
     }
 
     match /RegistrationRequests/{requestId} {
-      // Only active admins can see submitted applications.
-      // Submission and review changes are performed by trusted Cloud Functions.
+      allow create: if validRegistrationRequest();
       allow read: if isAdmin();
-      allow create, update, delete: if false;
+      allow update: if isAdmin()
+        && resource.data.status in ['Pending', 'PendingVerification']
+        && request.resource.data.status in ['Approved', 'Rejected']
+        && request.resource.data.reviewedBy == request.auth.uid
+        && request.resource.data.reviewedAt == request.time
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+          'status', 'rejectionReason', 'reviewedBy', 'reviewedAt', 'userId', 'barcode'
+        ])
+        && (
+          (request.resource.data.status == 'Approved'
+            && request.resource.data.userId is string
+            && request.resource.data.barcode is string
+            && request.resource.data.rejectionReason == resource.data.rejectionReason)
+          ||
+          (request.resource.data.status == 'Rejected'
+            && request.resource.data.rejectionReason is string
+            && request.resource.data.rejectionReason.size() >= 3
+            && request.resource.data.rejectionReason.size() <= 500
+            && !request.resource.data.keys().hasAny(['userId', 'barcode']))
+        );
+      allow delete: if false;
     }
 
+    // Keep unspecified collections closed. Add explicit least-privilege rules for each
+    // existing library feature before deploying this file to a live project.
     match /{document=**} {
       allow read, write: if false;
     }
