@@ -23,6 +23,7 @@ public class LoginActivity extends AppCompatActivity {
     private EditText passwordInput;
     private Button loginButton;
     private TextView registerLink;
+    private TextView forgotPasswordLink;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -35,14 +36,16 @@ public class LoginActivity extends AppCompatActivity {
         passwordInput = findViewById(R.id.editPassword);
         loginButton = findViewById(R.id.buttonLogin);
         registerLink = findViewById(R.id.textRegister);
+        forgotPasswordLink = findViewById(R.id.textForgotPassword);
 
         loginButton.setOnClickListener(v -> login());
         registerLink.setOnClickListener(v ->
                 startActivity(new Intent(this, RegisterActivity.class)));
+        forgotPasswordLink.setOnClickListener(v -> sendPasswordReset());
     }
 
     private void login() {
-        String email = emailInput.getText().toString().trim();
+        String email = InputValidator.normalizeEmail(emailInput.getText().toString());
         String password = passwordInput.getText().toString();
 
         if (!InputValidator.isValidEmail(email)) {
@@ -112,6 +115,27 @@ public class LoginActivity extends AppCompatActivity {
                 .addOnFailureListener(error -> {
                     setLoading(false);
                     showMessage("Không thể xác minh quyền quản trị viên.");
+                });
+    }
+
+    private void sendPasswordReset() {
+        String email = InputValidator.normalizeEmail(emailInput.getText().toString());
+        if (!InputValidator.isValidEmail(email)) {
+            emailInput.setError("Nhập email hợp lệ để nhận liên kết đặt lại mật khẩu");
+            emailInput.requestFocus();
+            return;
+        }
+
+        forgotPasswordLink.setEnabled(false);
+        auth.sendPasswordResetEmail(email)
+                .addOnCompleteListener(task -> {
+                    forgotPasswordLink.setEnabled(true);
+                    // Keep the message generic to avoid revealing whether an account exists.
+                    if (task.isSuccessful()) {
+                        showMessage("Nếu email thuộc tài khoản đã đăng ký, hướng dẫn đặt lại mật khẩu sẽ được gửi đến hộp thư.");
+                    } else {
+                        showMessage("Chưa gửi được email đặt lại mật khẩu. Vui lòng thử lại sau.");
+                    }
                 });
     }
 
