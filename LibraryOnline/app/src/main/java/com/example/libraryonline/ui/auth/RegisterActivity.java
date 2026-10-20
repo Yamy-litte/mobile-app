@@ -12,8 +12,6 @@ import androidx.appcompat.app.AppCompatActivity;
 
 import com.example.libraryonline.R;
 import com.example.libraryonline.utils.InputValidator;
-import com.google.firebase.firestore.DocumentSnapshot;
-import com.google.firebase.firestore.FieldValue;
 import com.google.firebase.functions.FirebaseFunctions;
 
 import java.text.SimpleDateFormat;
@@ -125,8 +123,4 @@ public class RegisterActivity extends AppCompatActivity {
         submitButton.setText(submitting ? "Đang gửi..." : "Gửi yêu cầu đăng ký");
     }
 
-    private void finishWithMessage(String message) {
-        setSubmitting(false);
-        Toast.makeText(this, message, Toast.LENGTH_LONG).show();
-    }
 }
