@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent" android:layout_height="match_parent"
+    android:background="#F4F7FB" android:fillViewport="true">
+    <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
+        android:orientation="vertical" android:padding="20dp">
+        <TextView android:layout_width="match_parent" android:layout_height="wrap_content"
+            android:text="MY LIBRARY" android:textColor="#64748B" android:textSize="12sp"
+            android:textStyle="bold" android:letterSpacing="0.12" />
+        <TextView android:layout_width="match_parent" android:layout_height="wrap_content"
+            android:layout_marginTop="8dp" android:text="Duyệt thẻ thành viên"
+            android:textColor="#172554" android:textSize="27sp" android:textStyle="bold" />
+        <TextView android:layout_width="match_parent" android:layout_height="wrap_content"
+            android:layout_marginTop="6dp"
+            android:text="Xem hồ sơ đăng ký mới và quyết định duyệt hoặc từ chối."
+            android:textColor="#64748B" android:textSize="14sp" />
+        <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
+            android:layout_marginTop="20dp" android:background="#E8F0FE"
+            android:orientation="vertical" android:padding="14dp">
+            <TextView android:layout_width="match_parent" android:layout_height="wrap_content"
+                android:text="QUY TRÌNH PHÊ DUYỆT" android:textColor="#1D4ED8"
+                android:textSize="12sp" android:textStyle="bold" />
+            <TextView android:layout_width="match_parent" android:layout_height="wrap_content"
+                android:layout_marginTop="5dp"
+                android:text="Khi duyệt, hệ thống tạo tài khoản độc giả và gửi email đặt mật khẩu. Khi từ chối, cần nhập lý do."
+                android:textColor="#1E3A8A" android:textSize="13sp" />
+        </LinearLayout>
+        <TextView android:id="@+id/textPendingCount" android:layout_width="match_parent"
+            android:layout_height="wrap_content" android:layout_marginTop="24dp"
+            android:text="YÊU CẦU ĐANG CHỜ (0)" android:textColor="#334155"
+            android:textSize="13sp" android:textStyle="bold" />
+        <ProgressBar android:id="@+id/progressRequests" style="?android:attr/progressBarStyle"
+            android:layout_width="36dp" android:layout_height="36dp"
+            android:layout_gravity="center_horizontal" android:layout_marginTop="24dp" />
+        <TextView android:id="@+id/textEmptyRequests" android:layout_width="match_parent"
+            android:layout_height="wrap_content" android:gravity="center" android:padding="24dp"
+            android:text="Đang tải yêu cầu đăng ký..." android:textColor="#64748B"
+            android:textSize="14sp" android:visibility="gone" />
+        <LinearLayout android:id="@+id/containerRegistrationRequests"
+            android:layout_width="match_parent" android:layout_height="wrap_content"
+            android:orientation="vertical" android:paddingBottom="24dp" />
+    </LinearLayout>
+</ScrollView>
