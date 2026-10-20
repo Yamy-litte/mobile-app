@@ -2,56 +2,137 @@
 <ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
+    android:background="@color/library_background"
     android:fillViewport="true">
     <LinearLayout
         android:layout_width="match_parent"
-        android:layout_height="match_parent"
+        android:layout_height="wrap_content"
         android:orientation="vertical"
-        android:padding="24dp">
+        android:paddingStart="24dp"
+        android:paddingTop="26dp"
+        android:paddingEnd="24dp"
+        android:paddingBottom="28dp">
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="MyLibrary"
+            android:textColor="@color/library_blue"
+            android:textSize="28sp"
+            android:textStyle="bold" />
         <TextView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="ĐĂNG KÝ THẺ THƯ VIỆN"
-            android:textSize="24sp"
-            android:textStyle="bold"
-            android:paddingBottom="8dp" />
+            android:layout_marginTop="24dp"
+            android:text="Đăng ký thẻ mới"
+            android:textColor="@color/library_navy"
+            android:textSize="25sp"
+            android:textStyle="bold" />
         <TextView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="Nhập thông tin chính xác. Email và số điện thoại cần được xác minh trước khi yêu cầu được duyệt."
+            android:layout_marginTop="8dp"
+            android:layout_marginBottom="20dp"
+            android:text="Điền đầy đủ thông tin để đăng ký thẻ độc giả. Hồ sơ sẽ được Admin xem xét trước khi bạn có thể đăng nhập."
+            android:textColor="@color/library_muted"
             android:textSize="14sp"
-            android:paddingBottom="18dp" />
-        <EditText
-            android:id="@+id/editFullName"
+            android:lineSpacingExtra="3dp" />
+        <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:hint="Họ và tên"
-            android:inputType="textPersonName"
-            android:autofillHints="name"
-            android:singleLine="true" />
-        <EditText
-            android:id="@+id/editRegisterEmail"
+            android:orientation="vertical"
+            android:padding="20dp"
+            android:background="@drawable/bg_auth_card"
+            android:elevation="2dp">
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Thông tin độc giả"
+                android:textColor="@color/library_navy"
+                android:textSize="18sp"
+                android:textStyle="bold"
+                android:layout_marginBottom="14dp" />
+            <EditText
+                android:id="@+id/editFullName"
+                android:layout_width="match_parent"
+                android:layout_height="52dp"
+                android:background="@drawable/bg_auth_input"
+                android:paddingStart="14dp"
+                android:paddingEnd="14dp"
+                android:hint="Họ và tên"
+                android:inputType="textPersonName"
+                android:autofillHints="name"
+                android:singleLine="true"
+                android:textColor="@color/library_text"
+                android:textColorHint="@color/library_muted" />
+            <EditText
+                android:id="@+id/editBirthDate"
+                android:layout_width="match_parent"
+                android:layout_height="52dp"
+                android:layout_marginTop="12dp"
+                android:background="@drawable/bg_auth_input"
+                android:paddingStart="14dp"
+                android:paddingEnd="14dp"
+                android:hint="Ngày sinh"
+                android:focusable="false"
+                android:clickable="true"
+                android:inputType="none"
+                android:textColor="@color/library_text"
+                android:textColorHint="@color/library_muted" />
+            <EditText
+                android:id="@+id/editPhone"
+                android:layout_width="match_parent"
+                android:layout_height="52dp"
+                android:layout_marginTop="12dp"
+                android:background="@drawable/bg_auth_input"
+                android:paddingStart="14dp"
+                android:paddingEnd="14dp"
+                android:hint="Số điện thoại"
+                android:inputType="phone"
+                android:autofillHints="phone"
+                android:singleLine="true"
+                android:textColor="@color/library_text"
+                android:textColorHint="@color/library_muted" />
+            <EditText
+                android:id="@+id/editRegisterEmail"
+                android:layout_width="match_parent"
+                android:layout_height="52dp"
+                android:layout_marginTop="12dp"
+                android:background="@drawable/bg_auth_input"
+                android:paddingStart="14dp"
+                android:paddingEnd="14dp"
+                android:hint="Email"
+                android:inputType="textEmailAddress"
+                android:autofillHints="emailAddress"
+                android:singleLine="true"
+                android:textColor="@color/library_text"
+                android:textColorHint="@color/library_muted" />
+            <CheckBox
+                android:id="@+id/checkAcceptTerms"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="12dp"
+                android:buttonTint="@color/library_blue"
+                android:text="Tôi đồng ý với Điều khoản sử dụng và Quy định mượn trả sách của thư viện MyLibrary"
+                android:textColor="@color/library_muted"
+                android:textSize="13sp" />
+            <Button
+                android:id="@+id/buttonSubmitRegistration"
+                android:layout_width="match_parent"
+                android:layout_height="52dp"
+                android:layout_marginTop="18dp"
+                android:backgroundTint="@color/library_blue"
+                android:text="Gửi yêu cầu đăng ký"
+                android:textAllCaps="false"
+                android:textSize="16sp"
+                android:textStyle="bold" />
+        </LinearLayout>
+        <TextView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:hint="Email"
-            android:inputType="textEmailAddress"
-            android:autofillHints="emailAddress"
-            android:singleLine="true"
-            android:layout_marginTop="12dp" />
-        <EditText
-            android:id="@+id/editPhone"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:hint="Số điện thoại Việt Nam"
-            android:inputType="phone"
-            android:autofillHints="phone"
-            android:singleLine="true"
-            android:layout_marginTop="12dp" />
-        <Button
-            android:id="@+id/buttonSubmitRegistration"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="Gửi yêu cầu đăng ký"
-            android:layout_marginTop="20dp" />
+            android:layout_marginTop="16dp"
+            android:text="Sau khi gửi yêu cầu, tài khoản sẽ ở trạng thái chờ duyệt. Bạn không thể đăng nhập trước khi Admin duyệt. Khi được duyệt, thông tin đăng nhập sẽ được gửi qua email."
+            android:textColor="@color/library_muted"
+            android:textSize="12sp"
+            android:lineSpacingExtra="3dp" />
     </LinearLayout>
 </ScrollView>
