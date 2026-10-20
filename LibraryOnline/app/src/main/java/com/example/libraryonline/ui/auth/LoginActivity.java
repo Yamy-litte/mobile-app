@@ -1,8 +1,10 @@
 package com.example.libraryonline.ui.auth;
 
 import android.content.Intent;
+import android.content.SharedPreferences;
 import android.os.Bundle;
 import android.widget.Button;
+import android.widget.CheckBox;
 import android.widget.EditText;
 import android.widget.TextView;
 import android.widget.Toast;
@@ -17,11 +19,15 @@ import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.firestore.FirebaseFirestore;
 
 public class LoginActivity extends AppCompatActivity {
+    private static final String PREFS_NAME = "mylibrary_login";
+    private static final String KEY_REMEMBER_EMAIL = "remember_email";
+
     private FirebaseAuth auth;
     private FirebaseFirestore firestore;
     private EditText emailInput;
     private EditText passwordInput;
     private Button loginButton;
+    private CheckBox rememberLogin;
     private TextView registerLink;
     private TextView forgotPasswordLink;
 
@@ -35,8 +41,16 @@ public class LoginActivity extends AppCompatActivity {
         emailInput = findViewById(R.id.editEmail);
         passwordInput = findViewById(R.id.editPassword);
         loginButton = findViewById(R.id.buttonLogin);
+        rememberLogin = findViewById(R.id.checkRememberLogin);
         registerLink = findViewById(R.id.textRegister);
         forgotPasswordLink = findViewById(R.id.textForgotPassword);
+
+        SharedPreferences preferences = getSharedPreferences(PREFS_NAME, MODE_PRIVATE);
+        String savedEmail = preferences.getString(KEY_REMEMBER_EMAIL, "");
+        if (!savedEmail.isEmpty()) {
+            emailInput.setText(savedEmail);
+            rememberLogin.setChecked(true);
+        }
 
         loginButton.setOnClickListener(v -> login());
         registerLink.setOnClickListener(v ->
@@ -58,6 +72,14 @@ public class LoginActivity extends AppCompatActivity {
             passwordInput.requestFocus();
             return;
         }
+
+        SharedPreferences.Editor preferences = getSharedPreferences(PREFS_NAME, MODE_PRIVATE).edit();
+        if (rememberLogin.isChecked()) {
+            preferences.putString(KEY_REMEMBER_EMAIL, email);
+        } else {
+            preferences.remove(KEY_REMEMBER_EMAIL);
+        }
+        preferences.apply();
 
         setLoading(true);
         auth.signInWithEmailAndPassword(email, password)
@@ -130,7 +152,6 @@ public class LoginActivity extends AppCompatActivity {
         auth.sendPasswordResetEmail(email)
                 .addOnCompleteListener(task -> {
                     forgotPasswordLink.setEnabled(true);
-                    // Keep the message generic to avoid revealing whether an account exists.
                     if (task.isSuccessful()) {
                         showMessage("Nếu email thuộc tài khoản đã đăng ký, hướng dẫn đặt lại mật khẩu sẽ được gửi đến hộp thư.");
                     } else {
