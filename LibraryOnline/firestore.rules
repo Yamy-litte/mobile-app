@@ -14,12 +14,12 @@ service cloud.firestore {
 
     function validRegistrationRequest(requestId) {
       return request.resource.data.keys().hasAll([
-          'fullName', 'birthDate', 'email', 'phone', 'uid', 'termsAccepted',
+          'fullName', 'birthDate', 'email', 'phone', 'termsAccepted',
           'termsAcceptedAt', 'status', 'emailVerified', 'phoneVerified',
           'rejectionReason', 'createdAt'
         ])
         && request.resource.data.keys().hasOnly([
-          'fullName', 'birthDate', 'email', 'phone', 'uid', 'termsAccepted',
+          'fullName', 'birthDate', 'email', 'phone', 'termsAccepted',
           'termsAcceptedAt', 'status', 'emailVerified', 'phoneVerified',
           'rejectionReason', 'createdAt'
         ])
@@ -29,106 +29,14 @@ service cloud.firestore {
         && request.resource.data.birthDate is string
         && request.resource.data.birthDate.matches('^[0-9]{4}-[0-9]{2}-[0-9]{2}$')
         && request.resource.data.email is string
-        && request.resource.data.uid is string
-        && signedIn()
-        && request.auth.uid == request.resource.data.uid
-        && request.auth.token.email == request.resource.data.email
         && request.resource.data.email.size() <= 254
         && request.resource.data.email.matches('^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$')
         && request.resource.data.phone is string
-        && request.resource.data.phone.matches('^0(3|5|7|8|9)[0-9]{8}        && request.resource.data.termsAccepted == true
-        && request.resource.data.termsAcceptedAt == request.time
-        && request.resource.data.status == 'Pending'
-        && request.resource.data.emailVerified == false
-        && request.resource.data.phoneVerified == false
-        && request.resource.data.rejectionReason == ''
-        && request.resource.data.createdAt == request.time
-        && getAfter(/databases/$(database)/documents/RegistrationEmailIndex/$(request.resource.data.email)).data.value == request.resource.data.email
-        && getAfter(/databases/$(database)/documents/RegistrationEmailIndex/$(request.resource.data.email)).data.requestId == requestId
-        && getAfter(/databases/$(database)/documents/RegistrationPhoneIndex/$(request.resource.data.phone)).data.value == request.resource.data.phone
-        && getAfter(/databases/$(database)/documents/RegistrationPhoneIndex/$(request.resource.data.phone)).data.requestId == requestId;
-    }
-
-    match /Admins/{adminId} {
-      // Provision administrator records manually in Firebase Console.
-      allow read: if signedIn() && request.auth.uid == adminId;
-      allow write: if false;
-    }
-
-    match /Users/{userId} {
-      allow read: if (signedIn() && request.auth.uid == userId) || isAdmin();
-      allow create: if isAdmin()
-        && request.resource.data.userId == userId
-        && request.resource.data.role == 'Reader'
-        && request.resource.data.cardStatus == 'HoatDong'
-        && request.resource.data.email is string
-        && request.resource.data.phone is string;
-      allow update: if signedIn()
-        && request.auth.uid == userId
-        && resource.data.mustChangePassword == true
-        && request.resource.data.mustChangePassword == false
-        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['mustChangePassword', 'updatedAt']);
-      allow delete: if false;
-    }
-
-    match /RegistrationEmailIndex/{email} {
-      allow create: if !exists(/databases/$(database)/documents/RegistrationEmailIndex/$(email))
-        && request.resource.data.keys().hasOnly(['value', 'requestId', 'createdAt'])
-        && request.resource.data.value == email
-        && request.resource.data.requestId is string
-        && request.resource.data.createdAt == request.time
-        && getAfter(/databases/$(database)/documents/RegistrationRequests/$(request.resource.data.requestId)).data.email == email;
-      allow read, update, delete: if false;
-    }
-
-    match /RegistrationPhoneIndex/{phone} {
-      allow create: if !exists(/databases/$(database)/documents/RegistrationPhoneIndex/$(phone))
-        && request.resource.data.keys().hasOnly(['value', 'requestId', 'createdAt'])
-        && request.resource.data.value == phone
-        && request.resource.data.requestId is string
-        && request.resource.data.createdAt == request.time
-        && getAfter(/databases/$(database)/documents/RegistrationRequests/$(request.resource.data.requestId)).data.phone == phone;
-      allow read, update, delete: if false;
-    }
-
-    match /RegistrationRequests/{requestId} {
-      allow create: if validRegistrationRequest(requestId);
-      allow read: if isAdmin();
-      allow update: if isAdmin()
-        && resource.data.status in ['Pending', 'PendingVerification']
-        && request.resource.data.status in ['Approved', 'Rejected']
-        && request.resource.data.reviewedBy == request.auth.uid
-        && request.resource.data.reviewedAt == request.time
-        && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
-          'status', 'rejectionReason', 'reviewedBy', 'reviewedAt', 'userId', 'barcode'
-        ])
-        && (
-          (request.resource.data.status == 'Approved'
-            && request.resource.data.userId is string
-            && request.resource.data.barcode is string
-            && request.resource.data.rejectionReason == resource.data.rejectionReason)
-          ||
-          (request.resource.data.status == 'Rejected'
-            && request.resource.data.rejectionReason is string
-            && request.resource.data.rejectionReason.size() >= 3
-            && request.resource.data.rejectionReason.size() <= 500
-            && !request.resource.data.keys().hasAny(['userId', 'barcode']))
-        );
-      allow delete: if false;
-    }
-
-    // Keep unspecified collections closed. Add least-privilege rules for every other
-    // collection before deploying these rules to a live project.
-    match /{document=**} {
-      allow read, write: if false;
-    }
-  }
-}
-)
+        && request.resource.data.phone.matches('^0(3|5|7|8|9)[0-9]{8}$')
         && request.resource.data.termsAccepted == true
         && request.resource.data.termsAcceptedAt == request.time
         && request.resource.data.status == 'Pending'
-        && request.resource.data.emailVerified == false
+        && request.resource.data.emailVerified == true
         && request.resource.data.phoneVerified == false
         && request.resource.data.rejectionReason == ''
         && request.resource.data.createdAt == request.time
@@ -139,7 +47,6 @@ service cloud.firestore {
     }
 
     match /Admins/{adminId} {
-      // Provision administrator records manually in Firebase Console.
       allow read: if signedIn() && request.auth.uid == adminId;
       allow write: if false;
     }
@@ -206,186 +113,6 @@ service cloud.firestore {
       allow delete: if false;
     }
 
-    // Keep unspecified collections closed. Add least-privilege rules for every other
-    // collection before deploying these rules to a live project.
-    match /{document=**} {
-      allow read, write: if false;
-    }
-  }
-}
-)
-        && request.resource.data.termsAccepted == true
-        && request.resource.data.termsAcceptedAt == request.time
-        && request.resource.data.status == 'Pending'
-        && request.resource.data.emailVerified == false
-        && request.resource.data.phoneVerified == false
-        && request.resource.data.rejectionReason == ''
-        && request.resource.data.createdAt == request.time
-        && getAfter(/databases/$(database)/documents/RegistrationEmailIndex/$(request.resource.data.email)).data.value == request.resource.data.email
-        && getAfter(/databases/$(database)/documents/RegistrationEmailIndex/$(request.resource.data.email)).data.requestId == requestId
-        && getAfter(/databases/$(database)/documents/RegistrationPhoneIndex/$(request.resource.data.phone)).data.value == request.resource.data.phone
-        && getAfter(/databases/$(database)/documents/RegistrationPhoneIndex/$(request.resource.data.phone)).data.requestId == requestId;
-    }
-
-    match /Admins/{adminId} {
-      // Provision administrator records manually in Firebase Console.
-      allow read: if signedIn() && request.auth.uid == adminId;
-      allow write: if false;
-    }
-
-    match /Users/{userId} {
-      allow read: if (signedIn() && request.auth.uid == userId) || isAdmin();
-      allow create: if isAdmin()
-        && request.resource.data.userId == userId
-        && request.resource.data.role == 'Reader'
-        && request.resource.data.cardStatus == 'HoatDong'
-        && request.resource.data.email is string
-        && request.resource.data.phone is string;
-      allow update: if signedIn()
-        && request.auth.uid == userId
-        && resource.data.mustChangePassword == true
-        && request.resource.data.mustChangePassword == false
-        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['mustChangePassword', 'updatedAt']);
-      allow delete: if false;
-    }
-
-    match /RegistrationEmailIndex/{email} {
-      allow create: if !exists(/databases/$(database)/documents/RegistrationEmailIndex/$(email))
-        && request.resource.data.keys().hasOnly(['value', 'requestId', 'createdAt'])
-        && request.resource.data.value == email
-        && request.resource.data.requestId is string
-        && request.resource.data.createdAt == request.time
-        && getAfter(/databases/$(database)/documents/RegistrationRequests/$(request.resource.data.requestId)).data.email == email;
-      allow read, update, delete: if false;
-    }
-
-    match /RegistrationPhoneIndex/{phone} {
-      allow create: if !exists(/databases/$(database)/documents/RegistrationPhoneIndex/$(phone))
-        && request.resource.data.keys().hasOnly(['value', 'requestId', 'createdAt'])
-        && request.resource.data.value == phone
-        && request.resource.data.requestId is string
-        && request.resource.data.createdAt == request.time
-        && getAfter(/databases/$(database)/documents/RegistrationRequests/$(request.resource.data.requestId)).data.phone == phone;
-      allow read, update, delete: if false;
-    }
-
-    match /RegistrationRequests/{requestId} {
-      allow create: if validRegistrationRequest(requestId);
-      allow read: if isAdmin();
-      allow update: if isAdmin()
-        && resource.data.status in ['Pending', 'PendingVerification']
-        && request.resource.data.status in ['Approved', 'Rejected']
-        && request.resource.data.reviewedBy == request.auth.uid
-        && request.resource.data.reviewedAt == request.time
-        && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
-          'status', 'rejectionReason', 'reviewedBy', 'reviewedAt', 'userId', 'barcode'
-        ])
-        && (
-          (request.resource.data.status == 'Approved'
-            && request.resource.data.userId is string
-            && request.resource.data.barcode is string
-            && request.resource.data.rejectionReason == resource.data.rejectionReason)
-          ||
-          (request.resource.data.status == 'Rejected'
-            && request.resource.data.rejectionReason is string
-            && request.resource.data.rejectionReason.size() >= 3
-            && request.resource.data.rejectionReason.size() <= 500
-            && !request.resource.data.keys().hasAny(['userId', 'barcode']))
-        );
-      allow delete: if false;
-    }
-
-    // Keep unspecified collections closed. Add least-privilege rules for every other
-    // collection before deploying these rules to a live project.
-    match /{document=**} {
-      allow read, write: if false;
-    }
-  }
-}
-)
-        && request.resource.data.termsAccepted == true
-        && request.resource.data.termsAcceptedAt == request.time
-        && request.resource.data.status == 'Pending'
-        && request.resource.data.emailVerified == false
-        && request.resource.data.phoneVerified == false
-        && request.resource.data.rejectionReason == ''
-        && request.resource.data.createdAt == request.time
-        && getAfter(/databases/$(database)/documents/RegistrationEmailIndex/$(request.resource.data.email)).data.value == request.resource.data.email
-        && getAfter(/databases/$(database)/documents/RegistrationEmailIndex/$(request.resource.data.email)).data.requestId == requestId
-        && getAfter(/databases/$(database)/documents/RegistrationPhoneIndex/$(request.resource.data.phone)).data.value == request.resource.data.phone
-        && getAfter(/databases/$(database)/documents/RegistrationPhoneIndex/$(request.resource.data.phone)).data.requestId == requestId;
-    }
-
-    match /Admins/{adminId} {
-      // Provision administrator records manually in Firebase Console.
-      allow read: if signedIn() && request.auth.uid == adminId;
-      allow write: if false;
-    }
-
-    match /Users/{userId} {
-      allow read: if (signedIn() && request.auth.uid == userId) || isAdmin();
-      allow create: if isAdmin()
-        && request.resource.data.userId == userId
-        && request.resource.data.role == 'Reader'
-        && request.resource.data.cardStatus == 'HoatDong'
-        && request.resource.data.email is string
-        && request.resource.data.phone is string;
-      allow update: if signedIn()
-        && request.auth.uid == userId
-        && resource.data.mustChangePassword == true
-        && request.resource.data.mustChangePassword == false
-        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['mustChangePassword', 'updatedAt']);
-      allow delete: if false;
-    }
-
-    match /RegistrationEmailIndex/{email} {
-      allow create: if !exists(/databases/$(database)/documents/RegistrationEmailIndex/$(email))
-        && request.resource.data.keys().hasOnly(['value', 'requestId', 'createdAt'])
-        && request.resource.data.value == email
-        && request.resource.data.requestId is string
-        && request.resource.data.createdAt == request.time
-        && getAfter(/databases/$(database)/documents/RegistrationRequests/$(request.resource.data.requestId)).data.email == email;
-      allow read, update, delete: if false;
-    }
-
-    match /RegistrationPhoneIndex/{phone} {
-      allow create: if !exists(/databases/$(database)/documents/RegistrationPhoneIndex/$(phone))
-        && request.resource.data.keys().hasOnly(['value', 'requestId', 'createdAt'])
-        && request.resource.data.value == phone
-        && request.resource.data.requestId is string
-        && request.resource.data.createdAt == request.time
-        && getAfter(/databases/$(database)/documents/RegistrationRequests/$(request.resource.data.requestId)).data.phone == phone;
-      allow read, update, delete: if false;
-    }
-
-    match /RegistrationRequests/{requestId} {
-      allow create: if validRegistrationRequest(requestId);
-      allow read: if isAdmin();
-      allow update: if isAdmin()
-        && resource.data.status in ['Pending', 'PendingVerification']
-        && request.resource.data.status in ['Approved', 'Rejected']
-        && request.resource.data.reviewedBy == request.auth.uid
-        && request.resource.data.reviewedAt == request.time
-        && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
-          'status', 'rejectionReason', 'reviewedBy', 'reviewedAt', 'userId', 'barcode'
-        ])
-        && (
-          (request.resource.data.status == 'Approved'
-            && request.resource.data.userId is string
-            && request.resource.data.barcode is string
-            && request.resource.data.rejectionReason == resource.data.rejectionReason)
-          ||
-          (request.resource.data.status == 'Rejected'
-            && request.resource.data.rejectionReason is string
-            && request.resource.data.rejectionReason.size() >= 3
-            && request.resource.data.rejectionReason.size() <= 500
-            && !request.resource.data.keys().hasAny(['userId', 'barcode']))
-        );
-      allow delete: if false;
-    }
-
-    // Keep unspecified collections closed. Add least-privilege rules for every other
-    // collection before deploying these rules to a live project.
     match /{document=**} {
       allow read, write: if false;
     }
