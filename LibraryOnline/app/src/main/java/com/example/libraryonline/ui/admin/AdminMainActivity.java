@@ -11,22 +11,32 @@ import android.widget.LinearLayout;
 import android.widget.ProgressBar;
 import android.widget.TextView;
 import android.widget.Toast;
+
 import androidx.appcompat.app.AppCompatActivity;
+
 import com.example.libraryonline.R;
+import com.google.firebase.FirebaseApp;
 import com.google.firebase.auth.FirebaseAuth;
+import com.google.firebase.auth.FirebaseUser;
 import com.google.firebase.firestore.DocumentSnapshot;
+import com.google.firebase.firestore.FieldValue;
 import com.google.firebase.firestore.FirebaseFirestore;
 import com.google.firebase.firestore.ListenerRegistration;
-import com.google.firebase.functions.FirebaseFunctions;
+import com.google.firebase.firestore.QuerySnapshot;
+import com.google.firebase.firestore.WriteBatch;
+
 import java.text.DateFormat;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.Locale;
+import java.util.Map;
 
 public class AdminMainActivity extends AppCompatActivity {
+    private static final String SECONDARY_APP_NAME = "LibraryOnlineSecondaryAuth";
+
     private FirebaseFirestore firestore;
-    private FirebaseFunctions functions;
     private FirebaseAuth auth;
+    private FirebaseAuth secondaryAuth;
     private LinearLayout requestsContainer;
     private TextView pendingCount, emptyMessage;
     private ProgressBar progress;
@@ -37,8 +47,15 @@ public class AdminMainActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_admin_main);
         firestore = FirebaseFirestore.getInstance();
-        functions = FirebaseFunctions.getInstance();
         auth = FirebaseAuth.getInstance();
+        FirebaseApp secondaryApp;
+        try {
+            secondaryApp = FirebaseApp.getInstance(SECONDARY_APP_NAME);
+        } catch (IllegalStateException notInitialized) {
+            secondaryApp = FirebaseApp.initializeApp(this,
+                    FirebaseApp.getInstance().getOptions(), SECONDARY_APP_NAME);
+        }
+        secondaryAuth = FirebaseAuth.getInstance(secondaryApp);
         requestsContainer = findViewById(R.id.containerRegistrationRequests);
         pendingCount = findViewById(R.id.textPendingCount);
         emptyMessage = findViewById(R.id.textEmptyRequests);
@@ -135,32 +152,25 @@ public class AdminMainActivity extends AppCompatActivity {
         reasonInput.setPadding(pad, dp(12), pad, dp(12));
         new AlertDialog.Builder(this)
                 .setTitle("Từ chối hồ sơ")
-                .setMessage("Lý do sẽ được lưu cùng yêu cầu đăng ký.")
+                .setMessage("Lý do sẽ được lưu cùng yêu cầu đăng ký. Email thông báo tự động chưa được hỗ trợ ở chế độ Spark.")
                 .setView(reasonInput)
                 .setNegativeButton("Hủy", (dialog, which) -> dialog.dismiss())
                 .setPositiveButton("Xác nhận từ chối", (dialog, which) -> {
                     String reason = reasonInput.getText().toString().trim();
-                    if (reason.isEmpty()) {
-                        Toast.makeText(this, "Vui lòng nhập lý do từ chối.", Toast.LENGTH_LONG).show();
+                    if (reason.length() < 3 || reason.length() > 500) {
+                        Toast.makeText(this, "Lý do từ chối phải từ 3 đến 500 ký tự.", Toast.LENGTH_LONG).show();
                         return;
                     }
                     setCardActionsEnabled(reject, approve, false);
-                    HashMap<String, Object> data = new HashMap<>();
-                    data.put("requestId", doc.getId());
-                    data.put("reason", reason);
-                    functions.getHttpsCallable("rejectRegistration").call(data)
-                            .addOnSuccessListener(result -> {
-                                boolean sent = false;
-                                Object payload = result.getData();
-                                if (payload instanceof java.util.Map) {
-                                    Object sentValue = ((java.util.Map<?, ?>) payload).get("emailSent");
-                                    sent = Boolean.TRUE.equals(sentValue);
-                                }
-                                Toast.makeText(this, sent
-                                        ? "Đã từ chối hồ sơ và gửi email thông báo."
-                                        : "Đã lưu từ chối. Chưa gửi được email, hãy kiểm tra cấu hình SMTP.",
-                                        Toast.LENGTH_LONG).show();
-                            })
+                    Map<String, Object> changes = new HashMap<>();
+                    changes.put("status", "Rejected");
+                    changes.put("rejectionReason", reason);
+                    changes.put("reviewedBy", auth.getCurrentUser() == null ? "" : auth.getCurrentUser().getUid());
+                    changes.put("reviewedAt", FieldValue.serverTimestamp());
+                    firestore.collection("RegistrationRequests").document(doc.getId()).update(changes)
+                            .addOnSuccessListener(unused -> Toast.makeText(this,
+                                    "Đã lưu kết quả từ chối. Ở gói Spark, hãy thông báo cho người đăng ký thủ công.",
+                                    Toast.LENGTH_LONG).show())
                             .addOnFailureListener(error -> {
                                 setCardActionsEnabled(reject, approve, true);
                                 Toast.makeText(this, "Không thể từ chối: " + error.getLocalizedMessage(),
@@ -170,33 +180,117 @@ public class AdminMainActivity extends AppCompatActivity {
     }
 
     private void approveRequest(DocumentSnapshot doc, Button reject, Button approve) {
+        String email = value(doc, "email", "").trim().toLowerCase(Locale.ROOT);
+        String phone = value(doc, "phone", "").trim();
+        String fullName = value(doc, "fullName", "").trim();
+        if (email.isEmpty() || phone.isEmpty() || fullName.isEmpty()) {
+            Toast.makeText(this, "Hồ sơ thiếu họ tên, email hoặc số điện thoại.", Toast.LENGTH_LONG).show();
+            return;
+        }
+
         new AlertDialog.Builder(this)
                 .setTitle("Duyệt hồ sơ thành viên")
-                .setMessage("Hệ thống sẽ tạo tài khoản độc giả và gửi email đặt mật khẩu đến "
-                        + value(doc, "email", "email đăng ký") + ". Tiếp tục?")
+                .setMessage("Tạo tài khoản độc giả cho " + email
+                        + " và gửi email đặt mật khẩu. Tiếp tục?")
                 .setNegativeButton("Hủy", (dialog, which) -> dialog.dismiss())
                 .setPositiveButton("Duyệt", (dialog, which) -> {
                     setCardActionsEnabled(reject, approve, false);
-                    HashMap<String, Object> data = new HashMap<>();
-                    data.put("requestId", doc.getId());
-                    functions.getHttpsCallable("approveRegistration").call(data)
-                            .addOnSuccessListener(result -> {
-                                String email = value(doc, "email", "");
-                                auth.sendPasswordResetEmail(email)
-                                        .addOnSuccessListener(unused -> Toast.makeText(this,
-                                                "Đã tạo tài khoản và gửi email đặt mật khẩu.",
-                                                Toast.LENGTH_LONG).show())
-                                        .addOnFailureListener(error -> Toast.makeText(this,
-                                                "Tài khoản đã tạo nhưng chưa gửi được email đặt mật khẩu. Dùng chức năng Quên mật khẩu để gửi lại. "
-                                                        + error.getLocalizedMessage(),
-                                                Toast.LENGTH_LONG).show());
-                            })
-                            .addOnFailureListener(error -> {
-                                setCardActionsEnabled(reject, approve, true);
-                                Toast.makeText(this, "Không thể duyệt hồ sơ: " + error.getLocalizedMessage(),
-                                        Toast.LENGTH_LONG).show();
-                            });
+                    checkDuplicatesThenCreate(doc, fullName, email, phone, reject, approve);
                 }).show();
+    }
+
+    private void checkDuplicatesThenCreate(DocumentSnapshot doc, String fullName, String email,
+                                           String phone, Button reject, Button approve) {
+        firestore.collection("Users").whereEqualTo("email", email).limit(1).get()
+                .addOnSuccessListener(emailMatches -> {
+                    if (!emailMatches.isEmpty()) {
+                        failAction(reject, approve, "Email đã được sử dụng bởi một độc giả.");
+                        return;
+                    }
+                    firestore.collection("Users").whereEqualTo("phone", phone).limit(1).get()
+                            .addOnSuccessListener(phoneMatches -> {
+                                if (!phoneMatches.isEmpty()) {
+                                    failAction(reject, approve, "Số điện thoại đã được sử dụng.");
+                                    return;
+                                }
+                                createApprovedAccount(doc, fullName, email, phone, reject, approve);
+                            })
+                            .addOnFailureListener(error -> failAction(reject, approve,
+                                    "Không kiểm tra được số điện thoại: " + error.getLocalizedMessage()));
+                })
+                .addOnFailureListener(error -> failAction(reject, approve,
+                        "Không kiểm tra được email: " + error.getLocalizedMessage()));
+    }
+
+    private void createApprovedAccount(DocumentSnapshot request, String fullName, String email,
+                                       String phone, Button reject, Button approve) {
+        secondaryAuth.createUserWithEmailAndPassword(email, createTemporaryPassword())
+                .addOnSuccessListener(result -> {
+                    FirebaseUser newUser = result.getUser();
+                    if (newUser == null) {
+                        failAction(reject, approve, "Firebase không trả về tài khoản vừa tạo.");
+                        return;
+                    }
+                    String uid = newUser.getUid();
+                    String barcode = "TV-" + uid.substring(0, Math.min(8, uid.length())).toUpperCase(Locale.ROOT);
+                    Map<String, Object> userData = new HashMap<>();
+                    userData.put("userId", uid);
+                    userData.put("fullName", fullName);
+                    userData.put("dateOfBirth", value(request, "birthDate", ""));
+                    userData.put("email", email);
+                    userData.put("phone", phone);
+                    userData.put("barcode", barcode);
+                    userData.put("role", "Reader");
+                    userData.put("cardStatus", "HoatDong");
+                    userData.put("createdAt", FieldValue.serverTimestamp());
+                    userData.put("updatedAt", FieldValue.serverTimestamp());
+
+                    Map<String, Object> requestChanges = new HashMap<>();
+                    requestChanges.put("status", "Approved");
+                    requestChanges.put("reviewedBy", auth.getCurrentUser() == null ? "" : auth.getCurrentUser().getUid());
+                    requestChanges.put("reviewedAt", FieldValue.serverTimestamp());
+                    requestChanges.put("userId", uid);
+                    requestChanges.put("barcode", barcode);
+
+                    WriteBatch batch = firestore.batch();
+                    batch.set(firestore.collection("Users").document(uid), userData);
+                    batch.update(firestore.collection("RegistrationRequests").document(request.getId()), requestChanges);
+                    batch.commit()
+                            .addOnSuccessListener(unused -> secondaryAuth.sendPasswordResetEmail(email)
+                                    .addOnSuccessListener(ignored -> {
+                                        Toast.makeText(this, "Đã duyệt hồ sơ, tạo tài khoản và gửi email đặt mật khẩu.",
+                                                Toast.LENGTH_LONG).show();
+                                    })
+                                    .addOnFailureListener(error -> Toast.makeText(this,
+                                            "Tài khoản đã tạo nhưng chưa gửi được email đặt mật khẩu. Người dùng có thể dùng Quên mật khẩu. "
+                                                    + error.getLocalizedMessage(),
+                                            Toast.LENGTH_LONG).show())
+                            )
+                            .addOnFailureListener(error -> secondaryAuth.getCurrentUser() == null
+                                    ? failAction(reject, approve, "Không lưu được hồ sơ: " + error.getLocalizedMessage())
+                                    : secondaryAuth.getCurrentUser().delete()
+                                            .addOnCompleteListener(cleanup -> failAction(reject, approve,
+                                                    "Không lưu được hồ sơ; đã thử dọn tài khoản vừa tạo. "
+                                                            + error.getLocalizedMessage())));
+                })
+                .addOnFailureListener(error -> {
+                    String message = error.getLocalizedMessage();
+                    if (message != null && message.toLowerCase(Locale.ROOT).contains("already")) {
+                        message = "Email đã tồn tại trong Firebase Authentication.";
+                    }
+                    failAction(reject, approve, "Không thể tạo tài khoản: " + message);
+                });
+    }
+
+    private String createTemporaryPassword() {
+        // A random initial secret is immediately replaced through Firebase's password-reset email.
+        return java.util.UUID.randomUUID().toString().replace("-", "")
+                + "aA1!";
+    }
+
+    private void failAction(Button reject, Button approve, String message) {
+        setCardActionsEnabled(reject, approve, true);
+        Toast.makeText(this, message, Toast.LENGTH_LONG).show();
     }
 
     private void setCardActionsEnabled(Button reject, Button approve, boolean enabled) {
