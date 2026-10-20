@@ -25,6 +25,10 @@
             android:name=".ui.auth.RegistrationSubmittedActivity"
             android:exported="false" />
         <activity
+            android:name=".ui.auth.ForgotPasswordActivity"
+            android:exported="false"
+            android:windowSoftInputMode="adjustResize" />
+        <activity
             android:name=".ui.auth.RegisterActivity"
             android:exported="false"
             android:windowSoftInputMode="adjustResize" />
