@@ -10,6 +10,7 @@ import android.widget.Toast;
 import androidx.appcompat.app.AppCompatActivity;
 
 import com.example.libraryonline.R;
+import com.example.libraryonline.utils.PasswordVisibilityToggle;
 import com.example.libraryonline.ui.admin.AdminMainActivity;
 import com.example.libraryonline.utils.InputValidator;
 import com.google.firebase.auth.FirebaseAuth;
@@ -32,6 +33,7 @@ public class AdminLoginActivity extends AppCompatActivity {
         firestore = FirebaseFirestore.getInstance();
         emailInput = findViewById(R.id.editAdminEmail);
         passwordInput = findViewById(R.id.editAdminPassword);
+        PasswordVisibilityToggle.attach(passwordInput);
         loginButton = findViewById(R.id.buttonAdminLogin);
         backLink = findViewById(R.id.textBackToReaderLogin);
 
