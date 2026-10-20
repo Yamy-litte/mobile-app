@@ -38,7 +38,7 @@ public final class EmailSender {
                 String appPassword = BuildConfig.SMTP_APP_PASSWORD.replaceAll("\\s+", "");
                 if (TextUtils.isEmpty(sender) || TextUtils.isEmpty(appPassword)) {
                     throw new IllegalStateException(
-                            "Chưa cấu hình SMTP_EMAIL và SMTP_APP_PASSWORD trong local.properties/Gradle properties.");
+                            "Chưa cấu hình SMTP_EMAIL và SMTP_APP_PASSWORD trong Gradle properties hoặc tham số -P.");
                 }
                 Properties props = new Properties();
                 props.put("mail.smtp.auth", "true");
