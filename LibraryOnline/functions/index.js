@@ -113,7 +113,7 @@ exports.submitRegistration = onCall(async (request) => {
     phone,
     termsAccepted: true,
     termsAcceptedAt: FieldValue.serverTimestamp(),
-    status: "PendingVerification",
+    status: "Pending",
     emailVerified: false,
     phoneVerified: false,
     rejectionReason: "",
