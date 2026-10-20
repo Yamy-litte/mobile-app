@@ -11,6 +11,7 @@ import android.widget.Toast;
 import androidx.appcompat.app.AppCompatActivity;
 
 import com.example.libraryonline.R;
+import com.example.libraryonline.utils.EmailSender;
 import com.example.libraryonline.utils.InputValidator;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.firestore.DocumentReference;
@@ -143,6 +144,17 @@ public class RegisterActivity extends AppCompatActivity {
         batch.commit()
                 .addOnSuccessListener(unused -> {
                     auth.signOut();
+                    EmailSender.send(email,
+                            "Library Online - Đã nhận yêu cầu đăng ký",
+                            "Xin chào " + fullName + ",\n\n"
+                                    + "Thư viện đã nhận yêu cầu đăng ký tài khoản của bạn. "
+                                    + "Hồ sơ đang ở trạng thái chờ quản trị viên duyệt. "
+                                    + "Bạn sẽ nhận email khác khi có kết quả.\n\n"
+                                    + "Đây là email tự động, vui lòng không trả lời.",
+                            (success, message) -> {
+                                if (!success) android.util.Log.w("RegisterActivity",
+                                        "Không gửi được email thông báo: " + message);
+                            });
                     Intent intent = new Intent(this, RegistrationSubmittedActivity.class);
                     intent.putExtra("fullName", fullName);
                     intent.putExtra("birthDateDisplay", birthDateInput.getText().toString());
