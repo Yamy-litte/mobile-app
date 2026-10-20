@@ -12,9 +12,10 @@ import androidx.appcompat.app.AppCompatActivity;
 
 import com.example.libraryonline.R;
 import com.example.libraryonline.utils.InputValidator;
-import com.google.firebase.Timestamp;
+import com.google.firebase.firestore.DocumentReference;
 import com.google.firebase.firestore.FieldValue;
 import com.google.firebase.firestore.FirebaseFirestore;
+import com.google.firebase.firestore.WriteBatch;
 
 import java.text.SimpleDateFormat;
 import java.util.Calendar;
@@ -33,7 +34,6 @@ public class RegisterActivity extends AppCompatActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_register);
-
         firestore = FirebaseFirestore.getInstance();
         nameInput = findViewById(R.id.editFullName);
         birthDateInput = findViewById(R.id.editBirthDate);
@@ -41,7 +41,6 @@ public class RegisterActivity extends AppCompatActivity {
         phoneInput = findViewById(R.id.editPhone);
         acceptTerms = findViewById(R.id.checkAcceptTerms);
         submitButton = findViewById(R.id.buttonSubmitRegistration);
-
         birthDateInput.setOnClickListener(v -> chooseBirthDate());
         submitButton.setOnClickListener(v -> submitRequest());
     }
@@ -91,8 +90,9 @@ public class RegisterActivity extends AppCompatActivity {
             return;
         }
         acceptTerms.setError(null);
-
         setSubmitting(true);
+
+        DocumentReference requestRef = firestore.collection("RegistrationRequests").document();
         Map<String, Object> request = new HashMap<>();
         request.put("fullName", fullName);
         request.put("birthDate", birthDateIso);
@@ -106,9 +106,17 @@ public class RegisterActivity extends AppCompatActivity {
         request.put("rejectionReason", "");
         request.put("createdAt", FieldValue.serverTimestamp());
 
-        firestore.collection("RegistrationRequests")
-                .add(request)
-                .addOnSuccessListener(reference -> {
+        Map<String, Object> emailIndex = indexData(email, requestRef.getId());
+        Map<String, Object> phoneIndex = indexData(phone, requestRef.getId());
+
+        // Reserve email and phone in the same atomic batch as the request. The rules
+        // permit index creation only once, preventing simultaneous duplicate submissions.
+        WriteBatch batch = firestore.batch();
+        batch.set(requestRef, request);
+        batch.set(firestore.collection("RegistrationEmailIndex").document(email), emailIndex);
+        batch.set(firestore.collection("RegistrationPhoneIndex").document(phone), phoneIndex);
+        batch.commit()
+                .addOnSuccessListener(unused -> {
                     Intent intent = new Intent(this, RegistrationSubmittedActivity.class);
                     intent.putExtra("fullName", fullName);
                     intent.putExtra("birthDateDisplay", birthDateInput.getText().toString());
@@ -120,10 +128,19 @@ public class RegisterActivity extends AppCompatActivity {
                 .addOnFailureListener(error -> {
                     setSubmitting(false);
                     Toast.makeText(this,
-                            "Không gửi được yêu cầu. Kiểm tra Firestore Rules và kết nối mạng: "
-                                    + error.getLocalizedMessage(),
+                            "Không gửi được yêu cầu. Email hoặc số điện thoại có thể đã được dùng, "
+                                    + "hoặc Firestore Rules chưa được cập nhật. "
+                                    + (error.getLocalizedMessage() == null ? "" : error.getLocalizedMessage()),
                             Toast.LENGTH_LONG).show();
                 });
+    }
+
+    private Map<String, Object> indexData(String value, String requestId) {
+        Map<String, Object> data = new HashMap<>();
+        data.put("value", value);
+        data.put("requestId", requestId);
+        data.put("createdAt", FieldValue.serverTimestamp());
+        return data;
     }
 
     private void setSubmitting(boolean submitting) {
