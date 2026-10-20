@@ -240,8 +240,8 @@ public class AdminMainActivity extends AppCompatActivity {
     private void createApprovedAccount(DocumentSnapshot request, String fullName, String email,
                                        String phone, Button reject, Button approve) {
         String uid = value(request, "uid", "").trim();
-        if (uid.isEmpty() || !Boolean.TRUE.equals(request.getBoolean("emailVerified"))) {
-            failAction(reject, approve, "Hồ sơ chưa có tài khoản xác thực email hợp lệ. Yêu cầu đăng ký lại.");
+        if (uid.isEmpty()) {
+            failAction(reject, approve, "Hồ sơ chưa có tài khoản Firebase hợp lệ. Yêu cầu đăng ký lại.");
             return;
         }
         String requestEmail = value(request, "email", "").trim();
