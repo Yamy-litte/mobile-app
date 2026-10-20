@@ -71,13 +71,13 @@ exports.submitRegistration = onCall(async (request) => {
   if (fullName.length < 2 || fullName.length > 120) {
     throw new HttpsError("invalid-argument", "Họ tên phải từ 2 đến 120 ký tự.");
   }
-  if (!/^\\d{4}-\\d{2}-\\d{2}$/.test(birthDate)) {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(birthDate)) {
     throw new HttpsError("invalid-argument", "Ngày sinh không hợp lệ.");
   }
-  if (!/^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(email)) {
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
     throw new HttpsError("invalid-argument", "Email không đúng định dạng.");
   }
-  if (!/^\\+?84[0-9]{9,10}$|^0[0-9]{9}$/.test(phone)) {
+  if (!/^\+?84[0-9]{9,10}$|^0[0-9]{9}$/.test(phone)) {
     throw new HttpsError("invalid-argument", "Số điện thoại không đúng định dạng.");
   }
   if (!termsAccepted) {
