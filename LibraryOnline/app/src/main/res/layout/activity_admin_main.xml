@@ -25,6 +25,24 @@
                 android:text="Khi duyệt, hệ thống tạo tài khoản độc giả và gửi email đặt mật khẩu. Khi từ chối, cần nhập lý do."
                 android:textColor="#1E3A8A" android:textSize="13sp" />
         </LinearLayout>
+        <TextView android:layout_width="match_parent" android:layout_height="wrap_content"
+            android:layout_marginTop="24dp" android:text="YÊU CẦU QUÊN MẬT KHẨU"
+            android:textColor="#172554" android:textSize="20sp" android:textStyle="bold" />
+        <TextView android:layout_width="match_parent" android:layout_height="wrap_content"
+            android:layout_marginTop="4dp"
+            android:text="Chỉ duyệt sau khi đối chiếu thông tin với hồ sơ độc giả. Email đặt lại mật khẩu được gửi bởi Firebase Authentication."
+            android:textColor="#64748B" android:textSize="13sp" />
+        <TextView android:id="@+id/textPasswordResetPendingCount"
+            android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="16dp"
+            android:text="YÊU CẦU QUÊN MẬT KHẨU ĐANG CHỜ (0)" android:textColor="#334155"
+            android:textSize="13sp" android:textStyle="bold" />
+        <TextView android:id="@+id/textEmptyPasswordResetRequests"
+            android:layout_width="match_parent" android:layout_height="wrap_content" android:gravity="center" android:padding="20dp"
+            android:text="Đang tải yêu cầu quên mật khẩu..." android:textColor="#64748B"
+            android:textSize="14sp" android:visibility="gone" />
+        <LinearLayout android:id="@+id/containerPasswordResetRequests"
+            android:layout_width="match_parent" android:layout_height="wrap_content"
+            android:orientation="vertical" android:paddingBottom="12dp" />
         <TextView android:id="@+id/textPendingCount" android:layout_width="match_parent"
             android:layout_height="wrap_content" android:layout_marginTop="24dp"
             android:text="YÊU CẦU ĐANG CHỜ (0)" android:textColor="#334155"
