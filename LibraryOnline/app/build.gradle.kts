@@ -38,6 +38,11 @@ android {
         buildConfig = true
     }
 
+    packaging {
+        resources {
+            excludes += "/META-INF/NOTICE.md"
+        }
+    }
 
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_11
