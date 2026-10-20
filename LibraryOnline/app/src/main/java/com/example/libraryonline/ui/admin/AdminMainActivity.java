@@ -266,12 +266,17 @@ public class AdminMainActivity extends AppCompatActivity {
                                                     + error.getLocalizedMessage(),
                                             Toast.LENGTH_LONG).show())
                             )
-                            .addOnFailureListener(error -> secondaryAuth.getCurrentUser() == null
-                                    ? failAction(reject, approve, "Không lưu được hồ sơ: " + error.getLocalizedMessage())
-                                    : secondaryAuth.getCurrentUser().delete()
-                                            .addOnCompleteListener(cleanup -> failAction(reject, approve,
+                            .addOnFailureListener(error -> {
+                                FirebaseUser createdUser = secondaryAuth.getCurrentUser();
+                                if (createdUser == null) {
+                                    failAction(reject, approve, "Không lưu được hồ sơ: " + error.getLocalizedMessage());
+                                } else {
+                                    createdUser.delete().addOnCompleteListener(cleanup ->
+                                            failAction(reject, approve,
                                                     "Không lưu được hồ sơ; đã thử dọn tài khoản vừa tạo. "
-                                                            + error.getLocalizedMessage())));
+                                                            + error.getLocalizedMessage()));
+                                }
+                            });
                 })
                 .addOnFailureListener(error -> {
                     String message = error.getLocalizedMessage();
