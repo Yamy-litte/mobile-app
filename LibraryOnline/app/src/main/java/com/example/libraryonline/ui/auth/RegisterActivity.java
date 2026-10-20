@@ -7,12 +7,14 @@ import android.widget.Button;
 import android.widget.CheckBox;
 import android.widget.EditText;
 import android.widget.Toast;
+import android.util.Log;
 
 import androidx.appcompat.app.AppCompatActivity;
 
 import com.example.libraryonline.R;
 import com.example.libraryonline.utils.InputValidator;
 import com.google.firebase.functions.FirebaseFunctions;
+import com.google.firebase.functions.FirebaseFunctionsException;
 
 import java.text.SimpleDateFormat;
 import java.util.Calendar;
@@ -32,7 +34,7 @@ public class RegisterActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_register);
 
-        functions = FirebaseFunctions.getInstance();
+        functions = FirebaseFunctions.getInstance("us-central1");
         nameInput = findViewById(R.id.editFullName);
         birthDateInput = findViewById(R.id.editBirthDate);
         emailInput = findViewById(R.id.editRegisterEmail);
@@ -112,7 +114,12 @@ public class RegisterActivity extends AppCompatActivity {
                 .addOnFailureListener(error -> {
                     setSubmitting(false);
                     String message = error.getLocalizedMessage();
-                    Toast.makeText(this, "Không gửi được yêu cầu đăng ký: "
+                    String errorCode = error instanceof FirebaseFunctionsException
+                            ? ((FirebaseFunctionsException) error).getCode().name()
+                            : error.getClass().getSimpleName();
+                    Log.e("RegisterActivity", "submitRegistration failed [" + errorCode + "]", error);
+                    Toast.makeText(this, "Không gửi được yêu cầu đăng ký ("
+                            + errorCode + "): "
                             + (message == null ? "Vui lòng kiểm tra kết nối Firebase." : message),
                             Toast.LENGTH_LONG).show();
                 });
