@@ -42,7 +42,10 @@ public class AdminMainActivity extends AppCompatActivity {
     private LinearLayout requestsContainer;
     private TextView pendingCount, emptyMessage;
     private ProgressBar progress;
-    private ListenerRegistration requestsListener;\n    private LinearLayout resetRequestsContainer;\n    private TextView resetPendingCount, resetEmptyMessage;\n    private ListenerRegistration resetRequestsListener;
+    private ListenerRegistration requestsListener;
+    private LinearLayout resetRequestsContainer;
+    private TextView resetPendingCount, resetEmptyMessage;
+    private ListenerRegistration resetRequestsListener;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -62,7 +65,11 @@ public class AdminMainActivity extends AppCompatActivity {
         pendingCount = findViewById(R.id.textPendingCount);
         emptyMessage = findViewById(R.id.textEmptyRequests);
         progress = findViewById(R.id.progressRequests);
-        resetRequestsContainer = findViewById(R.id.containerPasswordResetRequests);\n        resetPendingCount = findViewById(R.id.textPasswordResetPendingCount);\n        resetEmptyMessage = findViewById(R.id.textEmptyPasswordResetRequests);\n        listenForRequests();\n        listenForPasswordResetRequests();
+        resetRequestsContainer = findViewById(R.id.containerPasswordResetRequests);
+        resetPendingCount = findViewById(R.id.textPasswordResetPendingCount);
+        resetEmptyMessage = findViewById(R.id.textEmptyPasswordResetRequests);
+        listenForRequests();
+        listenForPasswordResetRequests();
     }
 
     private void listenForRequests() {
