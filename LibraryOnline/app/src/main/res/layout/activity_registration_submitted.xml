@@ -1,0 +1,141 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@color/library_background"
+    android:fillViewport="true">
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:padding="24dp">
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="MyLibrary"
+            android:textColor="@color/library_blue"
+            android:textSize="28sp"
+            android:textStyle="bold" />
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="32dp"
+            android:orientation="vertical"
+            android:gravity="center_horizontal"
+            android:padding="24dp"
+            android:background="@drawable/bg_auth_card"
+            android:elevation="2dp">
+            <TextView
+                android:layout_width="64dp"
+                android:layout_height="64dp"
+                android:gravity="center"
+                android:text="✓"
+                android:textColor="@color/library_success"
+                android:textSize="42sp"
+                android:textStyle="bold"
+                android:background="@drawable/bg_success_circle" />
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="20dp"
+                android:gravity="center"
+                android:text="Đã gửi yêu cầu đăng ký thẻ"
+                android:textColor="@color/library_navy"
+                android:textSize="23sp"
+                android:textStyle="bold" />
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="10dp"
+                android:gravity="center"
+                android:text="Yêu cầu của bạn đang được Admin xem xét. Thông tin đăng nhập sẽ được gửi qua email khi hồ sơ được duyệt."
+                android:textColor="@color/library_muted"
+                android:textSize="14sp"
+                android:lineSpacingExtra="3dp" />
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="24dp"
+                android:text="Tóm tắt hồ sơ"
+                android:textColor="@color/library_navy"
+                android:textSize="18sp"
+                android:textStyle="bold" />
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="16dp"
+                android:text="Họ tên"
+                android:textColor="@color/library_muted"
+                android:textSize="12sp" />
+            <TextView
+                android:id="@+id/textSubmittedFullName"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:textColor="@color/library_text"
+                android:textSize="15sp"
+                android:textStyle="bold" />
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="12dp"
+                android:text="Ngày sinh"
+                android:textColor="@color/library_muted"
+                android:textSize="12sp" />
+            <TextView
+                android:id="@+id/textSubmittedBirthDate"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:textColor="@color/library_text"
+                android:textSize="15sp"
+                android:textStyle="bold" />
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="12dp"
+                android:text="Điện thoại"
+                android:textColor="@color/library_muted"
+                android:textSize="12sp" />
+            <TextView
+                android:id="@+id/textSubmittedPhone"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:textColor="@color/library_text"
+                android:textSize="15sp"
+                android:textStyle="bold" />
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="12dp"
+                android:text="Email"
+                android:textColor="@color/library_muted"
+                android:textSize="12sp" />
+            <TextView
+                android:id="@+id/textSubmittedEmail"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:textColor="@color/library_text"
+                android:textSize="15sp"
+                android:textStyle="bold" />
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="20dp"
+                android:padding="14dp"
+                android:background="@drawable/bg_auth_input"
+                android:text="Chờ duyệt\nChưa thể đăng nhập cho đến khi hồ sơ được Admin duyệt. Bạn sẽ nhận email thông tin đăng nhập khi hồ sơ được chấp thuận."
+                android:textColor="@color/library_muted"
+                android:textSize="13sp"
+                android:lineSpacingExtra="3dp" />
+            <Button
+                android:id="@+id/buttonBackToLogin"
+                android:layout_width="match_parent"
+                android:layout_height="52dp"
+                android:layout_marginTop="22dp"
+                android:backgroundTint="@color/library_blue"
+                android:text="Về trang đăng nhập"
+                android:textAllCaps="false"
+                android:textSize="16sp"
+                android:textStyle="bold" />
+        </LinearLayout>
+    </LinearLayout>
+</ScrollView>
