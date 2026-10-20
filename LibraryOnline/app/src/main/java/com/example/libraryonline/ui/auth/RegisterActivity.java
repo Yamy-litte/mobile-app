@@ -13,7 +13,6 @@ import androidx.appcompat.app.AppCompatActivity;
 import com.example.libraryonline.R;
 import com.example.libraryonline.utils.EmailSender;
 import com.example.libraryonline.utils.InputValidator;
-import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.firestore.DocumentReference;
 import com.google.firebase.firestore.FieldValue;
 import com.google.firebase.firestore.FirebaseFirestore;
@@ -30,7 +29,6 @@ public class RegisterActivity extends AppCompatActivity {
     private CheckBox acceptTerms;
     private Button submitButton;
     private FirebaseFirestore firestore;
-    private FirebaseAuth auth;
     private String birthDateIso = "";
 
     @Override
@@ -38,7 +36,6 @@ public class RegisterActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_register);
         firestore = FirebaseFirestore.getInstance();
-        auth = FirebaseAuth.getInstance();
         nameInput = findViewById(R.id.editFullName);
         birthDateInput = findViewById(R.id.editBirthDate);
         emailInput = findViewById(R.id.editRegisterEmail);
@@ -96,27 +93,12 @@ public class RegisterActivity extends AppCompatActivity {
         }
         acceptTerms.setError(null);
         setSubmitting(true);
-        if (auth.getCurrentUser() != null) {
-            auth.signOut();
-        }
-        auth.createUserWithEmailAndPassword(email, "123456")
-                .addOnSuccessListener(authResult -> {
-                    if (authResult.getUser() == null) {
-                        setSubmitting(false);
-                        Toast.makeText(this, "Không tạo được tài khoản đăng ký.", Toast.LENGTH_LONG).show();
-                        return;
-                    }
-                    createRegistrationRequest(fullName, email, phone, authResult.getUser().getUid());
-                })
-                .addOnFailureListener(error -> {
-                    setSubmitting(false);
-                    String message = error.getMessage() == null ? "" : error.getMessage();
-                    Toast.makeText(this, "Không thể tạo tài khoản. Email có thể đã được đăng ký trước đó. " + message,
-                            Toast.LENGTH_LONG).show();
-                });
+        // Chỉ lưu hồ sơ đăng ký ở bước này. Tài khoản Firebase Auth sẽ được tạo
+        // sau khi quản trị viên duyệt hồ sơ.
+        createRegistrationRequest(fullName, email, phone);
     }
 
-    private void createRegistrationRequest(String fullName, String email, String phone, String uid) {
+    private void createRegistrationRequest(String fullName, String email, String phone) {
         DocumentReference requestRef = firestore.collection("RegistrationRequests").document();
         Map<String, Object> request = new HashMap<>();
         request.put("fullName", fullName);
@@ -127,7 +109,6 @@ public class RegisterActivity extends AppCompatActivity {
         request.put("termsAcceptedAt", FieldValue.serverTimestamp());
         request.put("status", "Pending");
         request.put("emailVerified", false);
-        request.put("uid", uid);
         request.put("phoneVerified", false);
         request.put("rejectionReason", "");
         request.put("createdAt", FieldValue.serverTimestamp());
@@ -143,7 +124,6 @@ public class RegisterActivity extends AppCompatActivity {
         batch.set(firestore.collection("RegistrationPhoneIndex").document(phone), phoneIndex);
         batch.commit()
                 .addOnSuccessListener(unused -> {
-                    auth.signOut();
                     EmailSender.send(email,
                             "Library Online - Đã nhận yêu cầu đăng ký",
                             "Xin chào " + fullName + ",\n\n"
