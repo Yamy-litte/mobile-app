@@ -15,6 +15,7 @@ import com.example.libraryonline.utils.InputValidator;
 import com.google.firebase.firestore.DocumentSnapshot;
 import com.google.firebase.firestore.FieldValue;
 import com.google.firebase.firestore.FirebaseFirestore;
+import com.google.firebase.firestore.FirebaseFirestoreException;
 import com.google.firebase.firestore.QuerySnapshot;
 
 import java.text.SimpleDateFormat;
@@ -94,7 +95,8 @@ public class RegisterActivity extends AppCompatActivity {
         acceptTerms.setError(null);
 
         setSubmitting(true);
-        // Client-side duplicate checks improve UX; trusted backend/rules must enforce uniqueness too.
+        // These reads require matching Firestore rules. Do not make private user records
+        // publicly readable just to make client-side duplicate checks work.
         firestore.collection("Users").whereEqualTo("email", email).get()
                 .addOnSuccessListener(usersByEmail -> {
                     if (!usersByEmail.isEmpty()) {
@@ -110,11 +112,9 @@ public class RegisterActivity extends AppCompatActivity {
                                 checkPendingRequests(fullName, birthDateIso,
                                         birthDateInput.getText().toString(), email, phone);
                             })
-                            .addOnFailureListener(e ->
-                                    finishWithMessage("Không thể kiểm tra số điện thoại. Thử lại sau."));
+                            .addOnFailureListener(e -> showFirestoreError("Kiểm tra số điện thoại", e));
                 })
-                .addOnFailureListener(e ->
-                        finishWithMessage("Không thể kiểm tra email. Thử lại sau."));
+                .addOnFailureListener(e -> showFirestoreError("Kiểm tra email trong danh sách độc giả", e));
     }
 
     private void checkPendingRequests(String fullName, String birthDate, String birthDateDisplay,
@@ -133,11 +133,9 @@ public class RegisterActivity extends AppCompatActivity {
                                 }
                                 savePendingRequest(fullName, birthDate, birthDateDisplay, email, phone);
                             })
-                            .addOnFailureListener(e ->
-                                    finishWithMessage("Không thể kiểm tra số điện thoại. Thử lại sau."));
+                            .addOnFailureListener(e -> showFirestoreError("Kiểm tra yêu cầu theo số điện thoại", e));
                 })
-                .addOnFailureListener(e ->
-                        finishWithMessage("Không thể kiểm tra email. Thử lại sau."));
+                .addOnFailureListener(e -> showFirestoreError("Kiểm tra yêu cầu theo email", e));
     }
 
     private boolean containsActiveRequest(QuerySnapshot results) {
@@ -177,8 +175,26 @@ public class RegisterActivity extends AppCompatActivity {
                     startActivity(intent);
                     finish();
                 })
-                .addOnFailureListener(e ->
-                        finishWithMessage("Không gửi được yêu cầu. Kiểm tra quyền Firestore."));
+                .addOnFailureListener(e -> showFirestoreError("Gửi yêu cầu đăng ký", e));
+    }
+
+    private void showFirestoreError(String operation, Exception error) {
+        setSubmitting(false);
+        String detail = error.getMessage();
+        String code = error instanceof FirebaseFirestoreException
+                ? ((FirebaseFirestoreException) error).getCode().name()
+                : error.getClass().getSimpleName();
+        android.util.Log.e("RegisterActivity", operation + " failed (" + code + ")", error);
+
+        String message;
+        if ("PERMISSION_DENIED".equals(code)) {
+            message = operation + " thất bại: Firestore từ chối quyền truy cập (PERMISSION_DENIED). Cần kiểm tra Firestore Rules hoặc chuyển việc kiểm tra trùng email sang backend an toàn.";
+        } else if ("UNAVAILABLE".equals(code) || "DEADLINE_EXCEEDED".equals(code)) {
+            message = operation + " thất bại do kết nối Firebase không khả dụng. Hãy kiểm tra mạng rồi thử lại.";
+        } else {
+            message = operation + " thất bại (" + code + "). " + (detail == null ? "Vui lòng kiểm tra cấu hình Firebase." : detail);
+        }
+        Toast.makeText(this, message, Toast.LENGTH_LONG).show();
     }
 
     private void setSubmitting(boolean submitting) {
