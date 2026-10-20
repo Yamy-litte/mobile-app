@@ -11,6 +11,7 @@ import android.widget.Toast;
 import androidx.appcompat.app.AppCompatActivity;
 
 import com.example.libraryonline.R;
+import com.example.libraryonline.utils.PasswordVisibilityToggle;
 import com.example.libraryonline.ui.reader.ReaderMainActivity;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
@@ -34,7 +35,9 @@ public class ChangePasswordActivity extends AppCompatActivity {
         auth = FirebaseAuth.getInstance();
         firestore = FirebaseFirestore.getInstance();
         newPasswordInput = findViewById(R.id.editNewPassword);
+        PasswordVisibilityToggle.attach(newPasswordInput);
         confirmPasswordInput = findViewById(R.id.editConfirmPassword);
+        PasswordVisibilityToggle.attach(confirmPasswordInput);
         changePasswordButton = findViewById(R.id.buttonChangePassword);
         changePasswordButton.setOnClickListener(v -> changePassword());
     }
