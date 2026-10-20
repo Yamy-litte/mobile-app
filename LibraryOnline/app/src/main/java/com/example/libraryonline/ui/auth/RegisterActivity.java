@@ -4,8 +4,6 @@ import android.app.DatePickerDialog;
 import android.content.Intent;
 import android.os.Bundle;
 import android.widget.Button;
-import android.text.Editable;
-import android.text.TextWatcher;
 import android.widget.CheckBox;
 import android.widget.EditText;
 import android.widget.Toast;
@@ -15,7 +13,6 @@ import androidx.appcompat.app.AppCompatActivity;
 import com.example.libraryonline.R;
 import com.example.libraryonline.utils.InputValidator;
 import com.google.firebase.auth.FirebaseAuth;
-import com.google.firebase.auth.FirebaseUser;
 import com.google.firebase.firestore.DocumentReference;
 import com.google.firebase.firestore.FieldValue;
 import com.google.firebase.firestore.FirebaseFirestore;
@@ -30,11 +27,9 @@ import java.util.Map;
 public class RegisterActivity extends AppCompatActivity {
     private EditText nameInput, birthDateInput, emailInput, phoneInput;
     private CheckBox acceptTerms;
-    private Button submitButton, verifyEmailButton;
+    private Button submitButton;
     private FirebaseFirestore firestore;
     private FirebaseAuth auth;
-    private String verifiedEmail = "";
-    private boolean verificationInProgress = false;
     private String birthDateIso = "";
 
     @Override
@@ -49,21 +44,7 @@ public class RegisterActivity extends AppCompatActivity {
         phoneInput = findViewById(R.id.editPhone);
         acceptTerms = findViewById(R.id.checkAcceptTerms);
         submitButton = findViewById(R.id.buttonSubmitRegistration);
-        verifyEmailButton = findViewById(R.id.buttonVerifyEmail);
-        submitButton.setEnabled(false);
-        verifyEmailButton.setOnClickListener(v -> verifyEmail());
-        emailInput.addTextChangedListener(new TextWatcher() {
-            @Override public void beforeTextChanged(CharSequence s, int start, int count, int after) { }
-            @Override public void onTextChanged(CharSequence s, int start, int before, int count) {
-                String current = InputValidator.normalizeEmail(s.toString());
-                if (!current.equals(verifiedEmail)) {
-                    verifiedEmail = "";
-                    submitButton.setEnabled(false);
-                    verifyEmailButton.setText("Xác thực email");
-                }
-            }
-            @Override public void afterTextChanged(Editable s) { }
-        });
+        submitButton.setEnabled(true);
         birthDateInput.setOnClickListener(v -> chooseBirthDate());
         submitButton.setOnClickListener(v -> submitRequest());
     }
@@ -80,131 +61,6 @@ public class RegisterActivity extends AppCompatActivity {
         }, initial.get(Calendar.YEAR) - 18, initial.get(Calendar.MONTH), initial.get(Calendar.DAY_OF_MONTH));
         picker.getDatePicker().setMaxDate(System.currentTimeMillis());
         picker.show();
-    }
-
-    private void verifyEmail() {
-        String email = InputValidator.normalizeEmail(emailInput.getText().toString());
-        if (!InputValidator.isValidEmail(email)) {
-            emailInput.setError("Nhập địa chỉ email hợp lệ trước khi xác thực");
-            emailInput.requestFocus();
-            return;
-        }
-        if (verificationInProgress) return;
-        verificationInProgress = true;
-        verifyEmailButton.setEnabled(false);
-
-        FirebaseUser currentUser = auth.getCurrentUser();
-        if (currentUser != null && currentUser.getEmail() != null
-                && !email.equalsIgnoreCase(currentUser.getEmail())) {
-            currentUser.delete().addOnCompleteListener(deleteTask -> {
-                auth.signOut();
-                if (!deleteTask.isSuccessful()) {
-                    verificationInProgress = false;
-                    verifyEmailButton.setEnabled(true);
-                    Toast.makeText(this, "Không thể đổi email xác thực. Hãy đăng xuất và thử lại.",
-                            Toast.LENGTH_LONG).show();
-                    return;
-                }
-                createVerificationAccount(email);
-            });
-            return;
-        }
-        if (currentUser == null) {
-            createVerificationAccount(email);
-            return;
-        }
-        currentUser.reload().addOnCompleteListener(reloadTask -> {
-            FirebaseUser refreshed = auth.getCurrentUser();
-            if (reloadTask.isSuccessful() && refreshed != null
-                    && email.equalsIgnoreCase(refreshed.getEmail()) && refreshed.isEmailVerified()) {
-                markEmailVerified(email);
-            } else if (reloadTask.isSuccessful() && refreshed != null
-                    && email.equalsIgnoreCase(refreshed.getEmail())) {
-                refreshed.sendEmailVerification().addOnCompleteListener(sendTask -> {
-                    verificationInProgress = false;
-                    verifyEmailButton.setEnabled(true);
-                    if (sendTask.isSuccessful()) {
-                        Toast.makeText(this, "Đã gửi liên kết xác thực. Mở email, bấm liên kết rồi quay lại ứng dụng và bấm Xác thực email lần nữa.",
-                                Toast.LENGTH_LONG).show();
-                    } else {
-                        Toast.makeText(this, "Chưa gửi được email xác thực. Vui lòng thử lại.",
-                                Toast.LENGTH_LONG).show();
-                    }
-                });
-            } else {
-                verificationInProgress = false;
-                verifyEmailButton.setEnabled(true);
-                Toast.makeText(this, "Không thể kiểm tra trạng thái email. Hãy thử lại.", Toast.LENGTH_LONG).show();
-            }
-        });
-    }
-
-    private void createVerificationAccount(String email) {
-        auth.createUserWithEmailAndPassword(email, "123456")
-                .addOnCompleteListener(task -> {
-                    if (!task.isSuccessful() || auth.getCurrentUser() == null) {
-                        verificationInProgress = false;
-                        verifyEmailButton.setEnabled(true);
-                        String message = task.getException() == null ? "" : task.getException().getLocalizedMessage();
-                        Toast.makeText(this, "Không thể bắt đầu xác thực email. Email có thể đã có tài khoản. "
-                                + message, Toast.LENGTH_LONG).show();
-                        return;
-                    }
-                    auth.getCurrentUser().sendEmailVerification().addOnCompleteListener(sendTask -> {
-                        verificationInProgress = false;
-                        verifyEmailButton.setEnabled(true);
-                        if (sendTask.isSuccessful()) {
-                            Toast.makeText(this, "Đã gửi liên kết xác thực đến " + email
-                                    + ". Mở email, bấm liên kết rồi quay lại ứng dụng và bấm Xác thực email lần nữa.",
-                                    Toast.LENGTH_LONG).show();
-                        } else {
-                            Toast.makeText(this, "Không gửi được email xác thực. Vui lòng thử lại.",
-                                    Toast.LENGTH_LONG).show();
-                        }
-                    });
-                });
-    }
-
-    private void markEmailVerified(String email) {
-        FirebaseUser user = auth.getCurrentUser();
-        if (user == null) {
-            verificationInProgress = false;
-            verifyEmailButton.setEnabled(true);
-            return;
-        }
-        user.getIdToken(true).addOnCompleteListener(tokenTask -> {
-            verificationInProgress = false;
-            verifyEmailButton.setEnabled(true);
-            FirebaseUser refreshed = auth.getCurrentUser();
-            if (tokenTask.isSuccessful() && refreshed != null && refreshed.isEmailVerified()
-                    && refreshed.getEmail() != null && email.equalsIgnoreCase(refreshed.getEmail())) {
-                verifiedEmail = email;
-                submitButton.setEnabled(true);
-                verifyEmailButton.setText("Email đã xác thực");
-                Toast.makeText(this, "Xác thực email thành công.", Toast.LENGTH_SHORT).show();
-            } else {
-                verifiedEmail = "";
-                submitButton.setEnabled(false);
-                Toast.makeText(this, "Chưa xác nhận được email đã xác thực. Hãy thử lại.", Toast.LENGTH_LONG).show();
-            }
-        });
-    }
-
-    @Override
-    protected void onResume() {
-        super.onResume();
-        FirebaseUser currentUser = auth == null ? null : auth.getCurrentUser();
-        if (currentUser != null && currentUser.getEmail() != null) {
-            currentUser.reload().addOnCompleteListener(task -> {
-                FirebaseUser refreshed = auth.getCurrentUser();
-                String entered = InputValidator.normalizeEmail(emailInput.getText().toString());
-                if (task.isSuccessful() && refreshed != null && refreshed.isEmailVerified()
-                        && refreshed.getEmail() != null
-                        && entered.equalsIgnoreCase(refreshed.getEmail())) {
-                    markEmailVerified(entered);
-                }
-            });
-        }
     }
 
     private void submitRequest() {
@@ -227,14 +83,6 @@ public class RegisterActivity extends AppCompatActivity {
             emailInput.requestFocus();
             return;
         }
-        FirebaseUser verifiedUser = auth.getCurrentUser();
-        if (!email.equals(verifiedEmail) || verifiedUser == null || !verifiedUser.isEmailVerified()
-                || verifiedUser.getEmail() == null || !email.equalsIgnoreCase(verifiedUser.getEmail())) {
-            verifiedEmail = "";
-            submitButton.setEnabled(false);
-            Toast.makeText(this, "Bạn cần xác thực đúng địa chỉ email đang nhập trước khi gửi yêu cầu.", Toast.LENGTH_LONG).show();
-            return;
-        }
         if (!InputValidator.isValidVietnamPhone(phone)) {
             phoneInput.setError("Số điện thoại Việt Nam không đúng định dạng");
             phoneInput.requestFocus();
@@ -247,7 +95,27 @@ public class RegisterActivity extends AppCompatActivity {
         }
         acceptTerms.setError(null);
         setSubmitting(true);
+        if (auth.getCurrentUser() != null) {
+            auth.signOut();
+        }
+        auth.createUserWithEmailAndPassword(email, "123456")
+                .addOnSuccessListener(authResult -> {
+                    if (authResult.getUser() == null) {
+                        setSubmitting(false);
+                        Toast.makeText(this, "Không tạo được tài khoản đăng ký.", Toast.LENGTH_LONG).show();
+                        return;
+                    }
+                    createRegistrationRequest(fullName, email, phone, authResult.getUser().getUid());
+                })
+                .addOnFailureListener(error -> {
+                    setSubmitting(false);
+                    String message = error.getMessage() == null ? "" : error.getMessage();
+                    Toast.makeText(this, "Không thể tạo tài khoản. Email có thể đã được đăng ký trước đó. " + message,
+                            Toast.LENGTH_LONG).show();
+                });
+    }
 
+    private void createRegistrationRequest(String fullName, String email, String phone, String uid) {
         DocumentReference requestRef = firestore.collection("RegistrationRequests").document();
         Map<String, Object> request = new HashMap<>();
         request.put("fullName", fullName);
@@ -257,8 +125,8 @@ public class RegisterActivity extends AppCompatActivity {
         request.put("termsAccepted", true);
         request.put("termsAcceptedAt", FieldValue.serverTimestamp());
         request.put("status", "Pending");
-        request.put("emailVerified", true);
-        request.put("uid", verifiedUser.getUid());
+        request.put("emailVerified", false);
+        request.put("uid", uid);
         request.put("phoneVerified", false);
         request.put("rejectionReason", "");
         request.put("createdAt", FieldValue.serverTimestamp());
@@ -302,7 +170,7 @@ public class RegisterActivity extends AppCompatActivity {
     }
 
     private void setSubmitting(boolean submitting) {
-        submitButton.setEnabled(!submitting && !verifiedEmail.isEmpty());
+        submitButton.setEnabled(!submitting);
         submitButton.setText(submitting ? "Đang gửi..." : "Gửi yêu cầu đăng ký");
     }
 }
