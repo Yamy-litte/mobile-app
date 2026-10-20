@@ -15,6 +15,7 @@ import android.widget.Toast;
 import androidx.appcompat.app.AppCompatActivity;
 
 import com.example.libraryonline.R;
+import com.example.libraryonline.utils.EmailSender;
 import com.google.firebase.FirebaseApp;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
@@ -152,7 +153,7 @@ public class AdminMainActivity extends AppCompatActivity {
         reasonInput.setPadding(pad, dp(12), pad, dp(12));
         new AlertDialog.Builder(this)
                 .setTitle("Từ chối hồ sơ")
-                .setMessage("Lý do sẽ được lưu cùng yêu cầu đăng ký. Email thông báo tự động chưa được hỗ trợ ở chế độ Spark.")
+                .setMessage("Lý do sẽ được lưu cùng yêu cầu đăng ký và gửi email thông báo.")
                 .setView(reasonInput)
                 .setNegativeButton("Hủy", (dialog, which) -> dialog.dismiss())
                 .setPositiveButton("Xác nhận từ chối", (dialog, which) -> {
@@ -168,9 +169,23 @@ public class AdminMainActivity extends AppCompatActivity {
                     changes.put("reviewedBy", auth.getCurrentUser() == null ? "" : auth.getCurrentUser().getUid());
                     changes.put("reviewedAt", FieldValue.serverTimestamp());
                     firestore.collection("RegistrationRequests").document(doc.getId()).update(changes)
-                            .addOnSuccessListener(unused -> Toast.makeText(this,
-                                    "Đã lưu kết quả từ chối. Ở gói Spark, hãy thông báo cho người đăng ký thủ công.",
-                                    Toast.LENGTH_LONG).show())
+                            .addOnSuccessListener(unused -> {
+                                String email = value(doc, "email", "").trim();
+                                String fullName = value(doc, "fullName", "bạn");
+                                EmailSender.send(email,
+                                        "Library Online - Kết quả đăng ký",
+                                        "Xin chào " + fullName + ",\\n\\n"
+                                                + "Rất tiếc, yêu cầu đăng ký thư viện của bạn chưa được chấp thuận.\\n"
+                                                + "Lý do: " + reason + "\\n\\n"
+                                                + "Bạn có thể liên hệ thư viện để được hỗ trợ.\\n"
+                                                + "Đây là email tự động, vui lòng không trả lời.",
+                                        (success, message) -> {
+                                            if (!success) Toast.makeText(this,
+                                                    "Đã lưu từ chối nhưng gửi email thất bại: " + message,
+                                                    Toast.LENGTH_LONG).show();
+                                        });
+                                Toast.makeText(this, "Đã lưu kết quả từ chối.", Toast.LENGTH_LONG).show();
+                            })
                             .addOnFailureListener(error -> {
                                 setCardActionsEnabled(reject, approve, true);
                                 Toast.makeText(this, "Không thể từ chối: " + error.getLocalizedMessage(),
@@ -190,7 +205,7 @@ public class AdminMainActivity extends AppCompatActivity {
 
         new AlertDialog.Builder(this)
                 .setTitle("Duyệt hồ sơ thành viên")
-                .setMessage("Duyệt hồ sơ đã xác thực email cho " + email
+                .setMessage("Duyệt hồ sơ cho " + email
                         + ". Tài khoản dùng mật khẩu tạm ban đầu và bắt buộc đổi ở lần đăng nhập đầu tiên. Tiếp tục?")
                 .setNegativeButton("Hủy", (dialog, which) -> dialog.dismiss())
                 .setPositiveButton("Duyệt", (dialog, which) -> {
@@ -261,7 +276,19 @@ public class AdminMainActivity extends AppCompatActivity {
         batch.commit()
                 .addOnSuccessListener(unused -> {
                     setCardActionsEnabled(reject, approve, true);
-                    Toast.makeText(this, "Đã duyệt hồ sơ. Mật khẩu tạm ban đầu là 123456; độc giả phải đổi ngay lần đăng nhập đầu tiên.",
+                    EmailSender.send(email,
+                            "Library Online - Hồ sơ đã được duyệt",
+                            "Xin chào " + fullName + ",\\n\\n"
+                                    + "Hồ sơ đăng ký thư viện của bạn đã được duyệt.\\n"
+                                    + "Bạn có thể đăng nhập bằng email này với mật khẩu tạm ban đầu đã được thông báo trong quy trình đăng ký. "
+                                    + "Vì lý do bảo mật, hãy đổi mật khẩu ngay lần đăng nhập đầu tiên.\\n\\n"
+                                    + "Đây là email tự động, vui lòng không trả lời.",
+                            (success, message) -> {
+                                if (!success) Toast.makeText(this,
+                                        "Đã duyệt hồ sơ nhưng gửi email thất bại: " + message,
+                                        Toast.LENGTH_LONG).show();
+                            });
+                    Toast.makeText(this, "Đã duyệt hồ sơ. Độc giả phải đổi mật khẩu ở lần đăng nhập đầu tiên.",
                             Toast.LENGTH_LONG).show();
                 })
                 .addOnFailureListener(error -> failAction(reject, approve,
