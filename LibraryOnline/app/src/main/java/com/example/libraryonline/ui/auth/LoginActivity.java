@@ -14,6 +14,7 @@ import androidx.appcompat.app.AppCompatActivity;
 import com.example.libraryonline.R;
 import com.example.libraryonline.ui.admin.AdminMainActivity;
 import com.example.libraryonline.ui.reader.ReaderMainActivity;
+import com.example.libraryonline.ui.auth.ChangePasswordActivity;
 import com.example.libraryonline.utils.InputValidator;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.firestore.FirebaseFirestore;
@@ -99,6 +100,13 @@ public class LoginActivity extends AppCompatActivity {
                             .addOnSuccessListener(userDoc -> {
                                 if (!userDoc.exists()) {
                                     verifyAdmin(uid);
+                                    return;
+                                }
+
+                                if (Boolean.TRUE.equals(userDoc.getBoolean("mustChangePassword"))) {
+                                    setLoading(false);
+                                    startActivity(new Intent(this, ChangePasswordActivity.class));
+                                    finish();
                                     return;
                                 }
 
