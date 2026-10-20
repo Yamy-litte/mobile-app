@@ -2,4 +2,13 @@
 <resources>
     <color name="black">#FF000000</color>
     <color name="white">#FFFFFFFF</color>
+    <color name="library_navy">#172B4D</color>
+    <color name="library_blue">#315EFB</color>
+    <color name="library_blue_dark">#2448C7</color>
+    <color name="library_background">#F5F7FC</color>
+    <color name="library_surface">#FFFFFFFF</color>
+    <color name="library_text">#182230</color>
+    <color name="library_muted">#68758A</color>
+    <color name="library_border">#DCE3EF</color>
+    <color name="library_success">#16845B</color>
 </resources>
