@@ -60,7 +60,8 @@ public class LoginActivity extends AppCompatActivity {
         loginButton.setOnClickListener(v -> login());
         registerLink.setOnClickListener(v ->
                 startActivity(new Intent(this, RegisterActivity.class)));
-        forgotPasswordLink.setOnClickListener(v ->\n                startActivity(new Intent(this, ForgotPasswordActivity.class)));
+        forgotPasswordLink.setOnClickListener(v ->
+                startActivity(new Intent(this, ForgotPasswordActivity.class)));
         adminLoginLink.setOnClickListener(v ->
                 startActivity(new Intent(this, AdminLoginActivity.class)));
     }
