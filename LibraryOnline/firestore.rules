@@ -33,6 +33,7 @@ service cloud.firestore {
         && signedIn()
         && request.auth.uid == request.resource.data.uid
         && request.auth.token.email_verified == true
+        && request.auth.token.email == request.resource.data.email
         && request.resource.data.email.size() <= 254
         && request.resource.data.email.matches('^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$')
         && request.resource.data.phone is string
