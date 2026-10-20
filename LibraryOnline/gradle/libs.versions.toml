@@ -9,6 +9,7 @@ activityKtx = "1.13.0"
 constraintlayout = "2.2.2"
 googleServices = "4.5.0"
 firebaseBom = "34.19.0"
+fragment = "1.9.1"
 
 [libraries]
 junit = { group = "junit", name = "junit", version.ref = "junit" }
@@ -23,6 +24,7 @@ firebase-auth = { group = "com.google.firebase", name = "firebase-auth" }
 firebase-firestore = { group = "com.google.firebase", name = "firebase-firestore" }
 firebase-messaging = { group = "com.google.firebase", name = "firebase-messaging" }
 firebase-functions = { group = "com.google.firebase", name = "firebase-functions" }
+fragment = { group = "androidx.fragment", name = "fragment", version.ref = "fragment" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }
