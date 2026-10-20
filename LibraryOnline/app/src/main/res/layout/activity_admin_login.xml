@@ -12,6 +12,13 @@
         android:paddingTop="32dp"
         android:paddingEnd="24dp"
         android:paddingBottom="28dp">
+        <ImageView
+            android:layout_width="64dp"
+            android:layout_height="64dp"
+            android:layout_marginBottom="8dp"
+            android:contentDescription="Logo MyLibrary"
+            android:src="@drawable/mylibrary_logo"
+            android:scaleType="fitCenter" />
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
@@ -72,6 +79,8 @@
                 android:background="@drawable/bg_auth_input"
                 android:paddingStart="14dp"
                 android:paddingEnd="14dp"
+            android:drawableEnd="@drawable/ic_visibility_off"
+            android:drawablePadding="8dp"
                 android:hint="Mật khẩu"
                 android:inputType="textPassword"
                 android:autofillHints="password"
