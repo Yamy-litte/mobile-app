@@ -59,6 +59,69 @@ async function sendRejectionEmail(email, fullName, reason) {
   return true;
 }
 
+
+exports.submitRegistration = onCall(async (request) => {
+  const input = request.data || {};
+  const fullName = String(input.fullName || "").trim();
+  const birthDate = String(input.birthDate || "").trim();
+  const email = normalizeEmail(input.email);
+  const phone = String(input.phone || "").trim();
+  const termsAccepted = input.termsAccepted === true;
+
+  if (fullName.length < 2 || fullName.length > 120) {
+    throw new HttpsError("invalid-argument", "Họ tên phải từ 2 đến 120 ký tự.");
+  }
+  if (!/^\\d{4}-\\d{2}-\\d{2}$/.test(birthDate)) {
+    throw new HttpsError("invalid-argument", "Ngày sinh không hợp lệ.");
+  }
+  if (!/^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(email)) {
+    throw new HttpsError("invalid-argument", "Email không đúng định dạng.");
+  }
+  if (!/^\\+?84[0-9]{9,10}$|^0[0-9]{9}$/.test(phone)) {
+    throw new HttpsError("invalid-argument", "Số điện thoại không đúng định dạng.");
+  }
+  if (!termsAccepted) {
+    throw new HttpsError("failed-precondition", "Bạn cần đồng ý điều khoản đăng ký.");
+  }
+
+  const existingUserEmail = await db.collection("Users").where("email", "==", email).limit(1).get();
+  if (!existingUserEmail.empty) {
+    throw new HttpsError("already-exists", "Email đã được sử dụng cho tài khoản độc giả.");
+  }
+  const existingUserPhone = await db.collection("Users").where("phone", "==", phone).limit(1).get();
+  if (!existingUserPhone.empty) {
+    throw new HttpsError("already-exists", "Số điện thoại đã được sử dụng.");
+  }
+
+  const [emailRequests, phoneRequests] = await Promise.all([
+    db.collection("RegistrationRequests").where("email", "==", email).get(),
+    db.collection("RegistrationRequests").where("phone", "==", phone).get()
+  ]);
+  const activeStatuses = ["Pending", "PendingVerification", "Approved"];
+  if (emailRequests.docs.some((doc) => activeStatuses.includes(String(doc.get("status"))))) {
+    throw new HttpsError("already-exists", "Email đã có yêu cầu đăng ký đang xử lý.");
+  }
+  if (phoneRequests.docs.some((doc) => activeStatuses.includes(String(doc.get("status"))))) {
+    throw new HttpsError("already-exists", "Số điện thoại đã có yêu cầu đăng ký đang xử lý.");
+  }
+
+  const ref = db.collection("RegistrationRequests").doc();
+  await ref.set({
+    fullName,
+    birthDate,
+    email,
+    phone,
+    termsAccepted: true,
+    termsAcceptedAt: FieldValue.serverTimestamp(),
+    status: "PendingVerification",
+    emailVerified: false,
+    phoneVerified: false,
+    rejectionReason: "",
+    createdAt: FieldValue.serverTimestamp()
+  });
+  return { success: true, requestId: ref.id };
+});
+
 exports.approveRegistration = onCall(async (request) => {
   await requireAdmin(request);
   const requestId = String((request.data && request.data.requestId) || "").trim();
