@@ -42,7 +42,7 @@ public class AdminMainActivity extends AppCompatActivity {
     private LinearLayout requestsContainer;
     private TextView pendingCount, emptyMessage;
     private ProgressBar progress;
-    private ListenerRegistration requestsListener;
+    private ListenerRegistration requestsListener;\n    private LinearLayout resetRequestsContainer;\n    private TextView resetPendingCount, resetEmptyMessage;\n    private ListenerRegistration resetRequestsListener;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -62,7 +62,7 @@ public class AdminMainActivity extends AppCompatActivity {
         pendingCount = findViewById(R.id.textPendingCount);
         emptyMessage = findViewById(R.id.textEmptyRequests);
         progress = findViewById(R.id.progressRequests);
-        listenForRequests();
+        resetRequestsContainer = findViewById(R.id.containerPasswordResetRequests);\n        resetPendingCount = findViewById(R.id.textPasswordResetPendingCount);\n        resetEmptyMessage = findViewById(R.id.textEmptyPasswordResetRequests);\n        listenForRequests();\n        listenForPasswordResetRequests();
     }
 
     private void listenForRequests() {
@@ -89,7 +89,172 @@ public class AdminMainActivity extends AppCompatActivity {
                 });
     }
 
-    private boolean isPending(String status) {
+
+    private void listenForPasswordResetRequests() {
+        resetRequestsListener = firestore.collection("PasswordResetRequests")
+                .addSnapshotListener((snapshot, error) -> {
+                    if (error != null) {
+                        resetEmptyMessage.setVisibility(View.VISIBLE);
+                        resetEmptyMessage.setText("Không tải được yêu cầu quên mật khẩu. Kiểm tra Firestore Rules.");
+                        return;
+                    }
+                    if (snapshot == null) return;
+                    resetRequestsContainer.removeAllViews();
+                    int count = 0;
+                    for (DocumentSnapshot doc : snapshot.getDocuments()) {
+                        if (!"Pending".equalsIgnoreCase(doc.getString("status"))) continue;
+                        count++;
+                        resetRequestsContainer.addView(createPasswordResetCard(doc));
+                    }
+                    resetPendingCount.setText("YÊU CẦU QUÊN MẬT KHẨU ĐANG CHỜ (" + count + ")");
+                    resetEmptyMessage.setVisibility(count == 0 ? View.VISIBLE : View.GONE);
+                    if (count == 0) resetEmptyMessage.setText("Hiện chưa có yêu cầu quên mật khẩu đang chờ duyệt.");
+                });
+    }
+
+    private View createPasswordResetCard(DocumentSnapshot doc) {
+        int pad = dp(16);
+        LinearLayout card = new LinearLayout(this);
+        card.setOrientation(LinearLayout.VERTICAL);
+        card.setPadding(pad, pad, pad, pad);
+        card.setBackgroundResource(R.drawable.bg_auth_card);
+        LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
+        params.topMargin = dp(12);
+        card.setLayoutParams(params);
+
+        card.addView(makeText(value(doc, "fullName", "Chưa có họ tên"), 18, "#172554", true));
+        card.addView(makeText("CHỜ XÁC MINH", 11, "#B45309", true));
+        card.addView(makeText("Ngày sinh: " + value(doc, "birthDate", "Chưa cung cấp"), 14, "#475569", false));
+        card.addView(makeText("Email: " + value(doc, "email", "Chưa cung cấp"), 14, "#475569", false));
+        card.addView(makeText("Số điện thoại: " + value(doc, "phone", "Chưa cung cấp"), 14, "#475569", false));
+
+        LinearLayout actions = new LinearLayout(this);
+        actions.setOrientation(LinearLayout.HORIZONTAL);
+        Button reject = new Button(this);
+        reject.setText("Từ chối");
+        reject.setTextColor(android.graphics.Color.rgb(185, 28, 28));
+        Button approve = new Button(this);
+        approve.setText("Duyệt & gửi email");
+        approve.setTextColor(android.graphics.Color.WHITE);
+        approve.setBackgroundTintList(android.content.res.ColorStateList.valueOf(
+                android.graphics.Color.rgb(37, 99, 235)));
+        LinearLayout.LayoutParams rejectParams = new LinearLayout.LayoutParams(0,
+                LinearLayout.LayoutParams.WRAP_CONTENT, 1);
+        rejectParams.rightMargin = dp(8);
+        actions.addView(reject, rejectParams);
+        actions.addView(approve, new LinearLayout.LayoutParams(0,
+                LinearLayout.LayoutParams.WRAP_CONTENT, 1));
+        card.addView(actions);
+        reject.setOnClickListener(v -> showPasswordResetRejectDialog(doc, reject, approve));
+        approve.setOnClickListener(v -> approvePasswordResetRequest(doc, reject, approve));
+        return card;
+    }
+
+    private void approvePasswordResetRequest(DocumentSnapshot request, Button reject, Button approve) {
+        String email = value(request, "email", "").trim().toLowerCase(Locale.ROOT);
+        String name = value(request, "fullName", "").trim().replaceAll("\\s+", " ");
+        String birthDate = value(request, "birthDate", "").trim();
+        String phone = value(request, "phone", "").trim();
+        if (email.isEmpty() || name.isEmpty() || birthDate.isEmpty() || phone.isEmpty()) {
+            failResetAction(reject, approve, "Yêu cầu thiếu thông tin xác minh.");
+            return;
+        }
+
+        new AlertDialog.Builder(this)
+                .setTitle("Duyệt yêu cầu quên mật khẩu")
+                .setMessage("Chỉ duyệt nếu họ tên, ngày sinh và số điện thoại khớp hoàn toàn với hồ sơ độc giả. Firebase sẽ gửi email đặt lại mật khẩu đến " + email + ".")
+                .setNegativeButton("Hủy", (dialog, which) -> dialog.dismiss())
+                .setPositiveButton("Xác minh và gửi", (dialog, which) -> {
+                    setResetActionsEnabled(reject, approve, false);
+                    firestore.collection("Users").whereEqualTo("email", email).limit(1).get()
+                            .addOnSuccessListener(matches -> {
+                                if (matches.isEmpty()) {
+                                    failResetAction(reject, approve, "Không tìm thấy tài khoản độc giả khớp email.");
+                                    return;
+                                }
+                                DocumentSnapshot user = matches.getDocuments().get(0);
+                                String storedName = value(user, "fullName", "").trim().replaceAll("\\s+", " ");
+                                String storedBirth = value(user, "dateOfBirth", value(user, "birthDate", "")).trim();
+                                String storedPhone = value(user, "phone", "").trim();
+                                if (!name.equalsIgnoreCase(storedName)
+                                        || !birthDate.equals(storedBirth)
+                                        || !phone.equals(storedPhone)
+                                        || !"Reader".equalsIgnoreCase(value(user, "role", ""))) {
+                                    failResetAction(reject, approve,
+                                            "Thông tin không khớp hồ sơ độc giả. Chưa gửi email.");
+                                    return;
+                                }
+
+                                secondaryAuth.sendPasswordResetEmail(email)
+                                        .addOnSuccessListener(unused ->
+                                                firestore.collection("PasswordResetRequests").document(request.getId())
+                                                        .update(
+                                                                "status", "Approved",
+                                                                "rejectionReason", "",
+                                                                "reviewedBy", auth.getCurrentUser() == null ? "" : auth.getCurrentUser().getUid(),
+                                                                "reviewedAt", FieldValue.serverTimestamp())
+                                                        .addOnSuccessListener(done -> {
+                                                            setResetActionsEnabled(reject, approve, true);
+                                                            Toast.makeText(this,
+                                                                    "Đã xác minh và yêu cầu Firebase gửi email đặt lại mật khẩu.",
+                                                                    Toast.LENGTH_LONG).show();
+                                                        })
+                                                        .addOnFailureListener(error -> failResetAction(reject, approve,
+                                                                "Firebase đã gửi email nhưng không cập nhật được trạng thái yêu cầu: "
+                                                                        + error.getLocalizedMessage())))
+                                        .addOnFailureListener(error -> failResetAction(reject, approve,
+                                                "Firebase chưa gửi được email đặt lại mật khẩu: "
+                                                        + error.getLocalizedMessage()));
+                            })
+                            .addOnFailureListener(error -> failResetAction(reject, approve,
+                                    "Không xác minh được hồ sơ: " + error.getLocalizedMessage()));
+                }).show();
+    }
+
+    private void showPasswordResetRejectDialog(DocumentSnapshot doc, Button reject, Button approve) {
+        EditText reasonInput = new EditText(this);
+        reasonInput.setHint("Nhập lý do từ chối");
+        reasonInput.setInputType(InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_FLAG_CAP_SENTENCES);
+        int pad = dp(20);
+        reasonInput.setPadding(pad, dp(12), pad, dp(12));
+        new AlertDialog.Builder(this)
+                .setTitle("Từ chối yêu cầu quên mật khẩu")
+                .setView(reasonInput)
+                .setNegativeButton("Hủy", (dialog, which) -> dialog.dismiss())
+                .setPositiveButton("Xác nhận từ chối", (dialog, which) -> {
+                    String reason = reasonInput.getText().toString().trim();
+                    if (reason.length() < 3 || reason.length() > 500) {
+                        Toast.makeText(this, "Lý do từ chối phải từ 3 đến 500 ký tự.", Toast.LENGTH_LONG).show();
+                        return;
+                    }
+                    setResetActionsEnabled(reject, approve, false);
+                    firestore.collection("PasswordResetRequests").document(doc.getId())
+                            .update(
+                                    "status", "Rejected",
+                                    "rejectionReason", reason,
+                                    "reviewedBy", auth.getCurrentUser() == null ? "" : auth.getCurrentUser().getUid(),
+                                    "reviewedAt", FieldValue.serverTimestamp())
+                            .addOnSuccessListener(unused -> {
+                                setResetActionsEnabled(reject, approve, true);
+                                Toast.makeText(this, "Đã từ chối yêu cầu quên mật khẩu.", Toast.LENGTH_SHORT).show();
+                            })
+                            .addOnFailureListener(error -> failResetAction(reject, approve,
+                                    "Không thể từ chối yêu cầu: " + error.getLocalizedMessage()));
+                }).show();
+    }
+
+    private void setResetActionsEnabled(Button reject, Button approve, boolean enabled) {
+        reject.setEnabled(enabled);
+        approve.setEnabled(enabled);
+        approve.setText(enabled ? "Duyệt & gửi email" : "Đang xử lý...");
+    }
+
+    private void failResetAction(Button reject, Button approve, String message) {
+        setResetActionsEnabled(reject, approve, true);
+        Toast.makeText(this, message, Toast.LENGTH_LONG).show();
+    }
+\n    private boolean isPending(String status) {
         return "Pending".equalsIgnoreCase(status) || "PendingVerification".equalsIgnoreCase(status);
     }
 
@@ -375,7 +540,7 @@ public class AdminMainActivity extends AppCompatActivity {
 
     @Override
     protected void onDestroy() {
-        if (requestsListener != null) requestsListener.remove();
+        if (requestsListener != null) requestsListener.remove();\n        if (resetRequestsListener != null) resetRequestsListener.remove();
         super.onDestroy();
     }
 }
