@@ -48,7 +48,7 @@
                 android:layout_height="wrap_content"
                 android:layout_marginTop="10dp"
                 android:gravity="center"
-                android:text="Yêu cầu của bạn đang được Admin xem xét. Thông tin đăng nhập sẽ được gửi qua email khi hồ sơ được duyệt."
+                android:text="Yêu cầu của bạn đang được Admin xem xét. Khi hồ sơ được duyệt, hãy đăng nhập bằng email này và mật khẩu tạm 123456. Ứng dụng sẽ bắt buộc đổi mật khẩu ở lần đăng nhập đầu tiên."
                 android:textColor="@color/library_muted"
                 android:textSize="14sp"
                 android:lineSpacingExtra="3dp" />
@@ -122,7 +122,7 @@
                 android:layout_marginTop="20dp"
                 android:padding="14dp"
                 android:background="@drawable/bg_auth_input"
-                android:text="Chờ duyệt\nChưa thể đăng nhập cho đến khi hồ sơ được Admin duyệt. Bạn sẽ nhận email thông tin đăng nhập khi hồ sơ được chấp thuận."
+                android:text="Chờ duyệt\nChưa thể đăng nhập cho đến khi hồ sơ được Admin duyệt. Mật khẩu tạm ban đầu là 123456 và phải được đổi ngay khi đăng nhập lần đầu."
                 android:textColor="@color/library_muted"
                 android:textSize="13sp"
                 android:lineSpacingExtra="3dp" />
