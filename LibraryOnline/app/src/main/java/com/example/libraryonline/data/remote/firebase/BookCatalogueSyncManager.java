@@ -1,4 +1,4 @@
-package com.example.libraryonline.remote.firebase;
+package com.example.libraryonline.data.remote.firebase;
 
 import android.content.Context;
 import android.database.sqlite.SQLiteDatabase;
@@ -9,7 +9,6 @@ import com.example.libraryonline.data.local.db.DatabaseHelper;
 import com.example.libraryonline.data.model.BookTitle;
 import com.example.libraryonline.data.model.BookCopy;
 import com.google.firebase.Timestamp;
-import com.google.firebase.firestore.DocumentChange;
 import com.google.firebase.firestore.DocumentSnapshot;
 import com.google.firebase.firestore.FirebaseFirestore;
 import com.google.firebase.firestore.ListenerRegistration;
