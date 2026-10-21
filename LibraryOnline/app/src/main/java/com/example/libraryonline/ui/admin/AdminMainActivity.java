@@ -110,10 +110,6 @@ public class AdminMainActivity extends AppCompatActivity {
                 }).show());
     }
 
-    private int dp(int value) {
-        return (int) (value * getResources().getDisplayMetrics().density + 0.5f);
-    }
-
     private void listenForRequests() {
         requestsListener = firestore.collection("RegistrationRequests")
                 .addSnapshotListener((snapshot, error) -> {
