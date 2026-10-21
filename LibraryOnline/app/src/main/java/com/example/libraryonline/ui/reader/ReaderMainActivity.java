@@ -28,6 +28,7 @@ import com.example.libraryonline.data.model.BookTitle;
 import com.example.libraryonline.ui.auth.LoginActivity;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
+import com.google.firebase.firestore.DocumentSnapshot;
 import com.google.firebase.firestore.FirebaseFirestore;
 
 import java.io.InputStream;
@@ -340,6 +341,14 @@ public class ReaderMainActivity extends AppCompatActivity {
         auth.signOut();
         startActivity(new Intent(this, LoginActivity.class));
         finish();
+    }
+
+    private String value(DocumentSnapshot doc, String key, String fallback) {
+        if (doc == null || !doc.contains(key)) return fallback;
+        Object raw = doc.get(key);
+        if (raw == null) return fallback;
+        String result = String.valueOf(raw).trim();
+        return result.isEmpty() ? fallback : result;
     }
 
     private String safe(String value, String fallback) {
