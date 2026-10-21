@@ -25,6 +25,7 @@ import com.google.firebase.firestore.FirebaseFirestore;
 import com.google.firebase.firestore.ListenerRegistration;
 import com.google.firebase.firestore.QuerySnapshot;
 import com.google.firebase.firestore.WriteBatch;
+import com.google.firebase.functions.FirebaseFunctions;
 
 import java.text.DateFormat;
 import java.util.Date;
@@ -68,8 +69,49 @@ public class AdminMainActivity extends AppCompatActivity {
         resetRequestsContainer = findViewById(R.id.containerPasswordResetRequests);
         resetPendingCount = findViewById(R.id.textPasswordResetPendingCount);
         resetEmptyMessage = findViewById(R.id.textEmptyPasswordResetRequests);
+        addSampleCatalogueSyncButton();
         listenForRequests();
         listenForPasswordResetRequests();
+    }
+
+    private void addSampleCatalogueSyncButton() {
+        View content = ((android.widget.ScrollView) findViewById(android.R.id.content).getChildAt(0)).getChildAt(0);
+        if (!(content instanceof LinearLayout)) return;
+        LinearLayout container = (LinearLayout) content;
+        Button seedButton = new Button(this);
+        seedButton.setText("Tạo dữ liệu sách mẫu trên Firebase");
+        seedButton.setTextColor(android.graphics.Color.WHITE);
+        seedButton.setBackgroundTintList(android.content.res.ColorStateList.valueOf(
+                android.graphics.Color.rgb(49, 94, 251)));
+        LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
+        params.topMargin = dp(12);
+        params.bottomMargin = dp(8);
+        container.addView(seedButton, 4, params);
+        seedButton.setOnClickListener(v -> new AlertDialog.Builder(this)
+                .setTitle("Đồng bộ danh mục sách mẫu")
+                .setMessage("Thêm hoặc cập nhật 10 đầu sách mẫu trong Firestore. Các tài liệu cùng mã sẽ được cập nhật; dữ liệu khác không bị xóa.")
+                .setNegativeButton("Hủy", (dialog, which) -> dialog.dismiss())
+                .setPositiveButton("Đồng bộ", (dialog, which) -> {
+                    seedButton.setEnabled(false);
+                    seedButton.setText("Đang đồng bộ...");
+                    FirebaseFunctions.getInstance().getHttpsCallable("seedSampleBooks").call()
+                            .addOnSuccessListener(result -> {
+                                seedButton.setEnabled(true);
+                                seedButton.setText("Tạo dữ liệu sách mẫu trên Firebase");
+                                Toast.makeText(this, "Đã đồng bộ 10 đầu sách mẫu lên Firestore.", Toast.LENGTH_LONG).show();
+                            })
+                            .addOnFailureListener(error -> {
+                                seedButton.setEnabled(true);
+                                seedButton.setText("Tạo dữ liệu sách mẫu trên Firebase");
+                                Toast.makeText(this, "Đồng bộ thất bại. Hãy triển khai Cloud Function và đăng nhập Admin. " +
+                                        error.getLocalizedMessage(), Toast.LENGTH_LONG).show();
+                            });
+                }).show());
+    }
+
+    private int dp(int value) {
+        return (int) (value * getResources().getDisplayMetrics().density + 0.5f);
     }
 
     private void listenForRequests() {
