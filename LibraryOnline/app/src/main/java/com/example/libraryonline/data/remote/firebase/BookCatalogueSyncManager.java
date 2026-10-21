@@ -196,66 +196,24 @@ public final class BookCatalogueSyncManager implements AutoCloseable {
     }
 
     private static String categoryKey(String name) {
-        String normalized = java.text.Normalizer.normalize(name, java.text.Normalizer.Form.NFD)
-                .replaceAll("\\p{M}+", "")
-                .toLowerCase(Locale.ROOT)
-                .replace('đ', 'd')
-                .replaceAll("[^a-z0-9]+", "-")
-                .replaceAll("(^-|-$)", "");
-        return normalized.isEmpty() ? "category" : normalized;
+        return CloudLibraryRepository.categoryIdForName(name);
     }
 
     public static Task<Void> uploadCopyToCloud(BookCopy copy) {
-        if (copy == null || copy.copyId == null || copy.copyId.trim().isEmpty()) {
-            throw new IllegalArgumentException("copyId is required");
-        }
-        return FirebaseFirestore.getInstance().collection("BookCopies")
-                .document(copy.copyId).set(toCloudMap(copy), SetOptions.merge());
+        return new CloudLibraryRepository().saveBookCopy(copy);
     }
 
     private static Map<String, Object> toCloudMap(BookCopy copy) {
-        Map<String, Object> data = new HashMap<>();
-        data.put("bookTitleId", copy.bookTitleId);
-        data.put("barcode", copy.barcode == null ? "" : copy.barcode);
-        data.put("shelfLocation", copy.shelfLocation == null ? "" : copy.shelfLocation);
-        data.put("copyStatus", copy.copyStatus == null ? "SanSang" : copy.copyStatus);
-        data.put("priorityUserId", copy.priorityUserId);
-        data.put("isHidden", copy.isHidden);
-        data.put("createdAt", copy.createdAt == null || copy.createdAt.isEmpty()
-                ? com.google.firebase.firestore.FieldValue.serverTimestamp() : copy.createdAt);
-        data.put("updatedAt", com.google.firebase.firestore.FieldValue.serverTimestamp());
-        return data;
+        return CloudLibraryRepository.toCloudMap(copy);
     }
 
     /** Upload one local create/update. Firestore rules enforce the active-admin requirement. */
     public static Task<Void> uploadBookToCloud(BookTitle book) {
-        if (book == null || book.bookTitleId == null || book.bookTitleId.trim().isEmpty()) {
-            throw new IllegalArgumentException("bookTitleId is required");
-        }
-        return FirebaseFirestore.getInstance().collection("BookTitles")
-                .document(book.bookTitleId).set(toCloudMap(book), SetOptions.merge());
+        return new CloudLibraryRepository().saveBookTitle(book);
     }
 
     private static Map<String, Object> toCloudMap(BookTitle book) {
-        Map<String, Object> data = new HashMap<>();
-        data.put("title", book.title == null ? "" : book.title);
-        data.put("author", book.author == null ? "" : book.author);
-        data.put("isbn", book.isbn == null ? "" : book.isbn);
-        data.put("category", book.category == null ? "Khác" : book.category);
-        data.put("categoryId", book.categoryId == null || book.categoryId.trim().isEmpty()
-                ? com.example.libraryonline.data.local.dao.CategoryDao.idForName(book.category)
-                : book.categoryId);
-        data.put("publisher", book.publisher == null ? "" : book.publisher);
-        data.put("publishYear", book.publishYear);
-        data.put("description", book.description == null ? "" : book.description);
-        data.put("coverUrl", book.coverUrl == null ? "" : book.coverUrl);
-        data.put("totalCopies", book.totalCopies);
-        data.put("availableCopies", book.availableCopies);
-        data.put("isHidden", book.isHidden);
-        data.put("createdAt", book.createdAt == null || book.createdAt.isEmpty()
-                ? com.google.firebase.firestore.FieldValue.serverTimestamp() : book.createdAt);
-        data.put("updatedAt", com.google.firebase.firestore.FieldValue.serverTimestamp());
-        return data;
+        return CloudLibraryRepository.toCloudMap(book);
     }
 
     private void applySnapshot(QuerySnapshot snapshot, SyncListener listener) {
