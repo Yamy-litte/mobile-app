@@ -158,10 +158,24 @@ service cloud.firestore {
       allow delete: if false;
     }
 
-    // Catalogue is public to authenticated readers; writes are restricted to trusted Admin SDK functions.
+    // Readers can browse. Only active admins can create/update catalogue documents.
+    // Deletion is logical (isHidden) so loan history is not orphaned.
     match /BookTitles/{bookTitleId} {
       allow read: if signedIn();
-      allow write: if false;
+      allow create, update: if isAdmin()
+        && request.resource.data.keys().hasAll([
+          'title', 'author', 'isbn', 'category', 'publisher', 'publishYear',
+          'description', 'coverUrl', 'totalCopies', 'availableCopies', 'isHidden'
+        ])
+        && request.resource.data.title is string
+        && request.resource.data.title.size() > 0
+        && request.resource.data.totalCopies is int
+        && request.resource.data.totalCopies >= 0
+        && request.resource.data.availableCopies is int
+        && request.resource.data.availableCopies >= 0
+        && request.resource.data.availableCopies <= request.resource.data.totalCopies
+        && request.resource.data.isHidden is bool;
+      allow delete: if false;
     }
 
     match /{document=**} {
