@@ -1,0 +1,79 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="horizontal"
+    android:gravity="center_vertical"
+    android:background="@drawable/bg_reader_book_card"
+    android:padding="12dp"
+    android:layout_marginBottom="10dp">
+
+    <FrameLayout
+        android:layout_width="76dp"
+        android:layout_height="104dp"
+        android:background="#E6EFE8">
+        <ImageView
+            android:id="@+id/imageReaderBookCover"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:scaleType="centerCrop"
+            android:contentDescription="Bìa sách" />
+        <TextView
+            android:id="@+id/textReaderCoverFallback"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:gravity="center"
+            android:padding="6dp"
+            android:text="MY LIBRARY"
+            android:textColor="#17665B"
+            android:textSize="10sp"
+            android:textStyle="bold" />
+    </FrameLayout>
+
+    <LinearLayout
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_weight="1"
+        android:orientation="vertical"
+        android:paddingStart="12dp"
+        android:paddingEnd="4dp">
+        <TextView
+            android:id="@+id/textReaderBookCategory"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="VĂN HỌC"
+            android:textColor="#24776B"
+            android:textSize="10sp"
+            android:textStyle="bold" />
+        <TextView
+            android:id="@+id/textReaderBookTitle"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="4dp"
+            android:maxLines="2"
+            android:ellipsize="end"
+            android:text="Tên sách"
+            android:textColor="#183D38"
+            android:textSize="15sp"
+            android:textStyle="bold" />
+        <TextView
+            android:id="@+id/textReaderBookAuthor"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="4dp"
+            android:maxLines="1"
+            android:ellipsize="end"
+            android:text="Tác giả"
+            android:textColor="#7C8D86"
+            android:textSize="12sp" />
+        <TextView
+            android:id="@+id/textReaderBookAvailability"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:text="Còn sách"
+            android:textColor="#19734D"
+            android:textSize="11sp"
+            android:textStyle="bold" />
+    </LinearLayout>
+</LinearLayout>
