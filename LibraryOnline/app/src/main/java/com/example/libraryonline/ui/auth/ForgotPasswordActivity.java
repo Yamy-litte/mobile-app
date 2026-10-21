@@ -81,10 +81,70 @@ public class ForgotPasswordActivity extends AppCompatActivity {
         }
 
         submitButton.setEnabled(false);
+        submitButton.setText("Đang xác minh thông tin...");
+
+        // Chỉ tạo yêu cầu khi cả bốn trường khớp hồ sơ độc giả đã được duyệt.
+        firestore.collection("Users")
+                .whereEqualTo("email", email)
+                .limit(2)
+                .get()
+                .addOnSuccessListener(matches -> {
+                    if (matches.isEmpty()) {
+                        rejectUnmatchedInformation();
+                        return;
+                    }
+
+                    boolean matched = false;
+                    for (com.google.firebase.firestore.DocumentSnapshot user : matches.getDocuments()) {
+                        String savedName = normalizeName(user.getString("fullName"));
+                        String savedBirthDate = user.getString("dateOfBirth");
+                        String savedPhone = InputValidator.normalizeVietnamPhone(user.getString("phone"));
+                        String savedEmail = InputValidator.normalizeEmail(user.getString("email"));
+                        String role = user.getString("role");
+
+                        if (fullName.equalsIgnoreCase(savedName)
+                                && birthDateIso.equals(savedBirthDate)
+                                && phone.equals(savedPhone)
+                                && email.equals(savedEmail)
+                                && "Reader".equalsIgnoreCase(role)) {
+                            matched = true;
+                            break;
+                        }
+                    }
+
+                    if (!matched) {
+                        rejectUnmatchedInformation();
+                        return;
+                    }
+
+                    createPasswordResetRequest(fullName, birthDateIso, phone, email);
+                })
+                .addOnFailureListener(error -> {
+                    submitButton.setEnabled(true);
+                    submitButton.setText("Gửi yêu cầu quên mật khẩu");
+                    Toast.makeText(this,
+                            "Không thể xác minh thông tin lúc này. Vui lòng kiểm tra kết nối và thử lại.",
+                            Toast.LENGTH_LONG).show();
+                });
+    }
+
+    private String normalizeName(String name) {
+        return name == null ? "" : name.trim().replaceAll("\\s+", " ");
+    }
+
+    private void rejectUnmatchedInformation() {
+        submitButton.setEnabled(true);
+        submitButton.setText("Gửi yêu cầu quên mật khẩu");
+        Toast.makeText(this,
+                "Thông tin không trùng khớp với hồ sơ độc giả trên hệ thống. Không gửi yêu cầu.",
+                Toast.LENGTH_LONG).show();
+    }
+
+    private void createPasswordResetRequest(String fullName, String birthDate, String phone, String email) {
         submitButton.setText("Đang gửi yêu cầu...");
         Map<String, Object> request = new HashMap<>();
         request.put("fullName", fullName);
-        request.put("birthDate", birthDateIso);
+        request.put("birthDate", birthDate);
         request.put("phone", phone);
         request.put("email", email);
         request.put("status", "Pending");
@@ -94,7 +154,7 @@ public class ForgotPasswordActivity extends AppCompatActivity {
         firestore.collection("PasswordResetRequests").add(request)
                 .addOnSuccessListener(ref -> {
                     Toast.makeText(this,
-                            "Đã gửi yêu cầu. Admin sẽ xác minh thông tin và duyệt trước khi Firebase gửi email đặt lại mật khẩu.",
+                            "Thông tin đã khớp. Yêu cầu đã gửi cho Admin xét duyệt.",
                             Toast.LENGTH_LONG).show();
                     finish();
                 })
@@ -102,7 +162,7 @@ public class ForgotPasswordActivity extends AppCompatActivity {
                     submitButton.setEnabled(true);
                     submitButton.setText("Gửi yêu cầu quên mật khẩu");
                     Toast.makeText(this,
-                            "Không gửi được yêu cầu. Kiểm tra kết nối hoặc Firestore Rules. " + error.getLocalizedMessage(),
+                            "Không gửi được yêu cầu. Kiểm tra kết nối hoặc Firestore Rules.",
                             Toast.LENGTH_LONG).show();
                 });
     }
