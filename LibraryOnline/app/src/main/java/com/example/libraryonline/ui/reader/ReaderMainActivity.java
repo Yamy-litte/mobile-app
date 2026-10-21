@@ -38,7 +38,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
 /**
- * Reader home screen. Layout is defined in activity_reader_main.xml and item_reader_book.xml.
+ * Reader home screen. Layout is defined in home_reader_activity.xml and item_reader_book.xml.
  * This Activity handles profile/catalogue data and user interactions only.
  */
 public class ReaderMainActivity extends AppCompatActivity {
