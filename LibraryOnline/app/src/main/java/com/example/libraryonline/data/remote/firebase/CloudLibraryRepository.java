@@ -111,7 +111,6 @@ public final class CloudLibraryRepository {
         data.put("title", safe(book.title));
         data.put("author", safe(book.author));
         data.put("isbn", safe(book.isbn));
-        data.put("category", category);
         data.put("categoryId", categoryId);
         data.put("publisher", safe(book.publisher));
         data.put("publishYear", book.publishYear);
