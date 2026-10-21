@@ -85,34 +85,86 @@ public final class BookCatalogueSyncManager implements AutoCloseable {
         firestore.collection("BookTitles").get()
                 .addOnSuccessListener(cloudSnapshot -> executor.execute(() -> {
                     if (closed) return;
-                    List<BookTitle> localBooks = new BookTitleDao(
-                            databaseHelper.getReadableDatabase()).getAll();
-                    Map<String, Boolean> cloudIds = new HashMap<>();
-                    for (DocumentSnapshot document : cloudSnapshot.getDocuments()) {
-                        cloudIds.put(document.getId(), true);
-                    }
-                    List<BookTitle> missing = new ArrayList<>();
-                    for (BookTitle book : localBooks) {
-                        if (book.bookTitleId != null && !cloudIds.containsKey(book.bookTitleId)) missing.add(book);
-                    }
-                    if (missing.isEmpty()) {
-                        syncCopiesLocalToCloud(listener);
-                        return;
-                    }
-                    if (missing.size() > 450) {
-                        if (listener != null) listener.onSyncFailed("Có hơn 450 đầu sách mới; hãy chia thành nhiều đợt.");
-                        return;
-                    }
-                    com.google.firebase.firestore.WriteBatch batch = firestore.batch();
-                    for (BookTitle book : missing) {
-                        batch.set(firestore.collection("BookTitles").document(book.bookTitleId), toCloudMap(book));
-                    }
-                    batch.commit().addOnSuccessListener(unused -> syncCopiesLocalToCloud(listener))
-                            .addOnFailureListener(error -> {
-                                if (listener != null) listener.onSyncFailed(error.getLocalizedMessage() == null
-                                        ? "Không thể đẩy dữ liệu SQLite lên Firestore." : error.getLocalizedMessage());
-                            });
+                    migrateLegacyBookTitles(cloudSnapshot.getDocuments(), 0, listener, () ->
+                            executor.execute(() -> uploadMissingLocalBooks(cloudSnapshot, listener)));
                 }))
+                .addOnFailureListener(error -> {
+                    if (listener != null) listener.onSyncFailed(error.getLocalizedMessage() == null
+                            ? "Không thể đọc danh mục từ Firestore." : error.getLocalizedMessage());
+                });
+    }
+
+    /** Migrate legacy Firestore documents from category-name field to categoryId. */
+    private void migrateLegacyBookTitles(List<DocumentSnapshot> documents, int start,
+                                         SyncListener listener, Runnable onComplete) {
+        if (closed) return;
+        com.google.firebase.firestore.WriteBatch batch = firestore.batch();
+        int next = start;
+        int writes = 0;
+        while (next < documents.size() && writes < 450) {
+            DocumentSnapshot document = documents.get(next++);
+            String oldName = document.getString("category");
+            String currentId = document.getString("categoryId");
+            if ((currentId == null || currentId.trim().isEmpty())
+                    || document.contains("category")) {
+                String categoryId = currentId == null || currentId.trim().isEmpty()
+                        ? categoryKey(oldName == null || oldName.trim().isEmpty() ? "Khác" : oldName)
+                        : currentId.trim();
+                Map<String, Object> changes = new HashMap<>();
+                changes.put("categoryId", categoryId);
+                if (document.contains("category")) {
+                    changes.put("category", com.google.firebase.firestore.FieldValue.delete());
+                }
+                batch.update(document.getReference(), changes);
+                writes++;
+            }
+        }
+        if (writes == 0) {
+            if (next >= documents.size()) onComplete.run();
+            else migrateLegacyBookTitles(documents, next, listener, onComplete);
+            return;
+        }
+        final int nextIndex = next;
+        batch.commit().addOnSuccessListener(unused -> {
+            if (nextIndex >= documents.size()) onComplete.run();
+            else migrateLegacyBookTitles(documents, nextIndex, listener, onComplete);
+        }).addOnFailureListener(error -> {
+            if (listener != null) listener.onSyncFailed(
+                    "Không thể chuyển BookTitles.category sang categoryId. Hãy cập nhật Firestore Rules và đăng nhập bằng Admin: "
+                            + (error.getLocalizedMessage() == null ? "lỗi không xác định" : error.getLocalizedMessage()));
+        });
+    }
+
+    private void uploadMissingLocalBooks(QuerySnapshot cloudSnapshot, SyncListener listener) {
+        if (closed) return;
+        List<BookTitle> localBooks = new BookTitleDao(
+                databaseHelper.getReadableDatabase()).getAll();
+        Map<String, Boolean> cloudIds = new HashMap<>();
+        for (DocumentSnapshot document : cloudSnapshot.getDocuments()) {
+            cloudIds.put(document.getId(), true);
+        }
+        List<BookTitle> missing = new ArrayList<>();
+        for (BookTitle book : localBooks) {
+            if (book.bookTitleId != null && !cloudIds.containsKey(book.bookTitleId)) missing.add(book);
+        }
+        if (missing.isEmpty()) {
+            syncCopiesLocalToCloud(listener);
+            return;
+        }
+        if (missing.size() > 450) {
+            if (listener != null) listener.onSyncFailed("Có hơn 450 đầu sách mới; hãy chia thành nhiều đợt.");
+            return;
+        }
+        com.google.firebase.firestore.WriteBatch batch = firestore.batch();
+        for (BookTitle book : missing) {
+            batch.set(firestore.collection("BookTitles").document(book.bookTitleId), toCloudMap(book));
+        }
+        batch.commit().addOnSuccessListener(unused -> syncCopiesLocalToCloud(listener))
+                .addOnFailureListener(error -> {
+                    if (listener != null) listener.onSyncFailed(error.getLocalizedMessage() == null
+                            ? "Không thể đẩy dữ liệu SQLite lên Firestore." : error.getLocalizedMessage());
+                });
+    }
                 .addOnFailureListener(error -> {
                     if (listener != null) listener.onSyncFailed(error.getLocalizedMessage() == null
                             ? "Không thể đọc danh mục từ Firestore." : error.getLocalizedMessage());
@@ -276,18 +328,23 @@ public final class BookCatalogueSyncManager implements AutoCloseable {
         if (listener != null) listener.onSyncCompleted(changed);
     }
 
-    private static BookTitle fromDocument(DocumentSnapshot doc) {
+    private BookTitle fromDocument(DocumentSnapshot doc) {
         BookTitle book = new BookTitle();
         book.bookTitleId = doc.getId();
         book.title = string(doc, "title");
         book.author = string(doc, "author");
         book.isbn = string(doc, "isbn");
-        book.category = string(doc, "category");
+        String legacyCategoryName = string(doc, "category");
         book.categoryId = string(doc, "categoryId");
         if (book.categoryId.trim().isEmpty()) {
             book.categoryId = com.example.libraryonline.data.local.dao.CategoryDao.idForName(
-                    book.category == null || book.category.trim().isEmpty() ? "Khác" : book.category);
+                    legacyCategoryName.trim().isEmpty() ? "Khác" : legacyCategoryName);
         }
+        String localCategoryName = new com.example.libraryonline.data.local.dao.CategoryDao(
+                databaseHelper.getReadableDatabase()).getName(book.categoryId);
+        book.category = !legacyCategoryName.trim().isEmpty() ? legacyCategoryName
+                : (localCategoryName == null || localCategoryName.trim().isEmpty()
+                    ? book.categoryId : localCategoryName);
         book.publisher = string(doc, "publisher");
         book.description = string(doc, "description");
         book.coverUrl = string(doc, "coverUrl");
