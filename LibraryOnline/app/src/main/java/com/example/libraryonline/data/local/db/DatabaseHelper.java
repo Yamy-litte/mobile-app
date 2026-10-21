@@ -11,7 +11,7 @@ import android.database.sqlite.SQLiteOpenHelper;
 public final class DatabaseHelper extends SQLiteOpenHelper {
 
     public static final String DATABASE_NAME = "library_online.db";
-    public static final int DATABASE_VERSION = 5;
+    public static final int DATABASE_VERSION = 6;
 
     public DatabaseHelper(Context context) {
         super(context.getApplicationContext(), DATABASE_NAME, null, DATABASE_VERSION);
@@ -31,6 +31,7 @@ public final class DatabaseHelper extends SQLiteOpenHelper {
             createUsers(db);
             createAdmins(db);
             createRegistrationRequests(db);
+            createCategories(db);
             createBookTitles(db);
             createBookCopies(db);
             seedSampleBooks(db);
@@ -41,6 +42,7 @@ public final class DatabaseHelper extends SQLiteOpenHelper {
             createPenaltyPayments(db);
             createSystemConfigs(db);
             createNotifications(db);
+            createCategoryIntegrityTriggers(db);
             createIndexes(db);
             insertDefaultConfig(db);
             db.setTransactionSuccessful();
