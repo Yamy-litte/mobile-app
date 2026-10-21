@@ -53,6 +53,15 @@ public final class CategoryDao {
         return db.insertOrThrow("Categories", null, values);
     }
 
+    public Category findById(String id) {
+        if (id == null) return null;
+        try (Cursor cursor = db.query("Categories", new String[]{"categoryId", "name", "isActive"},
+                "categoryId = ?", new String[]{id}, null, null, null, "1")) {
+            return cursor.moveToFirst()
+                    ? new Category(cursor.getString(0), cursor.getString(1), cursor.getInt(2) == 1) : null;
+        }
+    }
+
     public List<Category> getAll() {
         List<Category> result = new ArrayList<>();
         try (Cursor c = db.query("Categories", new String[]{"categoryId", "name", "isActive"},

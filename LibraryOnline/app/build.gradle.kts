@@ -66,6 +66,7 @@ dependencies {
     implementation(libs.android.activation)
 
     testImplementation(libs.junit)
+    testImplementation("org.robolectric:robolectric:4.16.1")
     androidTestImplementation(libs.espresso.core)
     androidTestImplementation(libs.ext.junit)
 }

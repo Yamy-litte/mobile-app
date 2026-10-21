@@ -52,7 +52,10 @@ public final class BookTitleDao {
                 ? "Khác" : book.category.trim();
         String id = book.categoryId == null || book.categoryId.trim().isEmpty()
                 ? CategoryDao.idForName(name) : book.categoryId.trim();
-        new CategoryDao(db).upsert(id, name, true);
+        CategoryDao categories = new CategoryDao(db);
+        CategoryDao.Category existing = categories.findById(id);
+        if (existing == null) categories.upsert(id, name, true);
+        else name = existing.name; // A title snapshot must not mutate category metadata.
         book.categoryId = id;
         book.category = name;
     }

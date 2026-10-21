@@ -69,12 +69,12 @@ public class AdminMainActivity extends AppCompatActivity {
         resetRequestsContainer = findViewById(R.id.containerPasswordResetRequests);
         resetPendingCount = findViewById(R.id.textPasswordResetPendingCount);
         resetEmptyMessage = findViewById(R.id.textEmptyPasswordResetRequests);
-        addSampleCatalogueSyncButton();
+        addCatalogueSyncButton();
         listenForRequests();
         listenForPasswordResetRequests();
     }
 
-    private void addSampleCatalogueSyncButton() {
+    private void addCatalogueSyncButton() {
         android.view.ViewGroup decorContent =
                 (android.view.ViewGroup) findViewById(android.R.id.content);
         if (decorContent.getChildCount() == 0) return;

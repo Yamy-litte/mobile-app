@@ -1,11 +1,14 @@
 {
   "name": "library-online-functions",
-  "description": "Secure admin approval workflow for Library Online",
+  "description": "Retired legacy backend; Android Spark workflow contract checks",
   "main": "index.js",
-  "engines": { "node": "20" },
+  "engines": {
+    "node": "20"
+  },
   "scripts": {
-    "serve": "firebase emulators:start --only functions",
-    "deploy": "firebase deploy --only functions"
+    "lint": "npx --yes --package=eslint@9.39.1 eslint --config eslint.config.cjs index.js test/*.js",
+    "check": "node --check index.js",
+    "test": "node --test test/*.test.js"
   },
   "dependencies": {
     "firebase-admin": "^13.0.0",

@@ -132,6 +132,19 @@ service cloud.firestore {
       allow delete: if false;
     }
 
+    // The Android approval batch must create a matching profile before review is final.
+    function approvedProfileMatches() {
+      let user = getAfter(/databases/$(database)/documents/Users/$(request.resource.data.userId)).data;
+      return user.userId == request.resource.data.userId
+        && user.role == 'Reader'
+        && user.cardStatus == 'HoatDong'
+        && user.fullName == resource.data.fullName
+        && user.dateOfBirth == resource.data.birthDate
+        && user.email == resource.data.email
+        && user.phone == resource.data.phone
+        && user.barcode == request.resource.data.barcode;
+    }
+
     match /RegistrationRequests/{requestId} {
       allow create: if validRegistrationRequest(requestId);
       allow read: if isAdmin();
@@ -147,6 +160,7 @@ service cloud.firestore {
           (request.resource.data.status == 'Approved'
             && request.resource.data.userId is string
             && request.resource.data.barcode is string
+            && approvedProfileMatches()
             && request.resource.data.rejectionReason == resource.data.rejectionReason)
           ||
           (request.resource.data.status == 'Rejected'
@@ -166,6 +180,7 @@ service cloud.firestore {
         && request.resource.data.categoryId == categoryId
         && request.resource.data.name is string
         && request.resource.data.name.size() > 0
+        && request.resource.data.name.size() <= 120
         && request.resource.data.isActive is bool;
       allow delete: if false;
     }
@@ -183,6 +198,16 @@ service cloud.firestore {
         && request.resource.data.title.size() > 0
         && request.resource.data.categoryId is string
         && request.resource.data.categoryId.size() > 0
+        && !request.resource.data.keys().hasAny(['category'])
+        && getAfter(/databases/$(database)/documents/Categories/$(request.resource.data.categoryId)).data.categoryId == request.resource.data.categoryId
+        && (!request.resource.data.keys().hasAny(['bookTitleId'])
+            || request.resource.data.bookTitleId == bookTitleId)
+        && request.resource.data.author is string
+        && request.resource.data.isbn is string
+        && request.resource.data.publisher is string
+        && (request.resource.data.publishYear == null || request.resource.data.publishYear is int)
+        && request.resource.data.description is string
+        && request.resource.data.coverUrl is string
         && request.resource.data.totalCopies is int
         && request.resource.data.totalCopies >= 0
         && request.resource.data.availableCopies is int
@@ -200,7 +225,24 @@ service cloud.firestore {
           'bookTitleId', 'barcode', 'shelfLocation', 'copyStatus', 'priorityUserId', 'isHidden'
         ])
         && request.resource.data.bookTitleId is string
+        && request.resource.data.bookTitleId.size() > 0
+        && existsAfter(/databases/$(database)/documents/BookTitles/$(request.resource.data.bookTitleId))
         && request.resource.data.barcode is string
+        && request.resource.data.barcode.size() > 0
+        && request.resource.data.shelfLocation is string
+        && (request.method == 'create'
+            || (request.resource.data.bookTitleId == resource.data.bookTitleId
+                && request.resource.data.barcode == resource.data.barcode))
+        && (!request.resource.data.keys().hasAny(['copyId']) || request.resource.data.copyId == copyId)
+        && (request.resource.data.priorityUserId == null
+            || (request.resource.data.priorityUserId is string
+                && getAfter(/databases/$(database)/documents/Users/$(request.resource.data.priorityUserId)).data.role == 'Reader'))
+        && (request.resource.data.copyStatus != 'DaDatTruoc'
+            || request.resource.data.priorityUserId is string)
+        && (request.method == 'create'
+            || !(resource.data.copyStatus in ['DaMuon', 'ChoLay', 'DaDatTruoc'])
+            || (!(request.resource.data.copyStatus in ['ThanhLy', 'DangSuaChua'])
+                && request.resource.data.isHidden == false))
         && request.resource.data.copyStatus in [
           'SanSang', 'ChoLay', 'DaMuon', 'DaDatTruoc', 'DangSuaChua', 'ThanhLy', 'DaMat'
         ]

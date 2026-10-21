@@ -60,6 +60,8 @@ public class ReaderMainActivity extends AppCompatActivity {
     private TextView greeting, avatar, popularCount, catalogueStatus;
     private final List<BookTitle> books = new ArrayList<>();
     private final ExecutorService imageExecutor = Executors.newFixedThreadPool(2);
+    private final ExecutorService catalogueExecutor = Executors.newSingleThreadExecutor();
+    private final CatalogueLoadStatus catalogueLoadStatus = new CatalogueLoadStatus();
     private String selectedCategory = "Tất cả";
 
     @Override
@@ -70,6 +72,10 @@ public class ReaderMainActivity extends AppCompatActivity {
         setContentView(R.layout.home_reader_activity);
 
         bindViews();
+        if (auth.getCurrentUser() == null) {
+            goToLogin();
+            return;
+        }
         bindActions();
         buildCategories();
         loadReaderProfile();
@@ -82,7 +88,17 @@ public class ReaderMainActivity extends AppCompatActivity {
                 runOnUiThread(() -> {
                     if (!isFinishing() && !isDestroyed()) {
                         loadBooksFromSqlite();
-                        catalogueStatus.setText("Danh mục đã đồng bộ với SQLite (" + changedRows + " thay đổi)");
+
+                    }
+                });
+            }
+
+            @Override
+            public void onCatalogueSnapshot(boolean fromCache, int documentCount) {
+                runOnUiThread(() -> {
+                    if (!isFinishing() && !isDestroyed()) {
+                        catalogueLoadStatus.remoteSnapshot(fromCache, documentCount);
+                        refreshCatalogueStatus();
                     }
                 });
             }
@@ -91,7 +107,8 @@ public class ReaderMainActivity extends AppCompatActivity {
             public void onSyncFailed(String message) {
                 runOnUiThread(() -> {
                     if (!isFinishing() && !isDestroyed()) {
-                        catalogueStatus.setText("Lỗi đồng bộ: " + safe(message, "Không rõ nguyên nhân"));
+                        catalogueLoadStatus.remoteFailed(safe(message, "Không rõ nguyên nhân"));
+                        refreshCatalogueStatus();
                     }
                 });
             }
@@ -186,10 +203,23 @@ public class ReaderMainActivity extends AppCompatActivity {
     /** Read catalogue rows from SQLite; the UI never renders Firestore snapshots directly. */
     private void loadBooksFromSqlite() {
         if (databaseHelper == null) return;
-        imageExecutor.execute(() -> {
-            List<BookTitle> local = new BookTitleDao(databaseHelper.getReadableDatabase()).getAll();
+        catalogueExecutor.execute(() -> {
+            final List<BookTitle> local;
+            try {
+                local = new BookTitleDao(databaseHelper.getReadableDatabase()).getAll();
+            } catch (Exception failure) {
+                runOnUiThread(() -> {
+                    if (!isFinishing() && !isDestroyed()) {
+                        catalogueLoadStatus.localFailed(safe(failure.getLocalizedMessage(),
+                                failure.getClass().getSimpleName()));
+                        refreshCatalogueStatus();
+                    }
+                });
+                return;
+            }
             runOnUiThread(() -> {
                 if (isFinishing() || isDestroyed()) return;
+                catalogueLoadStatus.localLoaded();
                 books.clear();
                 for (BookTitle book : local) {
                     if (book != null && !book.isHidden) books.add(book);
@@ -218,8 +248,9 @@ public class ReaderMainActivity extends AppCompatActivity {
             if (searchable.contains(query)) filtered.add(doc);
         }
 
+        lastDisplayedCount = filtered.size();
         popularCount.setText(filtered.size() + " đầu sách");
-        catalogueStatus.setText(filtered.size() + " đầu sách đang hiển thị từ SQLite");
+        catalogueStatus.setText(catalogueLoadStatus.describe(books.size(), filtered.size()));
         if (filtered.isEmpty()) {
             TextView empty = new TextView(this);
             empty.setText(books.isEmpty()
@@ -247,6 +278,13 @@ public class ReaderMainActivity extends AppCompatActivity {
         });
         for (BookTitle doc : latest) latestBooksContainer.addView(createBookCard(doc));
     }
+
+    private void refreshCatalogueStatus() {
+        if (catalogueStatus != null) catalogueStatus.setText(
+                catalogueLoadStatus.describe(books.size(), lastDisplayedCount));
+    }
+
+    private int lastDisplayedCount;
 
     private View createBookCard(BookTitle doc) {
         View card = LayoutInflater.from(this).inflate(R.layout.item_reader_book, latestBooksContainer, false);
@@ -387,6 +425,7 @@ public class ReaderMainActivity extends AppCompatActivity {
     protected void onDestroy() {
         if (catalogueSyncManager != null) catalogueSyncManager.close();
         if (databaseHelper != null) databaseHelper.close();
+        catalogueExecutor.shutdownNow();
         imageExecutor.shutdownNow();
         super.onDestroy();
     }

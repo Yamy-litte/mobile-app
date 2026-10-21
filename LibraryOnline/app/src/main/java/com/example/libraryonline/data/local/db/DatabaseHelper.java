@@ -11,7 +11,7 @@ import android.database.sqlite.SQLiteOpenHelper;
 public final class DatabaseHelper extends SQLiteOpenHelper {
 
     public static final String DATABASE_NAME = "library_online.db";
-    public static final int DATABASE_VERSION = 6;
+    public static final int DATABASE_VERSION = 7;
 
     public DatabaseHelper(Context context) {
         super(context.getApplicationContext(), DATABASE_NAME, null, DATABASE_VERSION);
@@ -21,6 +21,15 @@ public final class DatabaseHelper extends SQLiteOpenHelper {
     @Override
     public void onConfigure(SQLiteDatabase db) {
         super.onConfigure(db);
+        // v7 rebuilds only the Categories cache table, retaining every row and ID.
+        // SQLite requires this pragma before the upgrade transaction starts.
+        boolean upgradingCategoryCache = db.getVersion() > 0 && db.getVersion() < 7;
+        db.setForeignKeyConstraintsEnabled(!upgradingCategoryCache);
+    }
+
+    @Override
+    public void onOpen(SQLiteDatabase db) {
+        super.onOpen(db);
         db.setForeignKeyConstraintsEnabled(true);
     }
 
@@ -34,7 +43,6 @@ public final class DatabaseHelper extends SQLiteOpenHelper {
             createCategories(db);
             createBookTitles(db);
             createBookCopies(db);
-            seedSampleBooks(db);
             createLoanReceipts(db);
             createLoanDetails(db);
             createReservations(db);
@@ -74,46 +82,30 @@ public final class DatabaseHelper extends SQLiteOpenHelper {
                 }
             }
             createCategoryIntegrityTriggers(db);
-            seedSampleBooks(db);
-            // Backfill IDs for demo books inserted during the upgrade too.
             db.execSQL("UPDATE BookTitles SET categoryId = " +
                     "(SELECT categoryId FROM Categories WHERE Categories.name = BookTitles.category) " +
                     "WHERE categoryId IS NULL");
         }
+        if (oldVersion < 7) upgradeCategoryCache(db);
     }
 
-    private static void seedSampleBooks(SQLiteDatabase db) {
-        String now = "datetime('now')";
-        String[][] books = {
-            {"BOOK001","Sapiens: Lược sử loài người","Yuval Noah Harari","9780062315007","Lịch sử","Harper","2015","Hành trình nhìn lại lịch sử loài người từ thời đồ đá đến thế giới hiện đại.","https://covers.openlibrary.org/b/isbn/9780062315007-L.jpg","4","4"},
-            {"BOOK002","Atomic Habits: Thay đổi tí hon, hiệu quả bất ngờ","James Clear","9780735211292","Tâm lý","Avery","2018","Phương pháp xây dựng thói quen tốt bằng những thay đổi nhỏ và bền vững.","https://covers.openlibrary.org/b/isbn/9780735211292-L.jpg","5","4"},
-            {"BOOK003","Đắc Nhân Tâm","Dale Carnegie","9780671027032","Tâm lý","Simon & Schuster","1998","Những nguyên tắc giao tiếp và xây dựng quan hệ giữa người với người.","https://covers.openlibrary.org/b/isbn/9780671027032-L.jpg","6","5"},
-            {"BOOK004","1984","George Orwell","9780451524935","Văn học","Signet Classics","1950","Tiểu thuyết phản địa đàng kinh điển về quyền lực, giám sát và tự do cá nhân.","https://covers.openlibrary.org/b/isbn/9780451524935-L.jpg","3","2"},
-            {"BOOK005","Giết con chim nhại","Harper Lee","9780061120084","Văn học","Harper Perennial","2006","Tác phẩm kinh điển về công lý, lòng trắc ẩn và tuổi thơ ở miền Nam nước Mỹ.","https://covers.openlibrary.org/b/isbn/9780061120084-L.jpg","4","4"},
-            {"BOOK006","The Great Gatsby","F. Scott Fitzgerald","9780743273565","Văn học","Scribner","2004","Bức chân dung nước Mỹ thập niên 1920 qua giấc mơ và bi kịch của Jay Gatsby.","https://covers.openlibrary.org/b/isbn/9780743273565-L.jpg","3","3"},
-            {"BOOK007","Pride and Prejudice","Jane Austen","9780141439518","Văn học","Penguin Classics","2002","Tiểu thuyết về tình yêu, định kiến xã hội và những lựa chọn cá nhân.","https://covers.openlibrary.org/b/isbn/9780141439518-L.jpg","2","1"},
-            {"BOOK008","The Psychology of Money","Morgan Housel","9780857197689","Kinh tế","Harriman House","2020","Những bài học về hành vi, rủi ro và cách con người đưa ra quyết định tài chính.","https://covers.openlibrary.org/b/isbn/9780857197689-L.jpg","4","4"},
-            {"BOOK009","Clean Code","Robert C. Martin","9780132350884","Công nghệ","Prentice Hall","2008","Các nguyên tắc thực hành để viết mã nguồn dễ đọc, dễ bảo trì và có chất lượng.","https://covers.openlibrary.org/b/isbn/9780132350884-L.jpg","2","2"},
-            {"BOOK010","A Brief History of Time","Stephen Hawking","9780553380163","Khoa học","Bantam","1998","Giới thiệu những câu hỏi lớn của vũ trụ học như thời gian, hố đen và nguồn gốc vũ trụ.","https://covers.openlibrary.org/b/isbn/9780553380163-L.jpg","3","3"}
-        };
-        for (String[] b : books) {
-            String categoryId = com.example.libraryonline.data.local.dao.CategoryDao.idForName(b[4]);
-            db.execSQL("INSERT OR IGNORE INTO Categories(categoryId,name) VALUES(?,?)",
-                    new Object[]{categoryId, b[4]});
-            db.execSQL("INSERT OR IGNORE INTO BookTitles " +
-                    "(bookTitleId,title,author,isbn,categoryId,category,publisher,publishYear,description,coverUrl,totalCopies,availableCopies,isHidden,createdAt,updatedAt) " +
-                    "VALUES (?,?,?,?,?,?,?,?,?,?,?,?,0," + now + "," + now + ")",
-                    new Object[]{b[0],b[1],b[2],b[3],categoryId,b[4],b[5],Integer.parseInt(b[6]),b[7],b[8],Integer.parseInt(b[9]),Integer.parseInt(b[10])});
-            int copies = Integer.parseInt(b[9]);
-            for (int i = 1; i <= copies; i++) {
-                String copyId = b[0] + "_COPY_" + String.format(java.util.Locale.ROOT, "%02d", i);
-                String barcode = "BC-" + b[0] + "-" + String.format(java.util.Locale.ROOT, "%02d", i);
-                String copyStatus = i <= Integer.parseInt(b[10]) ? "SanSang" : "DaMuon";
-                db.execSQL("INSERT OR IGNORE INTO BookCopies " +
-                        "(copyId,bookTitleId,barcode,shelfLocation,copyStatus,isHidden,createdAt,updatedAt) " +
-                        "VALUES (?,?,?,?,?,0," + now + "," + now + ")",
-                        new Object[]{copyId,b[0],barcode,"Kệ " + b[4],copyStatus});
-            }
+    /** Keep category IDs authoritative; display names are not unique in Firestore. */
+    private static void upgradeCategoryCache(SQLiteDatabase db) {
+        db.execSQL("DROP TRIGGER IF EXISTS trg_booktitles_category_insert");
+        db.execSQL("DROP TRIGGER IF EXISTS trg_booktitles_category_update");
+        db.execSQL("CREATE TABLE Categories_v7 (" +
+                "categoryId TEXT PRIMARY KEY NOT NULL, name TEXT NOT NULL, " +
+                "isActive INTEGER NOT NULL DEFAULT 1 CHECK(isActive IN (0,1)), " +
+                "createdAt TEXT NOT NULL DEFAULT (datetime('now')), " +
+                "updatedAt TEXT NOT NULL DEFAULT (datetime('now')))");
+        db.execSQL("INSERT INTO Categories_v7(categoryId,name,isActive,createdAt,updatedAt) " +
+                "SELECT categoryId,name,isActive,createdAt,updatedAt FROM Categories");
+        // Only the copied table is replaced; no book/category business rows are discarded.
+        db.execSQL("DROP TABLE Categories");
+        db.execSQL("ALTER TABLE Categories_v7 RENAME TO Categories");
+        createCategoryIntegrityTriggers(db);
+        try (android.database.Cursor cursor = db.rawQuery("PRAGMA foreign_key_check", null)) {
+            if (cursor.moveToFirst()) throw new IllegalStateException("Invalid references in category cache upgrade");
         }
     }
 
@@ -162,7 +154,7 @@ public final class DatabaseHelper extends SQLiteOpenHelper {
 
     private static void createCategories(SQLiteDatabase db) {
         db.execSQL("CREATE TABLE IF NOT EXISTS Categories (" +
-                "categoryId TEXT PRIMARY KEY NOT NULL, name TEXT NOT NULL UNIQUE, " +
+                "categoryId TEXT PRIMARY KEY NOT NULL, name TEXT NOT NULL, " +
                 "isActive INTEGER NOT NULL DEFAULT 1 CHECK(isActive IN (0,1)), " +
                 "createdAt TEXT NOT NULL DEFAULT (datetime('now')), " +
                 "updatedAt TEXT NOT NULL DEFAULT (datetime('now')))");

@@ -1,23 +1,20 @@
-# Spark registration flow migration
+# Registration architecture in the current Android app
 
-The Android registration flow no longer calls the `submitRegistration` callable. It writes a pending document directly to `RegistrationRequests`. The admin screen uses a named secondary Firebase Auth instance to create a reader account without signing out the administrator, then writes the reader profile and marks the request approved in a Firestore batch.
+The app uses Firebase Authentication and direct Firestore writes (Spark workflow), not callable Functions. `RegisterActivity` writes RegistrationRequests + RegistrationEmailIndex + RegistrationPhoneIndex atomically. `AdminMainActivity` uses a named secondary Auth instance, then atomically writes Users and the registration decision. Rejection is a Firestore update followed by Android EmailSender. Approval emails a random temporary password and requires a password change; it does **not** send a password-reset email in the current implementation.
 
-## Important deployment warning
+The legacy submitRegistration, approveRegistration, rejectRegistration and seedSampleBooks endpoints have been removed from source because no current Android caller uses them. firebase.json no longer advertises a Functions codebase. This source change does not delete any already-deployed endpoint. Do not deploy or delete remote functions without a separate inventory of deployed clients and explicit approval.
 
-The updated `firestore.rules` permits only the registration request shape described in the rules, active-admin review, and admin-created reader profiles. It intentionally denies all other collections. **Do not deploy these rules to a live database until explicit least-privilege rules have been added for every other collection used by the library app** (books, loans, fines, notifications, and any others actually used in the project). Deploying the catch-all deny rule without those rules can break existing app features.
+Categories, BookTitles and BookCopies have explicit Rules. The Rules still deny unspecified collections: LoanReceipts, LoanDetails, Reservations, Penalties, PenaltyPayments, SystemConfigs and Notifications currently have only local SQLite implementations. Do not open these collections merely because they appear in the design documents.
 
-After reviewing and completing rules for the whole app, deploy only Firestore rules with:
+## Integrity and compatibility
 
-```powershell
-firebase use libraryonline-dd3a0
-firebase deploy --only firestore:rules
-```
+- Public registration is intentional. The three-document batch and create-only indices prevent duplicate requests for the same normalized email/phone. Indices stay reserved after rejection. Existing legacy requests without indices are not backfilled automatically.
+- Review is one-way from Pending/PendingVerification to Approved/Rejected. Approval must match the Users profile in the atomic batch. Rules do not create or validate the existence of an Auth account; Android's Auth creation and compensating cleanup are separate operations.
+- Registration birthDate maps to Users.dateOfBirth; reviewedBy remains the authenticated UID used as Admins document ID in this app. No migration to a distinct adminId is performed.
+- Client-side OTP and emailVerified=true are **not server-verifiable proof**. SMTP on the Android client and public request abuse remain architectural limitations, not problems fixed by retiring unused Functions.
+- Admin rights currently use Admins/{uid}.adminStatus (Active/HoatDong), as do login and existing Rules. The proposed Users.role + Admins.userId model requires a separately planned compatibility migration; no bootstrap records were changed.
+- Existing SQLite/cloud rows are never deleted based on demo-looking IDs. New installations/upgrades no longer insert sample books. Review old local data before manually syncing it.
 
-The Android source changes are on `main`; pull the latest commit and rebuild the app before testing.
+## Validation without production access
 
-## Spark limitations and remaining caveats
-
-- This client-only approach cannot provide the same trusted server-side duplicate checks or abuse/rate limiting as Cloud Functions. The admin screen checks duplicate email/phone values in `Users` before approval, and Firebase Authentication rejects an already-registered email. It does not guarantee global uniqueness under concurrent requests.
-- Approval sends a Firebase password-reset email so the reader can choose a password. This is not proof that the applicant's mailbox was verified before approval.
-- Rejection reasons are saved, but automatic rejection emails are not sent in this Spark-only flow. Notify the applicant manually.
-- Test the full flow with a test Firebase project first. Verify anonymous request creation, admin-only reads/review, reader profile creation, reset email delivery, and reader/admin login before using real user data.
+See [CLOUD_FUNCTIONS_AUDIT.md](docs/CLOUD_FUNCTIONS_AUDIT.md) for the inventory, evidence, remaining gaps and exact commands. Use firebase.emulators.json with the demo-library-online project for Rules tests. No Firebase deployment or destructive migration is part of this change.
