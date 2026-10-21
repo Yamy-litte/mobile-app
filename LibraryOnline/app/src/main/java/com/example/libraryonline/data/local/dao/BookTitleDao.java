@@ -69,7 +69,7 @@ public final class BookTitleDao {
     private static ContentValues toValues(BookTitle b) {
         ContentValues v = new ContentValues();
         put(v,"bookTitleId",b.bookTitleId); put(v,"title",b.title); put(v,"author",b.author);
-        put(v,"isbn",b.isbn); put(v,"category",b.category); put(v,"publisher",b.publisher);
+        put(v,"isbn",b.isbn); put(v,"categoryId",b.categoryId); put(v,"category",b.category); put(v,"publisher",b.publisher);
         if (b.publishYear == null) v.putNull("publishYear"); else v.put("publishYear", b.publishYear);
         put(v,"description",b.description); put(v,"coverUrl",b.coverUrl);
         v.put("totalCopies",b.totalCopies); v.put("availableCopies",b.availableCopies);
@@ -81,7 +81,7 @@ public final class BookTitleDao {
         BookTitle b = new BookTitle();
         b.bookTitleId=c.getString(c.getColumnIndexOrThrow("bookTitleId"));
         b.title=c.getString(c.getColumnIndexOrThrow("title")); b.author=c.getString(c.getColumnIndexOrThrow("author"));
-        b.isbn=c.getString(c.getColumnIndexOrThrow("isbn")); b.category=c.getString(c.getColumnIndexOrThrow("category"));
+        b.isbn=c.getString(c.getColumnIndexOrThrow("isbn")); b.categoryId=c.getString(c.getColumnIndexOrThrow("categoryId")); b.category=c.getString(c.getColumnIndexOrThrow("category"));
         b.publisher=c.getString(c.getColumnIndexOrThrow("publisher"));
         int year=c.getColumnIndexOrThrow("publishYear"); b.publishYear=c.isNull(year) ? null : c.getInt(year);
         b.description=c.getString(c.getColumnIndexOrThrow("description")); b.coverUrl=c.getString(c.getColumnIndexOrThrow("coverUrl"));
