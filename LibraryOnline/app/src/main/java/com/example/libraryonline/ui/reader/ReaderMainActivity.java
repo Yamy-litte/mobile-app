@@ -22,12 +22,13 @@ import androidx.appcompat.app.AppCompatActivity;
 
 import com.example.libraryonline.R;
 import com.example.libraryonline.data.repository.BookCatalogueSyncManager;
+import com.example.libraryonline.data.local.dao.BookTitleDao;
+import com.example.libraryonline.data.local.db.DatabaseHelper;
+import com.example.libraryonline.data.model.BookTitle;
 import com.example.libraryonline.ui.auth.LoginActivity;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
-import com.google.firebase.firestore.DocumentSnapshot;
 import com.google.firebase.firestore.FirebaseFirestore;
-import com.google.firebase.firestore.ListenerRegistration;
 
 import java.io.InputStream;
 import java.net.HttpURLConnection;
@@ -48,14 +49,14 @@ public class ReaderMainActivity extends AppCompatActivity {
 
     private FirebaseFirestore firestore;
     private FirebaseAuth auth;
-    private ListenerRegistration booksListener;
+    private DatabaseHelper databaseHelper;
     private BookCatalogueSyncManager catalogueSyncManager;
     private LinearLayout categoriesContainer;
     private LinearLayout popularBooksContainer;
     private LinearLayout latestBooksContainer;
     private EditText searchInput;
     private TextView greeting, avatar, popularCount, catalogueStatus;
-    private final List<DocumentSnapshot> books = new ArrayList<>();
+    private final List<BookTitle> books = new ArrayList<>();
     private final ExecutorService imageExecutor = Executors.newFixedThreadPool(2);
     private String selectedCategory = "Tất cả";
 
@@ -70,12 +71,15 @@ public class ReaderMainActivity extends AppCompatActivity {
         bindActions();
         buildCategories();
         loadReaderProfile();
+        databaseHelper = new DatabaseHelper(getApplicationContext());
+        loadBooksFromSqlite();
         catalogueSyncManager = new BookCatalogueSyncManager(getApplicationContext());
         catalogueSyncManager.start(new BookCatalogueSyncManager.SyncListener() {
             @Override
             public void onSyncCompleted(int changedRows) {
                 runOnUiThread(() -> {
                     if (!isFinishing() && !isDestroyed()) {
+                        loadBooksFromSqlite();
                         catalogueStatus.setText("Danh mục đã đồng bộ với SQLite (" + changedRows + " thay đổi)");
                     }
                 });
@@ -90,7 +94,6 @@ public class ReaderMainActivity extends AppCompatActivity {
                 });
             }
         });
-        listenForBooks();
     }
 
     private void bindViews() {
@@ -166,23 +169,19 @@ public class ReaderMainActivity extends AppCompatActivity {
                 .addOnFailureListener(e -> showMessage("Không tải được thông tin độc giả."));
     }
 
-    private void listenForBooks() {
-        booksListener = firestore.collection("BookTitles").addSnapshotListener((snapshot, error) -> {
-            if (isFinishing() || isDestroyed()) return;
-            if (error != null) {
-                popularCount.setText("Chưa tải được");
-                catalogueStatus.setText("Không thể tải danh mục. Kiểm tra kết nối và quyền Firestore.");
-                popularBooksContainer.removeAllViews();
-                latestBooksContainer.removeAllViews();
-                return;
-            }
-            books.clear();
-            if (snapshot != null) {
-                for (DocumentSnapshot doc : snapshot.getDocuments()) {
-                    if (!Boolean.TRUE.equals(doc.getBoolean("isHidden"))) books.add(doc);
+    /** Read catalogue rows from SQLite; the UI never renders Firestore snapshots directly. */
+    private void loadBooksFromSqlite() {
+        if (databaseHelper == null) return;
+        imageExecutor.execute(() -> {
+            List<BookTitle> local = new BookTitleDao(databaseHelper.getReadableDatabase()).getAll();
+            runOnUiThread(() -> {
+                if (isFinishing() || isDestroyed()) return;
+                books.clear();
+                for (BookTitle book : local) {
+                    if (book != null && !book.isHidden) books.add(book);
                 }
-            }
-            renderBooks();
+                renderBooks();
+            });
         });
     }
 
@@ -192,14 +191,14 @@ public class ReaderMainActivity extends AppCompatActivity {
         latestBooksContainer.removeAllViews();
 
         String query = searchInput == null ? "" : searchInput.getText().toString().trim().toLowerCase(Locale.ROOT);
-        List<DocumentSnapshot> filtered = new ArrayList<>();
-        for (DocumentSnapshot doc : books) {
-            String title = value(doc, "title", "Chưa có tên sách");
-            String author = value(doc, "author", "Chưa rõ tác giả");
-            String category = value(doc, "category", "Khác");
+        List<BookTitle> filtered = new ArrayList<>();
+        for (BookTitle doc : books) {
+            String title = safe(doc.title, "Chưa có tên sách");
+            String author = safe(doc.author, "Chưa rõ tác giả");
+            String category = safe(doc.category, "Khác");
             if (!"Tất cả".equals(selectedCategory)
                     && !category.toLowerCase(Locale.ROOT).contains(selectedCategory.toLowerCase(Locale.ROOT))) continue;
-            String searchable = (title + " " + author + " " + category + " " + value(doc, "isbn", ""))
+            String searchable = (title + " " + author + " " + category + " " + safe(doc.isbn, ""))
                     .toLowerCase(Locale.ROOT);
             if (searchable.contains(query)) filtered.add(doc);
         }
@@ -225,10 +224,10 @@ public class ReaderMainActivity extends AppCompatActivity {
             params.rightMargin = dp(10);
             popularBooksContainer.addView(card, params);
         }
-        for (DocumentSnapshot doc : filtered) latestBooksContainer.addView(createBookCard(doc));
+        for (BookTitle doc : filtered) latestBooksContainer.addView(createBookCard(doc));
     }
 
-    private View createBookCard(DocumentSnapshot doc) {
+    private View createBookCard(BookTitle doc) {
         View card = LayoutInflater.from(this).inflate(R.layout.item_reader_book, latestBooksContainer, false);
         TextView title = card.findViewById(R.id.textReaderBookTitle);
         TextView author = card.findViewById(R.id.textReaderBookAuthor);
@@ -237,15 +236,15 @@ public class ReaderMainActivity extends AppCompatActivity {
         ImageView cover = card.findViewById(R.id.imageReaderBookCover);
         TextView fallback = card.findViewById(R.id.textReaderCoverFallback);
 
-        title.setText(value(doc, "title", "Chưa có tên sách"));
-        author.setText(value(doc, "author", "Chưa rõ tác giả"));
-        category.setText(value(doc, "category", "Khác").toUpperCase(Locale.ROOT));
-        long available = number(doc, "availableCopies");
-        long total = number(doc, "totalCopies");
+        title.setText(safe(doc.title, "Chưa có tên sách"));
+        author.setText(safe(doc.author, "Chưa rõ tác giả"));
+        category.setText(safe(doc.category, "Khác").toUpperCase(Locale.ROOT));
+        long available = doc.availableCopies;
+        long total = doc.totalCopies;
         availability.setText(available > 0 ? "Còn " + available + "/" + total + " cuốn" : "Tạm hết sách");
         availability.setTextColor(available > 0 ? Color.rgb(25, 115, 77) : Color.rgb(179, 69, 57));
 
-        String coverUrl = value(doc, "coverUrl", "");
+        String coverUrl = safe(doc.coverUrl, "");
         if (!coverUrl.isEmpty()) {
             fallback.setVisibility(View.GONE);
             cover.setTag(coverUrl);
@@ -288,18 +287,18 @@ public class ReaderMainActivity extends AppCompatActivity {
         }
     }
 
-    private void showBookDetails(DocumentSnapshot doc) {
-        String title = value(doc, "title", "Chi tiết sách");
-        String author = value(doc, "author", "Chưa rõ tác giả");
+    private void showBookDetails(BookTitle doc) {
+        String title = safe(doc.title, "Chi tiết sách");
+        String author = safe(doc.author, "Chưa rõ tác giả");
         long available = number(doc, "availableCopies");
         long total = number(doc, "totalCopies");
         String message = "Tác giả: " + author
-                + "\nThể loại: " + value(doc, "category", "Chưa cập nhật")
-                + "\nNhà xuất bản: " + value(doc, "publisher", "Chưa cập nhật")
-                + "\nNăm xuất bản: " + value(doc, "publishYear", "Chưa cập nhật")
-                + "\nISBN: " + value(doc, "isbn", "Chưa cập nhật")
-                + "\nTình trạng: " + available + "/" + total + " cuốn sẵn sàng"
-                + "\n\n" + value(doc, "description", "Chưa có mô tả cho tác phẩm này.");
+                + "\nThể loại: " + safe(doc.category, "Chưa cập nhật")
+                + "\nNhà xuất bản: " + safe(doc.publisher, "Chưa cập nhật")
+                + "\nNăm xuất bản: " + (doc.publishYear == null ? "Chưa cập nhật" : doc.publishYear)
+                + "\nISBN: " + safe(doc.isbn, "Chưa cập nhật")
+                + "\nTình trạng: " + doc.availableCopies + "/" + doc.totalCopies + " cuốn sẵn sàng"
+                + "\n\n" + safe(doc.description, "Chưa có mô tả cho tác phẩm này.");
         new AlertDialog.Builder(this)
                 .setTitle(title)
                 .setMessage(message)
@@ -343,17 +342,8 @@ public class ReaderMainActivity extends AppCompatActivity {
         finish();
     }
 
-    private String value(DocumentSnapshot doc, String key, String fallback) {
-        if (doc == null) return fallback;
-        Object raw = doc.get(key);
-        if (raw == null) return fallback;
-        String value = String.valueOf(raw).trim();
-        return value.isEmpty() ? fallback : value;
-    }
-
-    private long number(DocumentSnapshot doc, String key) {
-        Long value = doc.getLong(key);
-        return value == null ? 0 : value;
+    private String safe(String value, String fallback) {
+        return value == null || value.trim().isEmpty() ? fallback : value.trim();
     }
 
     private void showMessage(String message) {
@@ -366,8 +356,8 @@ public class ReaderMainActivity extends AppCompatActivity {
 
     @Override
     protected void onDestroy() {
-        if (booksListener != null) booksListener.remove();
         if (catalogueSyncManager != null) catalogueSyncManager.close();
+        if (databaseHelper != null) databaseHelper.close();
         imageExecutor.shutdownNow();
         super.onDestroy();
     }
