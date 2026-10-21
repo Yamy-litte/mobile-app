@@ -3,7 +3,7 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:orientation="vertical"
-    android:background="#FBF8F1">
+    android:background="@color/library_background">
 
     <ScrollView
         android:id="@+id/readerScroll"
@@ -37,7 +37,7 @@
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:text="MY LIBRARY"
-                        android:textColor="#155E55"
+                        android:textColor="@color/library_navy"
                         android:textSize="11sp"
                         android:letterSpacing="0.12"
                         android:textStyle="bold" />
@@ -47,7 +47,7 @@
                         android:layout_height="wrap_content"
                         android:layout_marginTop="3dp"
                         android:text="Minh Đông"
-                        android:textColor="#183D38"
+                        android:textColor="@color/library_text"
                         android:textSize="25sp"
                         android:textStyle="bold" />
                 </LinearLayout>
@@ -59,7 +59,7 @@
                     android:background="@drawable/bg_reader_avatar"
                     android:gravity="center"
                     android:text="MD"
-                    android:textColor="#155E55"
+                    android:textColor="@color/library_navy"
                     android:textSize="13sp"
                     android:textStyle="bold"
                     android:contentDescription="Tài khoản độc giả" />
@@ -78,7 +78,7 @@
                     android:layout_width="24dp"
                     android:layout_height="wrap_content"
                     android:text="⌕"
-                    android:textColor="#47766F"
+                    android:textColor="@color/library_muted"
                     android:textSize="24sp" />
                 <EditText
                     android:id="@+id/inputBookSearch"
@@ -89,8 +89,8 @@
                     android:hint="Tìm tên sách, tác giả..."
                     android:imeOptions="actionSearch"
                     android:singleLine="true"
-                    android:textColor="#183D38"
-                    android:textColorHint="#8A9B95"
+                    android:textColor="@color/library_text"
+                    android:textColorHint="@color/library_muted"
                     android:textSize="14sp"
                     android:paddingStart="8dp"
                     android:paddingEnd="0dp" />
@@ -107,14 +107,14 @@
                     android:layout_height="wrap_content"
                     android:layout_weight="1"
                     android:text="Danh mục"
-                    android:textColor="#183D38"
+                    android:textColor="@color/library_text"
                     android:textSize="18sp"
                     android:textStyle="bold" />
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:text="Xem tất cả"
-                    android:textColor="#24776B"
+                    android:textColor="@color/library_blue"
                     android:textSize="12sp" />
             </LinearLayout>
 
@@ -143,7 +143,7 @@
                     android:layout_height="wrap_content"
                     android:layout_weight="1"
                     android:text="Sách phổ biến"
-                    android:textColor="#183D38"
+                    android:textColor="@color/library_text"
                     android:textSize="18sp"
                     android:textStyle="bold" />
                 <TextView
@@ -151,7 +151,7 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:text="Đang tải..."
-                    android:textColor="#7C8D86"
+                    android:textColor="@color/library_muted"
                     android:textSize="12sp" />
             </LinearLayout>
 
@@ -179,14 +179,14 @@
                     android:layout_height="wrap_content"
                     android:layout_weight="1"
                     android:text="Sách mới cập nhật"
-                    android:textColor="#183D38"
+                    android:textColor="@color/library_text"
                     android:textSize="18sp"
                     android:textStyle="bold" />
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:text="Mới nhất"
-                    android:textColor="#24776B"
+                    android:textColor="@color/library_blue"
                     android:textSize="12sp" />
             </LinearLayout>
 
@@ -196,7 +196,7 @@
                 android:layout_height="wrap_content"
                 android:layout_marginTop="4dp"
                 android:text="Danh sách sách trong thư viện"
-                android:textColor="#7C8D86"
+                android:textColor="@color/library_muted"
                 android:textSize="12sp" />
 
             <LinearLayout
@@ -211,13 +211,13 @@
     <View
         android:layout_width="match_parent"
         android:layout_height="1dp"
-        android:background="#E8E2D7" />
+        android:background="@color/library_border" />
 
     <LinearLayout
         android:id="@+id/readerBottomNavigation"
         android:layout_width="match_parent"
         android:layout_height="64dp"
-        android:background="#FFFEFA"
+        android:background="@color/library_surface"
         android:gravity="center"
         android:orientation="horizontal"
         android:paddingStart="4dp"
@@ -230,8 +230,8 @@
             android:layout_weight="1"
             android:gravity="center"
             android:orientation="vertical">
-            <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="⌂" android:textColor="#17665B" android:textSize="21sp" />
-            <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Trang chủ" android:textColor="#17665B" android:textSize="10sp" android:textStyle="bold" />
+            <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="⌂" android:textColor="@color/library_blue" android:textSize="21sp" />
+            <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Trang chủ" android:textColor="@color/library_blue" android:textSize="10sp" android:textStyle="bold" />
         </LinearLayout>
         <LinearLayout
             android:id="@+id/navReaderLoans"
