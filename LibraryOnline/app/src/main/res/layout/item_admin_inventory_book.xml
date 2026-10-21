@@ -1,27 +1,84 @@
 <?xml version="1.0" encoding="utf-8"?>
 <LinearLayout
     xmlns:android="http://schemas.android.com/apk/res/android"
-    android:layout_width="match_parent"
-    android:layout_height="wrap_content"
-    android:minHeight="88dp"
-    android:layout_marginBottom="12dp"
-    android:padding="16dp"
-    android:orientation="vertical"
-    android:background="@drawable/bg_reader_book_card"
-    android:foreground="?attr/selectableItemBackground"
-    android:clickable="true"
-    android:focusable="true">
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    style="@style/InventoryCard"
+    android:orientation="vertical">
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="center_vertical">
+        <FrameLayout
+            android:layout_width="60dp"
+            android:layout_height="84dp"
+            android:background="@color/reader_cover_placeholder">
+            <ImageView
+                android:id="@+id/inventoryBookCover"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:scaleType="centerCrop"
+                android:contentDescription="@string/book_cover"/>
+            <TextView
+                android:id="@+id/inventoryBookFallback"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:gravity="center"
+                android:text="@string/book_cover_missing"
+                android:textSize="10sp"
+                android:textColor="@color/library_muted"
+                android:padding="4dp"/>
+        </FrameLayout>
+        <LinearLayout
+            android:layout_width="0dp"
+            android:layout_weight="1"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:paddingStart="12dp">
+            <TextView
+                android:id="@+id/inventoryBookTitle"
+                style="@style/InventoryText"
+                android:textStyle="bold"/>
+            <TextView
+                android:id="@+id/inventoryBookState"
+                style="@style/InventoryCaption"
+                android:textColor="@color/library_success"/>
+            <TextView
+                android:id="@+id/inventoryBookMeta"
+                style="@style/InventoryCaption"/>
+        </LinearLayout>
+        <ImageButton
+            android:id="@+id/inventoryBookEdit"
+            android:layout_gravity="top"
+            android:layout_width="48dp"
+            android:layout_height="48dp"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            android:src="@drawable/ic_inventory_edit"
+            android:contentDescription="@string/stock_edit"/>
+    </LinearLayout>
     <TextView
-        android:id="@+id/inventoryBookTitle"
-        style="@style/CatalogueBody"
-        android:textStyle="bold" />
-    <TextView
-        android:id="@+id/inventoryBookMeta"
-        style="@style/CatalogueCaption"
-        android:layout_marginTop="6dp" />
+        android:id="@+id/inventoryBookIsbn"
+        style="@style/InventoryCaption"/>
     <TextView
         android:id="@+id/inventoryBookCount"
-        style="@style/CatalogueBody"
-        android:textColor="@color/library_blue"
-        android:layout_marginTop="8dp" />
+        style="@style/InventoryCaption"/>
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="center_vertical">
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/inventoryBookCopies"
+            style="@style/InventoryHalf"
+            android:text="@string/inventory_ui_copies"/>
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/inventoryBookIntake"
+            style="@style/InventoryHalf"
+            android:text="@string/inventory_ui_intake"/>
+    </LinearLayout>
+    <com.google.android.material.button.MaterialButton
+        android:id="@+id/inventoryBookHide"
+        style="@style/InventoryOutline"
+        android:text="@string/inventory_ui_hide_title"
+        android:textColor="@color/library_danger"/>
 </LinearLayout>

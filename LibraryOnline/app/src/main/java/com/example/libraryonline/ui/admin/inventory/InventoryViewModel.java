@@ -33,6 +33,10 @@ public final class InventoryViewModel extends ViewModel {
     private PendingInventoryStore store;
     private String journalId;
     public boolean journalError;
+    // UI receipt: published only after a successful server write and journal cleanup.
+    public String completionId, completedAction;
+    public BookTitle completedBook;
+    public StockIntake completedIntake;
 
     public void attach(android.content.Context context, String uid) {
         if (busy) return;
@@ -82,6 +86,10 @@ public final class InventoryViewModel extends ViewModel {
             String shelf,
             String uid) {
         if (busy || hasPending()) return;
+        completionId = null;
+        completedAction = null;
+        completedBook = null;
+        completedIntake = null;
         this.journalId = java.util.UUID.randomUUID().toString();
         this.action = action;
         this.id = id;
@@ -157,6 +165,10 @@ public final class InventoryViewModel extends ViewModel {
         busy = false;
         store.release(ownerUid);
         if (clearJournal()) {
+            completionId = journalId;
+            completedAction = action;
+            completedBook = book;
+            completedIntake = intake;
             clearPending();
             clearDraft();
             message.setValue("Đã lưu trên Firebase. Đang cập nhật danh sách…");
@@ -215,8 +227,8 @@ public final class InventoryViewModel extends ViewModel {
                 reason
                         + (hasPending()
                                 ? "\n"
-                                      + "Chưa xác nhận kết quả. Giữ nguyên mã thao tác và thử lại"
-                                      + " khi có mạng/quyền truy cập."
+                                        + "Chưa xác nhận kết quả. Giữ nguyên mã thao tác và thử lại"
+                                        + " khi có mạng/quyền truy cập."
                                 : "\n"
                                       + "Không ghi thêm dữ liệu. Kiểm tra đầu vào, schema và Rules"
                                       + " trước khi thử lại."));
@@ -234,6 +246,10 @@ public final class InventoryViewModel extends ViewModel {
         if (restored) return;
         restored = true;
         if (state == null) return;
+        completionId = state.getString("completionId");
+        completedAction = state.getString("completedAction");
+        completedBook = unpack(state.getBundle("completedBook"));
+        completedIntake = (StockIntake) state.getSerializable("completedIntake");
         journalId = state.getString("journalId");
         draftKind = state.getString("draftKind");
         draftId = state.getString("draftId");
@@ -253,6 +269,10 @@ public final class InventoryViewModel extends ViewModel {
     }
 
     public void save(Bundle state) {
+        state.putString("completionId", completionId);
+        state.putString("completedAction", completedAction);
+        state.putBundle("completedBook", pack(completedBook));
+        state.putSerializable("completedIntake", completedIntake);
         state.putString("journalId", journalId);
         state.putString("inventorySelected", selectedId);
         state.putString("inventoryOwner", ownerUid);
@@ -276,6 +296,10 @@ public final class InventoryViewModel extends ViewModel {
         b.putString("title", book.title);
         b.putString("author", book.author);
         b.putString("categoryId", book.categoryId);
+        b.putString("category", book.category);
+        b.putInt("totalCopies", book.totalCopies);
+        b.putInt("availableCopies", book.availableCopies);
+        b.putBoolean("isHidden", book.isHidden);
         b.putString("publisher", book.publisher);
         b.putString("isbn", book.isbn);
         b.putString("cover", book.coverUrl);
@@ -291,6 +315,10 @@ public final class InventoryViewModel extends ViewModel {
         book.title = b.getString("title");
         book.author = b.getString("author");
         book.categoryId = b.getString("categoryId");
+        book.category = b.getString("category");
+        book.totalCopies = b.getInt("totalCopies");
+        book.availableCopies = b.getInt("availableCopies");
+        book.isHidden = b.getBoolean("isHidden");
         book.publisher = b.getString("publisher");
         book.isbn = b.getString("isbn");
         book.coverUrl = b.getString("cover");

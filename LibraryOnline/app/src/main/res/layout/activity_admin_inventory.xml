@@ -1,85 +1,133 @@
 <?xml version="1.0" encoding="utf-8"?>
 <LinearLayout
     xmlns:android="http://schemas.android.com/apk/res/android"
-    android:id="@+id/inventoryRoot"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:orientation="vertical"
+    android:id="@+id/inventoryRoot"
     android:background="@color/library_background">
     <LinearLayout
         android:layout_width="match_parent"
-        android:layout_height="0dp"
-        android:layout_weight="1"
-        android:orientation="vertical"
-        android:padding="16dp">
-        <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:orientation="horizontal"
-            android:gravity="center_vertical">
-            <Button
-                android:id="@+id/inventoryBack"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:minHeight="48dp"
-                android:text="@string/catalogue_back" />
-            <TextView
-                style="@style/CatalogueBody"
-                android:layout_width="0dp"
-                android:layout_weight="1"
-                android:gravity="center"
-                android:textStyle="bold"
-                android:text="@string/inventory_title" />
-        </LinearLayout>
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="center_vertical">
+        <ImageButton
+            android:id="@+id/inventoryBack"
+            android:layout_width="48dp"
+            android:layout_height="48dp"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            android:src="@drawable/ic_inventory_back"
+            android:contentDescription="@string/catalogue_back"/>
         <TextView
-            android:id="@+id/inventoryStatus"
-            style="@style/CatalogueCaption"
-            android:accessibilityLiveRegion="polite"
-            android:text="@string/catalogue_loading" />
-        <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:orientation="horizontal">
-            <Button
-                android:id="@+id/inventoryRefresh"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:minHeight="48dp"
-                android:text="@string/catalogue_refresh" />
-            <Button
-                android:id="@+id/inventoryAdd"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:minHeight="48dp"
-                android:text="@string/inventory_add" />
-        </LinearLayout>
-        <Button
-            android:id="@+id/inventoryRetry"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:minHeight="48dp"
-            android:text="@string/stock_retry" />
-        <EditText
-            android:id="@+id/inventorySearch"
-            style="@style/CatalogueInput"
-            android:hint="@string/inventory_search"
-            android:inputType="text"
-            android:singleLine="true" />
-        <ScrollView
-            android:layout_width="match_parent"
-            android:layout_height="0dp"
+            android:id="@+id/inventoryHeading"
+            style="@style/InventorySection"
+            android:layout_width="0dp"
             android:layout_weight="1"
+            android:layout_marginBottom="0dp"
+            android:text="@string/inventory_title"/>
+        <ImageButton
+            android:id="@+id/inventoryRefresh"
+            android:layout_width="48dp"
+            android:layout_height="48dp"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            android:src="@drawable/ic_admin_refresh"
+            android:contentDescription="@string/catalogue_refresh"/>
+    </LinearLayout>
+    <TextView
+        android:id="@+id/inventoryStatus"
+        style="@style/InventoryCaption"
+        android:paddingStart="20dp"
+        android:paddingEnd="20dp"
+        android:accessibilityLiveRegion="polite"
+        android:text="@string/catalogue_loading"/>
+    <com.google.android.material.button.MaterialButton
+        android:id="@+id/inventoryRetry"
+        style="@style/InventoryOutline"
+        android:text="@string/inventory_ui_resume"
+        android:visibility="gone"/>
+    <FrameLayout
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1">
+        <ScrollView
+            android:id="@+id/inventoryScroll"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
             android:fillViewport="true">
             <LinearLayout
-                android:id="@+id/inventoryContent"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:orientation="vertical" />
+                android:orientation="vertical"
+                android:paddingStart="20dp"
+                android:paddingEnd="20dp"
+                android:paddingTop="12dp"
+                android:paddingBottom="84dp">
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:id="@+id/inventoryListTools">
+                    <TextView
+                        android:id="@+id/inventorySubtitle"
+                        style="@style/InventoryCaption"
+                        android:text="@string/inventory_ui_subtitle"/>
+                    <EditText
+                        android:id="@+id/inventorySearch"
+                        style="@style/InventoryInput"
+                        android:hint="@string/inventory_ui_search"
+                        android:inputType="text"
+                        android:drawableStart="@drawable/ic_inventory_search"
+                        android:drawablePadding="8dp"/>
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal"
+                        android:gravity="center_vertical">
+                        <com.google.android.material.button.MaterialButton
+                            android:id="@+id/inventoryFindBarcode"
+                            style="@style/InventoryHalf"
+                            android:text="@string/inventory_ui_find_barcode"/>
+                        <com.google.android.material.button.MaterialButton
+                            android:id="@+id/inventoryChooseIntake"
+                            style="@style/InventoryHalf"
+                            android:text="@string/inventory_ui_intake"/>
+                    </LinearLayout>
+                    <HorizontalScrollView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:scrollbars="none"
+                        android:layout_marginTop="12dp"
+                        android:layout_marginBottom="12dp">
+                        <LinearLayout
+                            android:id="@+id/inventoryCategories"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:orientation="horizontal"/>
+                    </HorizontalScrollView>
+                </LinearLayout>
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:id="@+id/inventoryContent"/>
+            </LinearLayout>
         </ScrollView>
-    </LinearLayout>
+        <com.google.android.material.floatingactionbutton.FloatingActionButton
+            android:id="@+id/inventoryAdd"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="bottom|end"
+            android:layout_margin="20dp"
+            android:src="@drawable/ic_inventory_add"
+            android:contentDescription="@string/inventory_add"
+            app:shapeAppearanceOverlay="@style/InventoryFabShape"
+            app:tint="@color/white"
+            app:backgroundTint="@color/library_blue"/>
+    </FrameLayout>
     <View
         android:layout_width="match_parent"
         android:layout_height="1dp"
-        android:background="@color/library_border" />
-    <include layout="@layout/view_admin_bottom_navigation" />
+        android:background="@color/library_border"/>
+    <include layout="@layout/view_admin_bottom_navigation"/>
 </LinearLayout>

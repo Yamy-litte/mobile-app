@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical">
+    <TextView
+        style="@style/InventoryCaption"
+        android:text="@string/inventory_ui_not_saved"
+        android:textColor="@color/library_warning"/>
+    <include layout="@layout/view_admin_inventory_book_summary"/>
+    <LinearLayout
+        style="@style/InventoryCard"
+        android:orientation="vertical">
+        <TextView
+            style="@style/InventorySection"
+            android:text="@string/inventory_ui_intake_info"/>
+        <include layout="@layout/view_admin_inventory_quantity"/>
+    </LinearLayout>
+    <LinearLayout
+        style="@style/InventoryCard"
+        android:orientation="vertical">
+        <TextView
+            style="@style/InventorySection"
+            android:text="@string/inventory_ui_forecast"/>
+        <TextView
+            android:id="@+id/intakeForecast"
+            style="@style/InventoryText"/>
+        <TextView
+            style="@style/InventoryCaption"
+            android:text="@string/inventory_ui_forecast_note"/>
+    </LinearLayout>
+    <TextView
+        android:id="@+id/intakeError"
+        style="@style/InventoryError"/>
+    <com.google.android.material.button.MaterialButton
+        android:id="@+id/intakeSubmit"
+        style="@style/InventoryPrimary"
+        android:text="@string/inventory_ui_confirm_intake"/>
+</LinearLayout>

@@ -31,7 +31,7 @@ public class CatalogueScreensTest {
             ((TextView)row.findViewById(R.id.inventoryBookMeta)).setText(book.author+" · "+book.category);
             ((TextView)row.findViewById(R.id.inventoryBookCount)).setText("3 sẵn sàng / 4 đã nhập");content.addView(row);
             render(activity.findViewById(R.id.inventoryRoot),"admin-inventory.png");
-            assertTrue(activity.findViewById(R.id.inventoryAdd).getRight()<=288);
+            assertTrue(activity.findViewById(R.id.inventoryAdd).getRight()<=304); // Floating add button keeps at least 16dp from the screen edge.
         }
     }
     private void render(View root,String name) throws Exception {

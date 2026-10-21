@@ -39,11 +39,20 @@ public final class BarcodeLabels {
     }
 
     public static void print(Activity activity, String barcode) {
-        Bitmap label = encode(barcode);
+        print(activity, Collections.singletonList(barcode));
+    }
+
+    public static void print(Activity activity, java.util.List<String> values) {
+        if (values == null || values.isEmpty())
+            throw new IllegalArgumentException("Chưa có barcode để in.");
+        final java.util.List<String> barcodes = new java.util.ArrayList<>(values);
+        final java.util.List<Bitmap> labels = new java.util.ArrayList<>();
+        for (String value : barcodes) labels.add(encode(value));
+        final int pageCount = (labels.size() + 4) / 5;
         PrintManager manager = (PrintManager) activity.getSystemService(Activity.PRINT_SERVICE);
         if (manager == null) throw new IllegalStateException("Thiết bị không hỗ trợ in.");
         manager.print(
-                "Library Online — " + barcode,
+                "Library Online — nhãn sách",
                 new PrintDocumentAdapter() {
                     @Override
                     public void onLayout(
@@ -59,46 +68,60 @@ public final class BarcodeLabels {
                         callback.onLayoutFinished(
                                 new PrintDocumentInfo.Builder("nhan-sach.pdf")
                                         .setContentType(PrintDocumentInfo.CONTENT_TYPE_DOCUMENT)
-                                        .setPageCount(1)
+                                        .setPageCount(pageCount)
                                         .build(),
                                 true);
                     }
 
                     @Override
                     public void onWrite(
-                            PageRange[] pages,
+                            PageRange[] ranges,
                             ParcelFileDescriptor destination,
                             CancellationSignal cancellation,
                             WriteResultCallback callback) {
-                        if (cancellation.isCanceled()) {
-                            callback.onWriteCancelled();
-                            return;
-                        }
-                        boolean include = false;
-                        for (PageRange range : pages)
-                            if (range.getStart() <= 0 && range.getEnd() >= 0) include = true;
-                        if (!include) {
-                            callback.onWriteFinished(new PageRange[0]);
-                            return;
-                        }
                         PdfDocument pdf = new PdfDocument();
+                        java.util.List<PageRange> written = new java.util.ArrayList<>();
                         try (FileOutputStream output =
                                 new FileOutputStream(destination.getFileDescriptor())) {
-                            PdfDocument.Page page =
-                                    pdf.startPage(
-                                            new PdfDocument.PageInfo.Builder(595, 842, 1).create());
-                            Canvas canvas = page.getCanvas();
-                            Paint paint = new Paint();
-                            paint.setColor(Color.BLACK);
-                            paint.setTextSize(12);
-                            canvas.drawText("LIBRARY ONLINE", 32, 44, paint);
-                            canvas.drawBitmap(label, null, new Rect(32, 60, 563, 166), null);
-                            paint.setTextSize(10);
-                            canvas.drawText(barcode, 32, 188, paint);
-                            pdf.finishPage(page);
-                            pdf.writeTo(output);
-                            callback.onWriteFinished(new PageRange[] {new PageRange(0, 0)});
+                            for (int index = 0; index < pageCount; index++) {
+                                if (cancellation.isCanceled()) {
+                                    callback.onWriteCancelled();
+                                    return;
+                                }
+                                boolean include = false;
+                                for (PageRange range : ranges)
+                                    if (range.getStart() <= index && range.getEnd() >= index)
+                                        include = true;
+                                if (!include) continue;
+                                PdfDocument.Page page =
+                                        pdf.startPage(
+                                                new PdfDocument.PageInfo.Builder(
+                                                                595, 842, index + 1)
+                                                        .create());
+                                Canvas canvas = page.getCanvas();
+                                Paint paint = new Paint(Paint.ANTI_ALIAS_FLAG);
+                                paint.setColor(Color.BLACK);
+                                for (int i = index * 5;
+                                        i < Math.min(labels.size(), index * 5 + 5);
+                                        i++) {
+                                    int top = 28 + (i % 5) * 156;
+                                    paint.setTextSize(11);
+                                    canvas.drawText("LIBRARY ONLINE", 32, top + 12, paint);
+                                    canvas.drawBitmap(
+                                            labels.get(i),
+                                            null,
+                                            new Rect(32, top + 20, 563, top + 110),
+                                            null);
+                                    paint.setTextSize(9);
+                                    canvas.drawText(barcodes.get(i), 32, top + 128, paint);
+                                }
+                                pdf.finishPage(page);
+                                written.add(new PageRange(index, index));
+                            }
+                            if (!written.isEmpty()) pdf.writeTo(output);
+                            callback.onWriteFinished(written.toArray(new PageRange[0]));
                         } catch (Exception error) {
+                            android.util.Log.e("BarcodeLabels", "Không thể tạo tài liệu nhãn.", error);
                             callback.onWriteFailed("Không lưu được nhãn mã vạch.");
                         } finally {
                             pdf.close();

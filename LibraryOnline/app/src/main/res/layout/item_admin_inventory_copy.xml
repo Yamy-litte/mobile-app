@@ -1,52 +1,17 @@
 <?xml version="1.0" encoding="utf-8"?>
 <LinearLayout
     xmlns:android="http://schemas.android.com/apk/res/android"
-    android:layout_width="match_parent"
-    android:layout_height="wrap_content"
-    android:layout_marginBottom="12dp"
-    android:padding="12dp"
-    android:orientation="vertical"
-    android:background="@drawable/bg_reader_book_card">
+    style="@style/InventoryCard"
+    android:orientation="vertical">
     <TextView
         android:id="@+id/copyLabel"
-        style="@style/CatalogueBody"
-        android:textStyle="bold" />
+        style="@style/InventoryText"
+        android:textStyle="bold"/>
     <TextView
         android:id="@+id/copyMetadata"
-        style="@style/CatalogueCaption"
-        android:layout_marginTop="6dp" />
-    <LinearLayout
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:orientation="horizontal">
-        <Button
-            android:id="@+id/copyShelf"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:minHeight="48dp"
-            android:text="@string/stock_location" />
-        <Button
-            android:id="@+id/copyBarcode"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:minHeight="48dp"
-            android:text="@string/stock_barcode" />
-    </LinearLayout>
-    <LinearLayout
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:orientation="horizontal">
-        <Button
-            android:id="@+id/copyHide"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:minHeight="48dp"
-            android:text="@string/stock_hide" />
-        <Button
-            android:id="@+id/copyRetire"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:minHeight="48dp"
-            android:text="@string/stock_retire" />
-    </LinearLayout>
+        style="@style/InventoryCaption"/>
+    <com.google.android.material.button.MaterialButton
+        android:id="@+id/copyShelf"
+        style="@style/InventoryOutline"
+        android:text="@string/inventory_ui_copy_detail"/>
 </LinearLayout>

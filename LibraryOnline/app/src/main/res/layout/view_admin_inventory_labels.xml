@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical">
+    <TextView
+        style="@style/InventorySection"
+        android:text="@string/inventory_ui_labels_success"
+        android:textColor="@color/library_success"/>
+    <include layout="@layout/view_admin_inventory_book_summary"/>
+    <TextView
+        style="@style/InventoryCaption"
+        android:text="@string/inventory_ui_labels_note"/>
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:id="@+id/labelItems"/>
+    <com.google.android.material.button.MaterialButton
+        android:id="@+id/labelsPrint"
+        style="@style/InventoryPrimary"
+        android:text="@string/inventory_ui_print_all"/>
+    <com.google.android.material.button.MaterialButton
+        android:id="@+id/labelsDone"
+        style="@style/InventoryOutline"
+        android:text="@string/inventory_ui_back_stock"/>
+</LinearLayout>

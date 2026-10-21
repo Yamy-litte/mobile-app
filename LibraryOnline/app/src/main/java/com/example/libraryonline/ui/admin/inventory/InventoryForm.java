@@ -14,6 +14,7 @@ import java.util.*;
 public final class InventoryForm {
     public final View view;
     private final List<CategoryDao.Category> categories;
+    private String draftCategoryId;
     private final int[] fields = {
         R.id.formTitle,
         R.id.formAuthor,
@@ -24,9 +25,14 @@ public final class InventoryForm {
         R.id.formDescription
     };
 
+    private static final String[] DRAFT_KEYS = {
+        "title", "author", "publisher", "year", "isbn", "coverUrl", "description"
+    };
+
     public InventoryForm(Context context, List<CategoryDao.Category> categories, BookTitle book) {
         this.categories = new ArrayList<>(categories);
-        view = LayoutInflater.from(context).inflate(R.layout.dialog_admin_inventory_title, null);
+        draftCategoryId = book == null ? null : book.categoryId;
+        view = LayoutInflater.from(context).inflate(R.layout.view_admin_inventory_editor, null);
         List<String> names = new ArrayList<>();
         for (CategoryDao.Category c : categories) names.add(c.name);
         Spinner spinner = view.findViewById(R.id.formCategory);
@@ -34,6 +40,20 @@ public final class InventoryForm {
                 new ArrayAdapter<>(context, android.R.layout.simple_spinner_item, names);
         adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
         spinner.setAdapter(adapter);
+        view.findViewById(R.id.editorSummary)
+                .setVisibility(book == null ? View.GONE : View.VISIBLE);
+        view.findViewById(R.id.editorIdentity)
+                .setVisibility(book == null ? View.GONE : View.VISIBLE);
+        view.findViewById(R.id.editorInitialStock)
+                .setVisibility(book == null ? View.VISIBLE : View.GONE);
+        view.findViewById(R.id.editorManageCopies)
+                .setVisibility(book == null ? View.GONE : View.VISIBLE);
+        ((TextView) view.findViewById(R.id.editorBookId))
+                .setText(book == null ? "Được tạo sau khi lưu" : book.bookTitleId);
+        ((TextView) view.findViewById(R.id.editorSave))
+                .setText(book == null ? R.string.inventory_ui_save_create : R.string.stock_save);
+        view.findViewById(R.id.editorCoverPreview).setOnClickListener(v -> previewCover());
+        if (book != null) InventoryViews.bindSummary(view, book);
         if (book != null) {
             String[] values = {
                 book.title,
@@ -83,17 +103,23 @@ public final class InventoryForm {
 
     public android.os.Bundle saveDraft() {
         android.os.Bundle draft = new android.os.Bundle();
-        for (int id : fields) draft.putString(Integer.toString(id), value(id));
+        for (int i = 0; i < fields.length; i++) draft.putString(DRAFT_KEYS[i], value(fields[i]));
         int position = ((Spinner) view.findViewById(R.id.formCategory)).getSelectedItemPosition();
         if (position >= 0 && position < categories.size())
-            draft.putString("categoryId", categories.get(position).categoryId);
+            draftCategoryId = categories.get(position).categoryId;
+        draft.putString("categoryId", draftCategoryId);
         return draft;
     }
 
     public void restoreDraft(android.os.Bundle draft) {
         if (draft == null) return;
-        for (int id : fields)
-            ((EditText) view.findViewById(id)).setText(draft.getString(Integer.toString(id), ""));
+        draftCategoryId = draft.getString("categoryId");
+        for (int i = 0; i < fields.length; i++)
+            ((EditText) view.findViewById(fields[i]))
+                    .setText(
+                            draft.getString(
+                                    DRAFT_KEYS[i],
+                                    draft.getString(Integer.toString(fields[i]), "")));
         Spinner spinner = view.findViewById(R.id.formCategory);
         spinner.setSelection(-1);
         for (int i = 0; i < categories.size(); i++)
@@ -125,6 +151,27 @@ public final class InventoryForm {
                                 changed.run();
                             }
                         });
+    }
+
+    private void previewCover() {
+        String url = value(R.id.formCover);
+        try {
+            if (!url.isEmpty()) {
+                java.net.URI parsed = new java.net.URI(url);
+                if (!"https".equalsIgnoreCase(parsed.getScheme()) || parsed.getHost() == null)
+                    throw new IllegalArgumentException("Ảnh bìa phải là địa chỉ HTTPS hợp lệ.");
+            }
+            view.findViewById(R.id.editorSummary).setVisibility(View.VISIBLE);
+            BookTitle preview = new BookTitle();
+            preview.title = value(R.id.formTitle);
+            preview.author = value(R.id.formAuthor);
+            preview.coverUrl = url;
+            InventoryViews.bindSummary(view, preview);
+            view.findViewById(R.id.summaryCounts).setVisibility(View.GONE);
+            ((EditText) view.findViewById(R.id.formCover)).setError(null);
+        } catch (Exception error) {
+            ((EditText) view.findViewById(R.id.formCover)).setError("Nhập URL ảnh HTTPS hợp lệ.");
+        }
     }
 
     public void setEnabled(boolean enabled) {

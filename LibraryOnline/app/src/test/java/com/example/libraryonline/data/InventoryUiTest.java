@@ -30,4 +30,11 @@ public class InventoryUiTest {
         assertEquals("Đang nhập dở",((EditText)restored.view.findViewById(R.id.formTitle)).getText().toString());
         assertEquals("0",((EditText)restored.view.findViewById(R.id.formYear)).getText().toString());
     }
+    @Test public void categoryDraftSurvivesWhileCatalogueIsStillLoading(){
+        InventoryForm first=new InventoryForm(activity,Arrays.asList(new CategoryDao.Category("cat","Thể loại",true)),null);
+        android.os.Bundle saved=first.saveDraft();
+        InventoryForm loading=new InventoryForm(activity,Collections.emptyList(),null);loading.restoreDraft(saved);
+        InventoryForm ready=new InventoryForm(activity,Arrays.asList(new CategoryDao.Category("cat","Thể loại",true)),null);ready.restoreDraft(loading.saveDraft());
+        assertEquals(0,((Spinner)ready.view.findViewById(R.id.formCategory)).getSelectedItemPosition());
+    }
 }

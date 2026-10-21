@@ -121,4 +121,22 @@ public class InventoryEmulatorTest {
         BookTitle other=book();model.submit("create",other.bookTitleId,other,new StockIntake(1,"C"),null,uid);settle(model);
         assertFalse(model.hasPending());assertTrue(await(db.collection("BookTitles").document(other.bookTitleId).get()).exists());
     }
+    @Test public void successfulIntakePublishesRestorableReceiptUsingActualCopyIds() throws Exception {
+        String uid=FirebaseAuth.getInstance(app).getCurrentUser().getUid();
+        com.example.libraryonline.ui.admin.inventory.InventoryViewModel model=new com.example.libraryonline.ui.admin.inventory.InventoryViewModel(repo);
+        model.attach(RuntimeEnvironment.getApplication(),uid);
+        BookTitle title=book();StockIntake intake=new StockIntake(2,"C1");
+        model.submit("create",title.bookTitleId,title,intake,null,uid);settle(model);
+        assertFalse(model.hasPending());assertNotNull(model.completionId);
+        assertEquals(intake.operationId,model.completedIntake.operationId);
+        android.os.Bundle saved=new android.os.Bundle();model.save(saved);
+        com.example.libraryonline.ui.admin.inventory.InventoryViewModel restored=new com.example.libraryonline.ui.admin.inventory.InventoryViewModel(repo);restored.restore(saved);
+        assertEquals(model.completionId,restored.completionId);
+        for(int i=0;i<2;i++){
+            DocumentSnapshot copy=await(db.collection("BookCopies").document(restored.completedIntake.copyId(i)).get());
+            assertTrue(copy.exists());assertEquals(title.bookTitleId,copy.getString("bookTitleId"));
+            assertEquals(intake.barcode(i),copy.getString("barcode"));
+        }
+    }
+
 }

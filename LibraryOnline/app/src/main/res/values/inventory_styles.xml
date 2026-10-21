@@ -1,0 +1,77 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <style
+        name="InventoryText"
+        parent="CatalogueBody">
+        <item name="android:textSize">14sp</item>
+        <item name="android:layout_marginBottom">6dp</item>
+    </style>
+    <style
+        name="InventoryCaption"
+        parent="InventoryText">
+        <item name="android:textSize">12sp</item>
+        <item name="android:textColor">@color/library_muted</item>
+    </style>
+    <style
+        name="InventorySection"
+        parent="InventoryText">
+        <item name="android:textSize">18sp</item>
+        <item name="android:fontFamily">serif</item>
+        <item name="android:textStyle">bold</item>
+        <item name="android:layout_marginBottom">14dp</item>
+    </style>
+    <style name="InventoryCard">
+        <item name="android:layout_width">match_parent</item>
+        <item name="android:layout_height">wrap_content</item>
+        <item name="android:padding">16dp</item>
+        <item name="android:layout_marginBottom">14dp</item>
+        <item name="android:background">@drawable/bg_reader_book_card</item>
+    </style>
+    <style
+        name="InventoryInput"
+        parent="CatalogueInput">
+        <item name="android:textSize">14sp</item>
+        <item name="android:minHeight">48dp</item>
+        <item name="android:singleLine">true</item>
+    </style>
+    <style
+        name="InventoryPrimary"
+        parent="Widget.Material3.Button">
+        <item name="android:layout_width">match_parent</item>
+        <item name="android:layout_height">wrap_content</item>
+        <item name="android:minHeight">48dp</item>
+        <item name="android:textSize">13sp</item>
+        <item name="cornerRadius">10dp</item>
+        <item name="android:layout_marginBottom">8dp</item>
+    </style>
+    <style
+        name="InventoryOutline"
+        parent="Widget.Material3.Button.OutlinedButton">
+        <item name="android:layout_width">match_parent</item>
+        <item name="android:layout_height">wrap_content</item>
+        <item name="android:minHeight">48dp</item>
+        <item name="android:textSize">12sp</item>
+        <item name="cornerRadius">10dp</item>
+    </style>
+    <style
+        name="InventoryHalf"
+        parent="InventoryOutline">
+        <item name="android:layout_width">0dp</item>
+        <item name="android:layout_weight">1</item>
+        <item name="android:insetLeft">0dp</item>
+        <item name="android:insetRight">0dp</item>
+        <item name="android:paddingStart">4dp</item>
+        <item name="android:paddingEnd">4dp</item>
+    </style>
+    <style
+        name="InventoryError"
+        parent="InventoryCaption">
+        <item name="android:textColor">@color/library_danger</item>
+        <item name="android:accessibilityLiveRegion">polite</item>
+        <item name="android:visibility">gone</item>
+    </style>
+    <style name="InventoryFabShape">
+        <item name="cornerFamily">rounded</item>
+        <item name="cornerSize">50%</item>
+    </style>
+</resources>

@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    style="@style/InventoryCard"
+    android:orientation="vertical">
+    <TextView
+        style="@style/InventoryCaption"
+        android:text="@string/inventory_ui_library"
+        android:gravity="center"/>
+    <TextView
+        android:id="@+id/labelTitle"
+        style="@style/InventoryText"
+        android:textStyle="bold"
+        android:gravity="center"/>
+    <ImageView
+        android:id="@+id/labelBarcodeImage"
+        android:layout_width="match_parent"
+        android:layout_height="72dp"
+        android:adjustViewBounds="true"
+        android:contentDescription="@string/stock_barcode"/>
+    <TextView
+        android:id="@+id/labelBarcode"
+        style="@style/InventoryCaption"
+        android:gravity="center"/>
+    <TextView
+        android:id="@+id/labelShelf"
+        style="@style/InventoryCaption"
+        android:gravity="center"/>
+</LinearLayout>
