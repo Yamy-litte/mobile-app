@@ -231,3 +231,158 @@ exports.rejectRegistration = onCall({ secrets: [smtpUser, smtpPass] }, async (re
   }
   return { success: true, emailSent };
 });
+
+const SAMPLE_BOOKS = [
+  {
+    "bookTitleId": "BOOK001",
+    "title": "Sapiens: Lược sử loài người",
+    "author": "Yuval Noah Harari",
+    "isbn": "9780062315007",
+    "category": "Lịch sử",
+    "publisher": "Harper",
+    "publishYear": 2015,
+    "description": "Hành trình nhìn lại lịch sử loài người từ thời đồ đá đến thế giới hiện đại.",
+    "coverUrl": "https://covers.openlibrary.org/b/isbn/9780062315007-L.jpg",
+    "totalCopies": 4,
+    "availableCopies": 4,
+    "isHidden": false
+  },
+  {
+    "bookTitleId": "BOOK002",
+    "title": "Atomic Habits: Thay đổi tí hon, hiệu quả bất ngờ",
+    "author": "James Clear",
+    "isbn": "9780735211292",
+    "category": "Tâm lý",
+    "publisher": "Avery",
+    "publishYear": 2018,
+    "description": "Phương pháp xây dựng thói quen tốt bằng những thay đổi nhỏ và bền vững.",
+    "coverUrl": "https://covers.openlibrary.org/b/isbn/9780735211292-L.jpg",
+    "totalCopies": 5,
+    "availableCopies": 4,
+    "isHidden": false
+  },
+  {
+    "bookTitleId": "BOOK003",
+    "title": "Đắc Nhân Tâm",
+    "author": "Dale Carnegie",
+    "isbn": "9780671027032",
+    "category": "Tâm lý",
+    "publisher": "Simon & Schuster",
+    "publishYear": 1998,
+    "description": "Những nguyên tắc giao tiếp và xây dựng quan hệ giữa người với người.",
+    "coverUrl": "https://covers.openlibrary.org/b/isbn/9780671027032-L.jpg",
+    "totalCopies": 6,
+    "availableCopies": 5,
+    "isHidden": false
+  },
+  {
+    "bookTitleId": "BOOK004",
+    "title": "1984",
+    "author": "George Orwell",
+    "isbn": "9780451524935",
+    "category": "Văn học",
+    "publisher": "Signet Classics",
+    "publishYear": 1950,
+    "description": "Tiểu thuyết phản địa đàng kinh điển về quyền lực, giám sát và tự do cá nhân.",
+    "coverUrl": "https://covers.openlibrary.org/b/isbn/9780451524935-L.jpg",
+    "totalCopies": 3,
+    "availableCopies": 2,
+    "isHidden": false
+  },
+  {
+    "bookTitleId": "BOOK005",
+    "title": "Giết con chim nhại",
+    "author": "Harper Lee",
+    "isbn": "9780061120084",
+    "category": "Văn học",
+    "publisher": "Harper Perennial",
+    "publishYear": 2006,
+    "description": "Tác phẩm kinh điển về công lý, lòng trắc ẩn và tuổi thơ ở miền Nam nước Mỹ.",
+    "coverUrl": "https://covers.openlibrary.org/b/isbn/9780061120084-L.jpg",
+    "totalCopies": 4,
+    "availableCopies": 4,
+    "isHidden": false
+  },
+  {
+    "bookTitleId": "BOOK006",
+    "title": "The Great Gatsby",
+    "author": "F. Scott Fitzgerald",
+    "isbn": "9780743273565",
+    "category": "Văn học",
+    "publisher": "Scribner",
+    "publishYear": 2004,
+    "description": "Bức chân dung nước Mỹ thập niên 1920 qua giấc mơ và bi kịch của Jay Gatsby.",
+    "coverUrl": "https://covers.openlibrary.org/b/isbn/9780743273565-L.jpg",
+    "totalCopies": 3,
+    "availableCopies": 3,
+    "isHidden": false
+  },
+  {
+    "bookTitleId": "BOOK007",
+    "title": "Pride and Prejudice",
+    "author": "Jane Austen",
+    "isbn": "9780141439518",
+    "category": "Văn học",
+    "publisher": "Penguin Classics",
+    "publishYear": 2002,
+    "description": "Tiểu thuyết về tình yêu, định kiến xã hội và những lựa chọn cá nhân.",
+    "coverUrl": "https://covers.openlibrary.org/b/isbn/9780141439518-L.jpg",
+    "totalCopies": 2,
+    "availableCopies": 1,
+    "isHidden": false
+  },
+  {
+    "bookTitleId": "BOOK008",
+    "title": "The Psychology of Money",
+    "author": "Morgan Housel",
+    "isbn": "9780857197689",
+    "category": "Kinh tế",
+    "publisher": "Harriman House",
+    "publishYear": 2020,
+    "description": "Những bài học về hành vi, rủi ro và cách con người đưa ra quyết định tài chính.",
+    "coverUrl": "https://covers.openlibrary.org/b/isbn/9780857197689-L.jpg",
+    "totalCopies": 4,
+    "availableCopies": 4,
+    "isHidden": false
+  },
+  {
+    "bookTitleId": "BOOK009",
+    "title": "Clean Code",
+    "author": "Robert C. Martin",
+    "isbn": "9780132350884",
+    "category": "Công nghệ",
+    "publisher": "Prentice Hall",
+    "publishYear": 2008,
+    "description": "Các nguyên tắc thực hành để viết mã nguồn dễ đọc, dễ bảo trì và có chất lượng.",
+    "coverUrl": "https://covers.openlibrary.org/b/isbn/9780132350884-L.jpg",
+    "totalCopies": 2,
+    "availableCopies": 2,
+    "isHidden": false
+  },
+  {
+    "bookTitleId": "BOOK010",
+    "title": "A Brief History of Time",
+    "author": "Stephen Hawking",
+    "isbn": "9780553380163",
+    "category": "Khoa học",
+    "publisher": "Bantam",
+    "publishYear": 1998,
+    "description": "Giới thiệu những câu hỏi lớn của vũ trụ học như thời gian, hố đen và nguồn gốc vũ trụ.",
+    "coverUrl": "https://covers.openlibrary.org/b/isbn/9780553380163-L.jpg",
+    "totalCopies": 3,
+    "availableCopies": 3,
+    "isHidden": false
+  }
+];
+
+exports.seedSampleBooks = onCall(async (request) => {
+  await requireAdmin(request);
+  const batch = db.batch();
+  const now = FieldValue.serverTimestamp();
+  for (const book of SAMPLE_BOOKS) {
+    const ref = db.collection("BookTitles").doc(book.bookTitleId);
+    batch.set(ref, { ...book, createdAt: now, updatedAt: now }, { merge: true });
+  }
+  await batch.commit();
+  return { success: true, count: SAMPLE_BOOKS.length, collection: "BookTitles" };
+});
