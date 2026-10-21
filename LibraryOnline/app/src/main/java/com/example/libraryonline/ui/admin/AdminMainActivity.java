@@ -24,7 +24,7 @@ import com.google.firebase.firestore.FieldValue;
 import com.google.firebase.firestore.FirebaseFirestore;
 import com.google.firebase.firestore.ListenerRegistration;
 import com.google.firebase.firestore.WriteBatch;
-import com.example.libraryonline.data.remote.firebase.BookCatalogueSyncManager;
+import com.example.libraryonline.remote.firebase.BookCatalogueSyncManager;
 
 import java.text.DateFormat;
 import java.util.Date;
