@@ -199,6 +199,7 @@ public final class BookCatalogueSyncManager implements AutoCloseable {
         String normalized = java.text.Normalizer.normalize(name, java.text.Normalizer.Form.NFD)
                 .replaceAll("\\p{M}+", "")
                 .toLowerCase(Locale.ROOT)
+                .replace('đ', 'd')
                 .replaceAll("[^a-z0-9]+", "-")
                 .replaceAll("(^-|-$)", "");
         return normalized.isEmpty() ? "category" : normalized;
