@@ -124,14 +124,39 @@ public final class DatabaseHelper extends SQLiteOpenHelper {
                 "FOREIGN KEY(reviewedBy) REFERENCES Admins(adminId) ON UPDATE CASCADE ON DELETE SET NULL)");
     }
 
+    private static void createCategories(SQLiteDatabase db) {
+        db.execSQL("CREATE TABLE IF NOT EXISTS Categories (" +
+                "categoryId TEXT PRIMARY KEY NOT NULL, name TEXT NOT NULL UNIQUE, " +
+                "isActive INTEGER NOT NULL DEFAULT 1 CHECK(isActive IN (0,1)), " +
+                "createdAt TEXT NOT NULL DEFAULT (datetime('now')), " +
+                "updatedAt TEXT NOT NULL DEFAULT (datetime('now')))");
+        String[] names = {"Văn học", "Khoa học", "Lịch sử", "Tâm lý", "Kinh tế", "Công nghệ", "Khác"};
+        for (String name : names) {
+            String id = com.example.libraryonline.data.local.dao.CategoryDao.idForName(name);
+            db.execSQL("INSERT OR IGNORE INTO Categories(categoryId,name) VALUES(?,?)",
+                    new Object[]{id, name});
+        }
+    }
+
+    private static void createCategoryIntegrityTriggers(SQLiteDatabase db) {
+        db.execSQL("CREATE TRIGGER IF NOT EXISTS trg_booktitles_category_insert " +
+                "BEFORE INSERT ON BookTitles WHEN NEW.categoryId IS NOT NULL AND " +
+                "NOT EXISTS (SELECT 1 FROM Categories WHERE categoryId = NEW.categoryId) " +
+                "BEGIN SELECT RAISE(ABORT, 'Invalid BookTitles.categoryId'); END");
+        db.execSQL("CREATE TRIGGER IF NOT EXISTS trg_booktitles_category_update " +
+                "BEFORE UPDATE OF categoryId ON BookTitles WHEN NEW.categoryId IS NOT NULL AND " +
+                "NOT EXISTS (SELECT 1 FROM Categories WHERE categoryId = NEW.categoryId) " +
+                "BEGIN SELECT RAISE(ABORT, 'Invalid BookTitles.categoryId'); END");
+    }
+
     private static void createBookTitles(SQLiteDatabase db) {
         db.execSQL("CREATE TABLE BookTitles (" +
                 "bookTitleId TEXT PRIMARY KEY NOT NULL, title TEXT NOT NULL, author TEXT, " +
-                "isbn TEXT, category TEXT, publisher TEXT, publishYear INTEGER, description TEXT, " +
+                "isbn TEXT, categoryId TEXT, category TEXT, publisher TEXT, publishYear INTEGER, description TEXT, " +
                 "coverUrl TEXT, totalCopies INTEGER NOT NULL DEFAULT 0 CHECK(totalCopies >= 0), " +
                 "availableCopies INTEGER NOT NULL DEFAULT 0 CHECK(availableCopies >= 0), " +
                 "isHidden INTEGER NOT NULL DEFAULT 0 CHECK(isHidden IN (0,1)), " +
-                "createdAt TEXT NOT NULL, updatedAt TEXT NOT NULL)");
+                "createdAt TEXT NOT NULL, updatedAt TEXT NOT NULL, FOREIGN KEY(categoryId) REFERENCES Categories(categoryId) ON UPDATE CASCADE ON DELETE RESTRICT)");
     }
 
     private static void createBookCopies(SQLiteDatabase db) {
