@@ -137,3 +137,33 @@ test("admin dashboard counts use existing read permissions and deny reader profi
   assert.equal(readers.data().count,2);
   await assertFails(getCountFromServer(query(collection(db("reader"),"Users"),where("role","==","Reader"))));
 });
+
+test("retirement cannot restart history or discard repair/priority copies", async () => {
+  for (const state of ["DangSuaChua","ThanhLy","DaMat"]) {
+    await env.withSecurityRulesDisabled(c => updateDoc(doc(c.firestore(),"BookCopies/copy"),{copyStatus:state,isHidden:true}));
+    await assertFails(updateDoc(doc(db("admin"),"BookCopies/copy"),{copyStatus:"SanSang",isHidden:false}));
+  }
+  await env.withSecurityRulesDisabled(c => updateDoc(doc(c.firestore(),"BookCopies/copy"),{copyStatus:"SanSang",isHidden:false,priorityUserId:"reader"}));
+  await assertFails(updateDoc(doc(db("admin"),"BookCopies/copy"),{copyStatus:"ThanhLy",isHidden:true}));
+});
+test("hiding or retiring a ready copy must decrement parent atomically", async () => {
+  const d=db("admin");
+  await assertFails(updateDoc(doc(d,"BookCopies/copy"),{copyStatus:"ThanhLy",isHidden:true}));
+  const b=writeBatch(d);
+  b.update(doc(d,"BookCopies/copy"),{copyStatus:"ThanhLy",isHidden:true});
+  b.update(doc(d,"BookTitles/book"),{availableCopies:0});
+  await assertSucceeds(b.commit());
+  const parent=await getDoc(doc(d,"BookTitles/book"));
+  require("node:assert/strict").equal(parent.data().totalCopies,1);
+});
+test("five-copy intake fits access budget and invalid child rolls back parent", async () => {
+  const d=db("admin"), b=writeBatch(d);
+  b.update(doc(d,"BookTitles/book"),{totalCopies:6,availableCopies:6});
+  for(let i=0;i<5;i++)b.set(doc(d,`BookCopies/intake-${i}`),{...copy,barcode:`BOOK-${i+2}`});
+  await assertSucceeds(b.commit());
+  const bad=writeBatch(d);
+  bad.update(doc(d,"BookTitles/book"),{totalCopies:7,availableCopies:7});
+  bad.set(doc(d,"BookCopies/bad"),{...copy,copyStatus:"Invented"});
+  await assertFails(bad.commit());
+  require("node:assert/strict").equal((await getDoc(doc(d,"BookTitles/book"))).data().totalCopies,6);
+});

@@ -14,7 +14,7 @@
     <string name="admin_reset">Yêu cầu khôi phục mật khẩu</string>
     <string name="admin_reset_hint">Đối chiếu hồ sơ trước khi gửi email đặt lại mật khẩu.</string>
     <string name="admin_sync">Đồng bộ danh mục</string>
-    <string name="admin_sync_hint">Cập nhật danh mục sách trên thiết bị và thư viện.</string>
+    <string name="admin_sync_hint">Tải danh mục thư viện về thiết bị.</string>
     <string name="admin_account">Tài khoản</string>
     <string name="admin_home">Trang chủ</string>
     <string name="admin_approvals">Duyệt thẻ</string>

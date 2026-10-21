@@ -86,6 +86,9 @@ public class AdminMainActivity extends com.example.libraryonline.ui.auth.Session
                 else {setEnabled(false);getOnBackPressedDispatcher().onBackPressed();setEnabled(true);}
             }
         });
+        findViewById(R.id.actionAdminInventory).setOnClickListener(v -> {
+            if(isSessionReady())startActivity(new android.content.Intent(this,InventoryActivity.class));
+        });
         bindCatalogueSyncButton();
         findViewById(R.id.actionAdminSync).setOnClickListener(v -> {if(isSessionReady() && syncButton.isEnabled())syncButton.performClick();});
         findViewById(R.id.buttonAdminRefresh).setOnClickListener(v -> {if(isSessionReady()){loadDashboard();stopRequestListeners();startRequests();}});
@@ -159,7 +162,7 @@ public class AdminMainActivity extends com.example.libraryonline.ui.auth.Session
         syncButton=findViewById(R.id.buttonAdminSync);
         syncButton.setOnClickListener(v -> privateDialog()
                 .setTitle(R.string.admin_sync)
-                .setMessage("Cập nhật danh mục sách trên thiết bị và gửi những sách mới trên thiết bị lên thư viện. Dữ liệu hiện có của thư viện được ưu tiên.")
+                .setMessage("Tải danh mục Firebase về thiết bị. Thêm và thay đổi sách qua mục Quản lý kho để giữ số lượng nhất quán.")
                 .setNegativeButton("Hủy", (dialog, which) -> dialog.dismiss())
                 .setPositiveButton("Đồng bộ", (dialog, which) -> {
                     if(!isSessionReady())return;
@@ -191,8 +194,7 @@ public class AdminMainActivity extends com.example.libraryonline.ui.auth.Session
                             });
                         }
                     };
-                    catalogueSyncManager.start(null);
-                    catalogueSyncManager.syncLocalToCloud(syncListener);
+                    catalogueSyncManager.start(syncListener);
                 }).show());
     }
 

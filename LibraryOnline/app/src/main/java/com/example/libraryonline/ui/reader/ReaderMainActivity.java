@@ -56,7 +56,7 @@ public class ReaderMainActivity extends com.example.libraryonline.ui.auth.Sessio
     private final List<BookTitle> books = new ArrayList<>();
     private final ExecutorService catalogueExecutor = Executors.newSingleThreadExecutor();
     private final CatalogueLoadStatus catalogueLoadStatus = new CatalogueLoadStatus();
-    private String selectedCategory = "Tất cả";
+    private String selectedCategory = "";
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -140,34 +140,27 @@ public class ReaderMainActivity extends com.example.libraryonline.ui.auth.Sessio
     }
 
     private void buildCategories() {
-        Set<String> names = new LinkedHashSet<>();
-        names.add("Tất cả");
-        names.add("Văn học");
-        names.add("Khoa học");
-        names.add("Lịch sử");
-        names.add("Tâm lý");
-        names.add("Kinh tế");
-        names.add("Công nghệ");
-        for (BookTitle book : books) {
-            String category = safe(book.category, "Khác");
-            if (!category.isEmpty()) names.add(category);
-        }
-        if (!names.contains(selectedCategory)) selectedCategory = "Tất cả";
+        java.util.Map<String,String> names=new java.util.LinkedHashMap<>();
+        names.put("", "Tất cả");
+        for(BookTitle book:books)if(book.categoryId!=null && !book.categoryId.isEmpty())
+            names.put(book.categoryId,safe(book.category,"Chưa cập nhật"));
+        if(!names.containsKey(selectedCategory))selectedCategory="";
         categoriesContainer.removeAllViews();
-        for (String name : names) {
+        for (java.util.Map.Entry<String,String> categoryEntry : names.entrySet()) {
+            String name=categoryEntry.getValue(), categoryId=categoryEntry.getKey();
             TextView chip = new TextView(this);
             chip.setText(name);
             chip.setTextSize(12);
             chip.setGravity(android.view.Gravity.CENTER);
             chip.setPadding(dp(15), 0, dp(15), 0);
-            chip.setTextColor(name.equals(selectedCategory) ? Color.WHITE : TEAL);
-            chip.setBackgroundResource(name.equals(selectedCategory)
+            chip.setTextColor(categoryId.equals(selectedCategory) ? androidx.core.content.ContextCompat.getColor(this,R.color.white) : androidx.core.content.ContextCompat.getColor(this,R.color.library_blue));
+            chip.setBackgroundResource(categoryId.equals(selectedCategory)
                     ? R.drawable.bg_reader_chip_selected : R.drawable.bg_reader_chip);
             LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(-2, dp(36));
             params.rightMargin = dp(8);
             categoriesContainer.addView(chip, params);
             chip.setOnClickListener(v -> {
-                selectedCategory = name;
+                selectedCategory = categoryId;
                 buildCategories();
                 renderBooks();
             });
@@ -237,8 +230,7 @@ public class ReaderMainActivity extends com.example.libraryonline.ui.auth.Sessio
             String title = safe(doc.title, "Chưa có tên sách");
             String author = safe(doc.author, "Chưa rõ tác giả");
             String category = safe(doc.category, "Khác");
-            if (!"Tất cả".equals(selectedCategory)
-                    && !category.toLowerCase(Locale.ROOT).contains(selectedCategory.toLowerCase(Locale.ROOT))) continue;
+            if (!selectedCategory.isEmpty() && !selectedCategory.equals(doc.categoryId)) continue;
             String searchable = (title + " " + author + " " + category + " " + safe(doc.isbn, ""))
                     .toLowerCase(Locale.ROOT);
             if (searchable.contains(query)) filtered.add(doc);
@@ -252,7 +244,7 @@ public class ReaderMainActivity extends com.example.libraryonline.ui.auth.Sessio
             empty.setText(books.isEmpty()
                     ? "Thư viện chưa có sách được công khai."
                     : "Không tìm thấy sách phù hợp với từ khóa hoặc danh mục này.");
-            empty.setTextColor(MUTED);
+            empty.setTextColor(androidx.core.content.ContextCompat.getColor(this,R.color.library_muted));
             empty.setTextSize(13);
             empty.setPadding(dp(14), dp(16), dp(14), dp(16));
             latestBooksContainer.addView(empty);
@@ -297,7 +289,7 @@ public class ReaderMainActivity extends com.example.libraryonline.ui.auth.Sessio
         long available = doc.availableCopies;
         long total = doc.totalCopies;
         availability.setText(available > 0 ? "Còn " + available + "/" + total + " cuốn" : "Tạm hết sách");
-        availability.setTextColor(available > 0 ? Color.rgb(25, 115, 77) : Color.rgb(179, 69, 57));
+        availability.setTextColor(androidx.core.content.ContextCompat.getColor(this,available > 0 ? R.color.library_success : R.color.library_muted));
 
         BookCoverLoader.load(doc.coverUrl, cover, fallback);
 
@@ -306,22 +298,8 @@ public class ReaderMainActivity extends com.example.libraryonline.ui.auth.Sessio
     }
 
     private void showBookDetails(BookTitle doc) {
-        String title = safe(doc.title, "Chi tiết sách");
-        String author = safe(doc.author, "Chưa rõ tác giả");
-        long available = doc.availableCopies;
-        long total = doc.totalCopies;
-        String message = "Tác giả: " + author
-                + "\nThể loại: " + safe(doc.category, "Chưa cập nhật")
-                + "\nNhà xuất bản: " + safe(doc.publisher, "Chưa cập nhật")
-                + "\nNăm xuất bản: " + (doc.publishYear == null ? "Chưa cập nhật" : doc.publishYear)
-                + "\nISBN: " + safe(doc.isbn, "Chưa cập nhật")
-                + "\nTình trạng: " + doc.availableCopies + "/" + doc.totalCopies + " cuốn sẵn sàng"
-                + "\n\n" + safe(doc.description, "Chưa có mô tả cho tác phẩm này.");
-        privateSupportDialog()
-                .setTitle(title)
-                .setMessage(message)
-                .setPositiveButton("Đóng", (dialog, which) -> dialog.dismiss())
-                .show();
+        if(isSessionReady())startActivity(new Intent(this,BookDetailActivity.class)
+                .putExtra(BookDetailActivity.EXTRA_BOOK_ID,doc.bookTitleId));
     }
 
     private void showAccount() {

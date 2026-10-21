@@ -60,6 +60,8 @@ dependencies {
     implementation(libs.constraintlayout)
     implementation(libs.fragment)
     implementation("com.github.bumptech.glide:glide:4.16.0")
+    // Code 128 labels only; no camera/scanner or network dependency.
+    implementation("com.google.zxing:core:3.5.3")
     implementation(libs.material)
 
     implementation(platform(libs.firebase.bom))
