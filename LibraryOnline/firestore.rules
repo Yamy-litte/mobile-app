@@ -158,6 +158,18 @@ service cloud.firestore {
       allow delete: if false;
     }
 
+    // Categories are readable by signed-in readers; only active admins can maintain them.
+    match /Categories/{categoryId} {
+      allow read: if signedIn();
+      allow create, update: if isAdmin()
+        && request.resource.data.keys().hasAll(['categoryId', 'name', 'isActive'])
+        && request.resource.data.categoryId == categoryId
+        && request.resource.data.name is string
+        && request.resource.data.name.size() > 0
+        && request.resource.data.isActive is bool;
+      allow delete: if false;
+    }
+
     // Readers can browse. Only active admins can create/update catalogue documents.
     // Deletion is logical (isHidden) so loan history is not orphaned.
     match /BookTitles/{bookTitleId} {
