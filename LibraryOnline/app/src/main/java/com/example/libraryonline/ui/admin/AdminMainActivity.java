@@ -411,16 +411,10 @@ public class AdminMainActivity extends AppCompatActivity {
                                 String fullName = value(doc, "fullName", "bạn");
                                 EmailSender.send(email,
                                         "Library Online - Kết quả đăng ký",
-                                        "Xin chào " + fullName + ",
-
-"
-                                                + "Rất tiếc, yêu cầu đăng ký thư viện của bạn chưa được chấp thuận.
-"
-                                                + "Lý do: " + reason + "
-
-"
-                                                + "Bạn có thể liên hệ thư viện để được hỗ trợ.
-"
+                                        "Xin chào " + fullName + ",\n\n"
+                                                + "Rất tiếc, yêu cầu đăng ký thư viện của bạn chưa được chấp thuận.\n"
+                                                + "Lý do: " + reason + "\n\n"
+                                                + "Bạn có thể liên hệ thư viện để được hỗ trợ.\n"
                                                 + "Đây là email tự động, vui lòng không trả lời.",
                                         (success, message) -> {
                                             if (!success) Toast.makeText(this,
@@ -534,21 +528,12 @@ public class AdminMainActivity extends AppCompatActivity {
                                 setCardActionsEnabled(reject, approve, true);
                                 EmailSender.send(email,
                                         "Library Online - Hồ sơ đã được duyệt",
-                                        "Xin chào " + fullName + ",
-
-"
-                                                + "Hồ sơ đăng ký thư viện của bạn đã được duyệt.
-"
-                                                + "Thông tin đăng nhập:
-"
-                                                + "Email: " + email + "
-"
-                                                + "Mật khẩu tạm: " + temporaryPassword + "
-
-"
-                                                + "Vì lý do bảo mật, vui lòng đổi mật khẩu ngay ở lần đăng nhập đầu tiên.
-
-"
+                                        "Xin chào " + fullName + ",\n\n"
+                                                + "Hồ sơ đăng ký thư viện của bạn đã được duyệt.\n"
+                                                + "Thông tin đăng nhập:\n"
+                                                + "Email: " + email + "\n"
+                                                + "Mật khẩu tạm: " + temporaryPassword + "\n\n"
+                                                + "Vì lý do bảo mật, vui lòng đổi mật khẩu ngay ở lần đăng nhập đầu tiên.\n\n"
                                                 + "Đây là email tự động, vui lòng không trả lời.",
                                         (success, message) -> {
                                             if (!success) Toast.makeText(this,
