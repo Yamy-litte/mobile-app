@@ -68,7 +68,7 @@ public final class BookCatalogueSyncManager implements AutoCloseable {
             for (DocumentChange change : snapshot.getDocumentChanges()) {
                 DocumentSnapshot document = change.getDocument();
                 if (change.getType() == DocumentChange.Type.REMOVED) {
-                    dao.deleteById(document.getId());
+                    dao.markHiddenById(document.getId());
                     changed++;
                 } else {
                     BookTitle book = fromDocument(document);
