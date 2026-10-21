@@ -40,6 +40,14 @@ public final class BookTitleDao {
         return db.update("BookTitles", toValues(b), "bookTitleId = ?", new String[]{b.bookTitleId});
     }
 
+    public List<BookTitle> getAll() {
+        List<BookTitle> result = new ArrayList<>();
+        try (Cursor c = db.query("BookTitles", null, null, null, null, null, "bookTitleId ASC")) {
+            while (c.moveToNext()) result.add(fromCursor(c));
+        }
+        return result;
+    }
+
     public BookTitle findById(String id) {
         try (Cursor c = db.query("BookTitles", null, "bookTitleId = ?", new String[]{id}, null, null, null, "1")) {
             return c.moveToFirst() ? fromCursor(c) : null;
