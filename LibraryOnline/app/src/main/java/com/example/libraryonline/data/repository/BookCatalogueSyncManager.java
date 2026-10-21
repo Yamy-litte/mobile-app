@@ -11,7 +11,14 @@ import com.google.firebase.firestore.DocumentChange;
 import com.google.firebase.firestore.DocumentSnapshot;
 import com.google.firebase.firestore.FirebaseFirestore;
 import com.google.firebase.firestore.ListenerRegistration;
-import com.google.firebase.firestore.QuerySnapshot;\nimport com.google.firebase.firestore.SetOptions;\nimport com.google.android.gms.tasks.Task;\nimport com.google.firebase.auth.FirebaseAuth;\nimport java.util.ArrayList;\nimport java.util.HashMap;\nimport java.util.List;\nimport java.util.Map;
+import com.google.firebase.firestore.QuerySnapshot;
+import com.google.firebase.firestore.SetOptions;
+import com.google.android.gms.tasks.Task;
+import com.google.firebase.auth.FirebaseAuth;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 
 import java.text.SimpleDateFormat;
 import java.util.Date;
@@ -22,7 +29,7 @@ import java.util.concurrent.Executors;
 /**
  * Keeps the local SQLite book catalogue in sync with the authoritative Firestore collection.
  * Cloud changes are applied incrementally so an offline/empty first snapshot cannot wipe local data.
- * This class intentionally does not upload SQLite rows: Firestore writes are admin-controlled by rules.
+ * Local-only records and repository create/update operations are uploaded under admin-only Firestore rules.
  */
 public final class BookCatalogueSyncManager implements AutoCloseable {
     public interface SyncListener {
