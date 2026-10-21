@@ -59,9 +59,9 @@ public final class BookCatalogueSyncManager implements AutoCloseable {
                         ? "Không thể đồng bộ danh mục sách." : error.getLocalizedMessage());
                 return;
             }
-            if (snapshot == null || snapshot.getDocumentChanges().isEmpty()) return;
-
-            executor.execute(() -> applyChanges(snapshot, listener));
+            if (snapshot == null) return;
+            // Always apply the complete snapshot so initial catalogue data is persisted locally.
+            executor.execute(() -> applySnapshot(snapshot, listener));
         });
     }
 
@@ -138,23 +138,17 @@ public final class BookCatalogueSyncManager implements AutoCloseable {
         return data;
     }
 
-    private void applyChanges(QuerySnapshot snapshot, SyncListener listener) {
+    private void applySnapshot(QuerySnapshot snapshot, SyncListener listener) {
         if (closed) return;
         int changed = 0;
         SQLiteDatabase db = databaseHelper.getWritableDatabase();
         db.beginTransaction();
         try {
             BookTitleDao dao = new BookTitleDao(db);
-            for (DocumentChange change : snapshot.getDocumentChanges()) {
-                DocumentSnapshot document = change.getDocument();
-                if (change.getType() == DocumentChange.Type.REMOVED) {
-                    dao.markHiddenById(document.getId());
-                    changed++;
-                } else {
-                    BookTitle book = fromDocument(document);
-                    dao.upsertFromCloud(book);
-                    changed++;
-                }
+            // Upsert every document in the complete snapshot into SQLite.
+            for (DocumentSnapshot document : snapshot.getDocuments()) {
+                dao.upsertFromCloud(fromDocument(document));
+                changed++;
             }
             db.setTransactionSuccessful();
         } catch (Exception e) {
@@ -166,7 +160,7 @@ public final class BookCatalogueSyncManager implements AutoCloseable {
         } finally {
             db.endTransaction();
         }
-        if (listener != null && changed > 0) listener.onSyncCompleted(changed);
+        if (listener != null) listener.onSyncCompleted(changed);
     }
 
     private static BookTitle fromDocument(DocumentSnapshot doc) {
