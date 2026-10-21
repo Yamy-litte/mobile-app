@@ -16,7 +16,10 @@ import com.example.libraryonline.data.local.db.DatabaseHelper;
 import com.example.libraryonline.data.model.*;
 import com.example.libraryonline.data.remote.firebase.BookCatalogueSyncManager;
 import com.example.libraryonline.data.session.*;
+import com.example.libraryonline.ui.admin.AdminHomeView;
+import com.example.libraryonline.ui.admin.AdminNavigation;
 import com.example.libraryonline.ui.auth.SessionActivity;
+import com.google.android.material.bottomnavigation.BottomNavigationView;
 
 import java.util.*;
 import java.util.concurrent.*;
@@ -34,6 +37,7 @@ public class InventoryActivity extends SessionActivity {
     private EditText search;
     private String uid;
     private long generation;
+    private boolean leaving;
 
     @Override
     protected void onCreate(Bundle state) {
@@ -49,7 +53,7 @@ public class InventoryActivity extends SessionActivity {
                             insets.getInsets(WindowInsetsCompat.Type.systemBars());
                     view.setPadding(
                             padding + bars.left, bars.top, padding + bars.right, bars.bottom);
-                    return insets;
+                    return WindowInsetsCompat.CONSUMED;
                 });
         helper = new DatabaseHelper(getApplicationContext());
         model = new ViewModelProvider(this).get(InventoryViewModel.class);
@@ -57,6 +61,26 @@ public class InventoryActivity extends SessionActivity {
         content = findViewById(R.id.inventoryContent);
         status = findViewById(R.id.inventoryStatus);
         search = findViewById(R.id.inventorySearch);
+        BottomNavigationView navigation = findViewById(R.id.adminBottomNavigation);
+        navigation.getMenu().findItem(R.id.navAdminInventory).setChecked(true);
+        navigation.setOnItemSelectedListener(
+                item -> {
+                    if (item.getItemId() == R.id.navAdminInventory) return true;
+                    if (!isSessionReady() || leaving) return false;
+                    int tab = AdminHomeView.HOME;
+                    if (item.getItemId() == R.id.navAdminRequests) tab = AdminHomeView.REQUESTS;
+                    else if (item.getItemId() == R.id.navAdminAccount) tab = AdminHomeView.ACCOUNT;
+                    else if (item.getItemId() == R.id.navAdminCirculation)
+                        tab = AdminHomeView.CIRCULATION;
+                    leaving = true;
+                    AdminNavigation.returnToMain(this, tab);
+                    return false;
+                });
+        navigation.setOnItemReselectedListener(
+                item -> {
+                    model.selectedId = null;
+                    render();
+                });
         findViewById(R.id.inventoryBack).setOnClickListener(v -> back());
         getOnBackPressedDispatcher()
                 .addCallback(
@@ -131,7 +155,10 @@ public class InventoryActivity extends SessionActivity {
         if (model.selectedId != null) {
             model.selectedId = null;
             render();
-        } else finish();
+        } else if (!leaving && isSessionReady()) {
+            leaving = true;
+            AdminNavigation.returnToMain(this, AdminHomeView.HOME);
+        }
     }
 
     private void startSync() {
@@ -164,7 +191,7 @@ public class InventoryActivity extends SessionActivity {
                                         status.setText(
                                                 cached
                                                         ? "Dữ liệu đã lưu — cần mạng để thay đổi"
-                                                              + " kho"
+                                                                + " kho"
                                                         : "Đã nhận danh mục Firebase");
                                 });
                     }
@@ -310,7 +337,7 @@ public class InventoryActivity extends SessionActivity {
                         confirm(
                                 "Ẩn đầu sách?",
                                 "Đầu sách sẽ không còn xuất hiện cho Reader. Giữ nguyên các bản"
-                                    + " sách và lịch sử.",
+                                        + " sách và lịch sử.",
                                 () -> submit("hideTitle", book.bookTitleId, null, null, null)));
         content.addView(detail);
         int count = 0;

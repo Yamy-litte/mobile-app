@@ -1,21 +1,35 @@
 package com.example.libraryonline.ui.admin;
 
 import android.app.Activity;
+import android.content.Intent;
 import android.view.View;
 import android.widget.ScrollView;
 
 import com.example.libraryonline.R;
+import com.example.libraryonline.ui.admin.inventory.InventoryActivity;
+import com.google.android.material.bottomnavigation.BottomNavigationView;
 
 /** Navigation within the existing Admin screen, with no new business operations. */
 public final class AdminHomeView {
-    public static final int HOME = 0, REQUESTS = 1, ACCOUNT = 2;
+    public static final int HOME = 0, REQUESTS = 1, ACCOUNT = 2, CIRCULATION = 3;
     private final Activity activity;
     private final int[] panels = {R.id.adminOverview, R.id.adminRequests, R.id.adminAccount};
-    private final int[] tabs = {R.id.navAdminHome, R.id.navAdminRequests, R.id.navAdminAccount};
+    private final int[] tabs = {
+        R.id.navAdminHome, R.id.navAdminRequests, R.id.navAdminAccount, R.id.navAdminCirculation
+    };
+    private final BottomNavigationView navigation;
     private int selected;
 
     public AdminHomeView(Activity activity, int restoredTab) {
+        this(
+                activity,
+                restoredTab,
+                () -> activity.startActivity(new Intent(activity, InventoryActivity.class)));
+    }
+
+    public AdminHomeView(Activity activity, int restoredTab, Runnable openInventory) {
         this.activity = activity;
+        navigation = activity.findViewById(R.id.adminBottomNavigation);
         for (int id :
                 new int[] {
                     R.id.textAdminOverview,
@@ -25,10 +39,24 @@ public final class AdminHomeView {
                     R.id.textAdminAccountHeading
                 })
             androidx.core.view.ViewCompat.setAccessibilityHeading(activity.findViewById(id), true);
-        for (int i = 0; i < tabs.length; i++) {
-            final int tab = i;
-            activity.findViewById(tabs[i]).setOnClickListener(v -> show(tab));
-        }
+        navigation.setOnItemSelectedListener(
+                item -> {
+                    if (item.getItemId() == R.id.navAdminInventory) {
+                        openInventory.run();
+                        return false; // Selection belongs to InventoryActivity while it is visible.
+                    }
+                    for (int i = 0; i < tabs.length; i++)
+                        if (item.getItemId() == tabs[i]) {
+                            show(i);
+                            return true;
+                        }
+                    return false;
+                });
+        navigation.setOnItemReselectedListener(
+                item -> {
+                    if (item.getItemId() != R.id.navAdminCirculation)
+                        ((ScrollView) activity.findViewById(R.id.adminScroll)).smoothScrollTo(0, 0);
+                });
         activity.findViewById(R.id.buttonAdminAccount).setOnClickListener(v -> show(ACCOUNT));
         activity.findViewById(R.id.buttonAdminReview).setOnClickListener(v -> show(REQUESTS));
         activity.findViewById(R.id.actionAdminRegistrations)
@@ -57,12 +85,16 @@ public final class AdminHomeView {
     }
 
     public void show(int tab) {
-        selected = tab >= HOME && tab <= ACCOUNT ? tab : HOME;
+        selected = tab >= HOME && tab <= CIRCULATION ? tab : HOME;
         for (int i = 0; i < panels.length; i++) {
             activity.findViewById(panels[i])
                     .setVisibility(i == selected ? View.VISIBLE : View.GONE);
-            activity.findViewById(tabs[i]).setSelected(i == selected);
         }
+        activity.findViewById(R.id.adminScroll)
+                .setVisibility(selected == CIRCULATION ? View.GONE : View.VISIBLE);
+        activity.findViewById(R.id.adminCirculation)
+                .setVisibility(selected == CIRCULATION ? View.VISIBLE : View.GONE);
+        navigation.getMenu().findItem(tabs[selected]).setChecked(true);
         ((ScrollView) activity.findViewById(R.id.adminScroll)).scrollTo(0, 0);
     }
 }

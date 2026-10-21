@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <style
+        name="LibraryBottomNavigation"
+        parent="Widget.Material3.BottomNavigationView">
+        <item name="android:layout_width">match_parent</item>
+        <item name="android:layout_height">72dp</item>
+        <item name="android:background">@color/library_surface</item>
+        <item name="elevation">0dp</item>
+        <item name="itemIconSize">24dp</item>
+        <item name="itemIconTint">@color/navigation_item</item>
+        <item name="itemTextColor">@color/navigation_item</item>
+        <item name="labelVisibilityMode">labeled</item>
+        <item name="itemHorizontalTranslationEnabled">false</item>
+        <item name="itemActiveIndicatorStyle">@null</item>
+        <item name="itemTextAppearanceActive">@style/LibraryNavigationTextActive</item>
+        <item name="itemTextAppearanceInactive">@style/LibraryNavigationText</item>
+    </style>
+    <style
+        name="LibraryNavigationText"
+        parent="TextAppearance.Material3.LabelSmall">
+        <item name="android:textSize">11sp</item>
+        <item name="android:textStyle">normal</item>
+    </style>
+    <style
+        name="LibraryNavigationTextActive"
+        parent="LibraryNavigationText">
+        <item name="android:textStyle">bold</item>
+    </style>
+</resources>

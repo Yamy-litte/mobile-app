@@ -1,7 +1,6 @@
 package com.example.libraryonline.ui.reader;
 
 import android.content.Intent;
-import android.graphics.Color;
 import android.os.Bundle;
 import android.text.Editable;
 import android.text.TextWatcher;
@@ -35,8 +34,7 @@ import java.util.concurrent.Executors;
  * Activity handles profile/catalogue data and user interactions only.
  */
 public class ReaderMainActivity extends com.example.libraryonline.ui.auth.SessionActivity {
-    private static final int TEAL = Color.rgb(23, 102, 91);
-    private static final int MUTED = Color.rgb(124, 141, 134);
+    private ReaderHomeView homeView;
 
     private FirebaseFirestore firestore;
     private FirebaseAuth auth;
@@ -59,6 +57,42 @@ public class ReaderMainActivity extends com.example.libraryonline.ui.auth.Sessio
         firestore = FirebaseFirestore.getInstance();
         setContentView(R.layout.activity_reader_main);
 
+        androidx.core.view.WindowCompat.setDecorFitsSystemWindows(getWindow(), false);
+        androidx.core.view.ViewCompat.setOnApplyWindowInsetsListener(
+                findViewById(R.id.readerRoot),
+                (view, insets) -> {
+                    androidx.core.graphics.Insets bars =
+                            insets.getInsets(
+                                    androidx.core.view.WindowInsetsCompat.Type.systemBars());
+                    view.setPadding(bars.left, bars.top, bars.right, bars.bottom);
+                    return androidx.core.view.WindowInsetsCompat.CONSUMED;
+                });
+        homeView =
+                new ReaderHomeView(
+                        this,
+                        savedInstanceState == null
+                                ? getIntent()
+                                        .getIntExtra(
+                                                ReaderNavigation.EXTRA_TAB, ReaderHomeView.HOME)
+                                : savedInstanceState.getInt("readerTab", ReaderHomeView.HOME));
+        getIntent().removeExtra(ReaderNavigation.EXTRA_TAB);
+        getOnBackPressedDispatcher()
+                .addCallback(
+                        this,
+                        new androidx.activity.OnBackPressedCallback(true) {
+                            @Override
+                            public void handleOnBackPressed() {
+                                if (homeView.onBack()) return;
+                                setEnabled(false);
+                                getOnBackPressedDispatcher().onBackPressed();
+                                setEnabled(true);
+                            }
+                        });
+        findViewById(R.id.readerAccountLogout)
+                .setOnClickListener(
+                        v -> {
+                            if (isSessionReady()) logoutSession();
+                        });
         bindViews();
         bindActions();
         buildCategories();
@@ -72,6 +106,7 @@ public class ReaderMainActivity extends com.example.libraryonline.ui.auth.Sessio
     @Override
     protected void onSessionAuthorized(
             com.example.libraryonline.data.session.SessionProfile profile) {
+        homeView.bindProfile(profile);
         loadReaderProfile();
         if (databaseHelper == null) databaseHelper = new DatabaseHelper(getApplicationContext());
         loadBooksFromSqlite();
@@ -126,26 +161,6 @@ public class ReaderMainActivity extends com.example.libraryonline.ui.auth.Sessio
     }
 
     private void bindActions() {
-        findViewById(R.id.buttonReaderAccount).setOnClickListener(v -> showAccount());
-        findViewById(R.id.navReaderHome)
-                .setOnClickListener(
-                        v ->
-                                ((android.widget.ScrollView) findViewById(R.id.readerScroll))
-                                        .smoothScrollTo(0, 0));
-        findViewById(R.id.navReaderLoans)
-                .setOnClickListener(
-                        v ->
-                                showMessage(
-                                        "Màn hình mượn sách sẽ được nối với phiếu mượn trong bước"
-                                            + " nghiệp vụ mượn/trả."));
-        findViewById(R.id.navReaderNotifications)
-                .setOnClickListener(
-                        v ->
-                                showMessage(
-                                        "Màn hình thông báo sẽ hiển thị thông báo mượn, trả và hạn"
-                                            + " trả khi được nối dữ liệu."));
-        findViewById(R.id.navReaderAccount).setOnClickListener(v -> showAccount());
-
         searchInput.addTextChangedListener(
                 new TextWatcher() {
                     @Override
@@ -362,43 +377,18 @@ public class ReaderMainActivity extends com.example.libraryonline.ui.auth.Sessio
                             .putExtra(BookDetailActivity.EXTRA_BOOK_ID, doc.bookTitleId));
     }
 
-    private void showAccount() {
-        FirebaseUser user = auth.getCurrentUser();
-        if (user == null) {
-            goToLogin();
-            return;
-        }
-        firestore
-                .collection("Users")
-                .document(user.getUid())
-                .get()
-                .addOnSuccessListener(
-                        doc -> {
-                            if (!isSessionReady()) return;
-                            String message =
-                                    "Họ tên: "
-                                            + value(doc, "fullName", "Độc giả")
-                                            + "\nEmail: "
-                                            + value(
-                                                    doc,
-                                                    "email",
-                                                    user.getEmail() == null ? "" : user.getEmail())
-                                            + "\nMã thẻ: "
-                                            + value(doc, "barcode", "Chưa cấp")
-                                            + "\nTrạng thái thẻ: "
-                                            + value(doc, "cardStatus", "Chưa rõ");
-                            privateSupportDialog()
-                                    .setTitle("Tài khoản độc giả")
-                                    .setMessage(message)
-                                    .setNeutralButton("Đăng xuất", (dialog, which) -> logout())
-                                    .setPositiveButton("Đóng", (dialog, which) -> dialog.dismiss())
-                                    .show();
-                        })
-                .addOnFailureListener(e -> showMessage("Không tải được thông tin tài khoản."));
+    @Override
+    protected void onNewIntent(Intent intent) {
+        super.onNewIntent(intent);
+        setIntent(intent);
+        homeView.show(intent.getIntExtra(ReaderNavigation.EXTRA_TAB, ReaderHomeView.HOME));
+        intent.removeExtra(ReaderNavigation.EXTRA_TAB);
     }
 
-    private void logout() {
-        logoutSession();
+    @Override
+    protected void onSaveInstanceState(Bundle state) {
+        state.putInt("readerTab", homeView.selectedTab());
+        super.onSaveInstanceState(state);
     }
 
     private void goToLogin() {
@@ -407,6 +397,7 @@ public class ReaderMainActivity extends com.example.libraryonline.ui.auth.Sessio
 
     @Override
     protected void onSessionStopped() {
+        if (homeView != null) homeView.clearProfile();
         if (catalogueSyncManager != null) {
             catalogueSyncManager.close();
             catalogueSyncManager = null;

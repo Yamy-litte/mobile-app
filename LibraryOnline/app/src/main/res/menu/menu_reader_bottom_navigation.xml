@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<menu xmlns:android="http://schemas.android.com/apk/res/android">
+    <item
+        android:id="@+id/navReaderHome"
+        android:title="@string/nav_home"
+        android:icon="@drawable/ic_admin_home" />
+    <item
+        android:id="@+id/navReaderLoans"
+        android:title="@string/nav_loans"
+        android:icon="@drawable/ic_nav_book" />
+    <item
+        android:id="@+id/navReaderNotifications"
+        android:title="@string/nav_notifications"
+        android:icon="@drawable/ic_nav_bell" />
+    <item
+        android:id="@+id/navReaderAccount"
+        android:title="@string/nav_account"
+        android:icon="@drawable/ic_admin_account" />
+</menu>

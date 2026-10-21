@@ -35,6 +35,7 @@ public class AdminMainActivity extends com.example.libraryonline.ui.auth.Session
     private FirebaseFirestore firestore;
     private FirebaseAuth auth;
     private FirebaseAuth secondaryAuth;
+    private boolean inventoryOpening;
     private LinearLayout requestsContainer;
     private TextView pendingCount, emptyMessage;
     private ProgressBar progress;
@@ -76,8 +77,11 @@ public class AdminMainActivity extends com.example.libraryonline.ui.auth.Session
                 new AdminHomeView(
                         this,
                         savedInstanceState == null
-                                ? AdminHomeView.HOME
-                                : savedInstanceState.getInt("adminTab", AdminHomeView.HOME));
+                                ? getIntent()
+                                        .getIntExtra(AdminNavigation.EXTRA_TAB, AdminHomeView.HOME)
+                                : savedInstanceState.getInt("adminTab", AdminHomeView.HOME),
+                        this::openInventory);
+        getIntent().removeExtra(AdminNavigation.EXTRA_TAB);
         androidx.core.view.ViewCompat.setOnApplyWindowInsetsListener(
                 findViewById(R.id.adminRoot),
                 (view, insets) -> {
@@ -85,7 +89,7 @@ public class AdminMainActivity extends com.example.libraryonline.ui.auth.Session
                             insets.getInsets(
                                     androidx.core.view.WindowInsetsCompat.Type.systemBars());
                     view.setPadding(bars.left, bars.top, bars.right, bars.bottom);
-                    return insets;
+                    return androidx.core.view.WindowInsetsCompat.CONSUMED;
                 });
         getOnBackPressedDispatcher()
                 .addCallback(
@@ -102,13 +106,7 @@ public class AdminMainActivity extends com.example.libraryonline.ui.auth.Session
                                 }
                             }
                         });
-        findViewById(R.id.actionAdminInventory)
-                .setOnClickListener(
-                        v -> {
-                            if (isSessionReady())
-                                startActivity(
-                                        new android.content.Intent(this, InventoryActivity.class));
-                        });
+        findViewById(R.id.actionAdminInventory).setOnClickListener(v -> openInventory());
         bindCatalogueSyncButton();
         findViewById(R.id.actionAdminSync)
                 .setOnClickListener(
@@ -133,6 +131,26 @@ public class AdminMainActivity extends com.example.libraryonline.ui.auth.Session
                             startRequests();
                         });
         findViewById(R.id.buttonAdminLogout).setOnClickListener(v -> logoutSession());
+    }
+
+    private void openInventory() {
+        if (!isSessionReady() || inventoryOpening) return;
+        inventoryOpening = true;
+        startActivity(new android.content.Intent(this, InventoryActivity.class));
+    }
+
+    @Override
+    protected void onResume() {
+        super.onResume();
+        inventoryOpening = false;
+    }
+
+    @Override
+    protected void onNewIntent(android.content.Intent intent) {
+        super.onNewIntent(intent);
+        setIntent(intent);
+        homeView.show(intent.getIntExtra(AdminNavigation.EXTRA_TAB, AdminHomeView.HOME));
+        intent.removeExtra(AdminNavigation.EXTRA_TAB);
     }
 
     @Override
@@ -293,7 +311,7 @@ public class AdminMainActivity extends com.example.libraryonline.ui.auth.Session
                                 .setTitle(R.string.admin_sync)
                                 .setMessage(
                                         "Tải danh mục Firebase về thiết bị. Thêm và thay đổi sách"
-                                            + " qua mục Quản lý kho để giữ số lượng nhất quán.")
+                                                + " qua mục Quản lý kho để giữ số lượng nhất quán.")
                                 .setNegativeButton("Hủy", (dialog, which) -> dialog.dismiss())
                                 .setPositiveButton(
                                         "Đồng bộ",
@@ -448,7 +466,7 @@ public class AdminMainActivity extends com.example.libraryonline.ui.auth.Session
                                     if (count == 0)
                                         resetEmptyMessage.setText(
                                                 "Hiện chưa có yêu cầu quên mật khẩu đang chờ"
-                                                    + " duyệt.");
+                                                        + " duyệt.");
                                 });
     }
 
@@ -483,7 +501,7 @@ public class AdminMainActivity extends com.example.libraryonline.ui.auth.Session
                 .setTitle("Duyệt yêu cầu quên mật khẩu")
                 .setMessage(
                         "Chỉ duyệt nếu họ tên, ngày sinh và số điện thoại khớp hoàn toàn với hồ sơ"
-                            + " độc giả. Firebase sẽ gửi email đặt lại mật khẩu đến "
+                                + " độc giả. Firebase sẽ gửi email đặt lại mật khẩu đến "
                                 + email
                                 + ".")
                 .setNegativeButton("Hủy", (dialog, which) -> dialog.dismiss())
@@ -504,7 +522,7 @@ public class AdminMainActivity extends com.example.libraryonline.ui.auth.Session
                                                             reject,
                                                             approve,
                                                             "Không tìm thấy tài khoản độc giả khớp"
-                                                                + " email.");
+                                                                    + " email.");
                                                     return;
                                                 }
                                                 DocumentSnapshot user =
@@ -534,7 +552,7 @@ public class AdminMainActivity extends com.example.libraryonline.ui.auth.Session
                                                             reject,
                                                             approve,
                                                             "Thông tin không khớp hồ sơ độc giả."
-                                                                + " Chưa gửi email.");
+                                                                    + " Chưa gửi email.");
                                                     return;
                                                 }
 
@@ -1022,7 +1040,7 @@ public class AdminMainActivity extends com.example.libraryonline.ui.auth.Session
                                                                             reject,
                                                                             approve,
                                                                             "Không thể lưu hồ sơ đã"
-                                                                                + " duyệt: "
+                                                                                    + " duyệt: "
                                                                                     + error
                                                                                             .getLocalizedMessage()
                                                                                     + (deleteTask
@@ -1049,7 +1067,7 @@ public class AdminMainActivity extends com.example.libraryonline.ui.auth.Session
                                     reject,
                                     approve,
                                     "Không thể tạo tài khoản Firebase sau khi duyệt. Email có thể"
-                                        + " đã có tài khoản Auth. "
+                                            + " đã có tài khoản Auth. "
                                             + detail);
                         });
     }

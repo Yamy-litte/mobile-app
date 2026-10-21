@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="nav_home">Trang chủ</string>
+    <string name="nav_inventory">Kho sách</string>
+    <string name="nav_circulation">Mượn trả</string>
+    <string name="nav_management">Quản lý</string>
+    <string name="nav_account">Tài khoản</string>
+    <string name="nav_loans">Mượn sách</string>
+    <string name="nav_notifications">Thông báo</string>
+    <string name="nav_circulation_pending">Chức năng mượn và trả sách đang được hoàn thiện. Hiện chưa thể thực hiện giao dịch tại đây.</string>
+    <string name="nav_loans_pending">Chức năng quản lý sách mượn đang được hoàn thiện. Hiện chưa thể xem phiếu mượn hoặc gia hạn tại đây.</string>
+    <string name="nav_notifications_pending">Chức năng thông báo đang được hoàn thiện. Hiện chưa thể xem thông báo tại đây.</string>
+    <string name="nav_reader_account">Tài khoản độc giả</string>
+    <string name="nav_card_barcode">Mã thẻ: %1$s</string>
+    <string name="nav_card_status">Trạng thái thẻ: %1$s</string>
+    <string name="nav_not_issued">Chưa cấp</string>
+    <string name="nav_not_updated">Chưa cập nhật</string>
+</resources>

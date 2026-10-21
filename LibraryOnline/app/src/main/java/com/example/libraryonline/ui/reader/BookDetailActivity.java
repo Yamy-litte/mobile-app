@@ -25,6 +25,7 @@ public class BookDetailActivity extends SessionActivity {
     private final ExecutorService worker = Executors.newSingleThreadExecutor();
     private long generation;
     private Boolean remoteVisible;
+    private boolean leaving;
 
     @Override
     protected void onCreate(Bundle state) {
@@ -37,8 +38,17 @@ public class BookDetailActivity extends SessionActivity {
                     androidx.core.graphics.Insets bars =
                             insets.getInsets(WindowInsetsCompat.Type.systemBars());
                     v.setPadding(bars.left, bars.top, bars.right, bars.bottom);
-                    return insets;
+                    return WindowInsetsCompat.CONSUMED;
                 });
+        com.google.android.material.bottomnavigation.BottomNavigationView navigation =
+                findViewById(R.id.readerBottomNavigation);
+        navigation.getMenu().findItem(R.id.navReaderHome).setChecked(true);
+        navigation.setOnItemSelectedListener(
+                item -> {
+                    navigateToTab(item.getItemId());
+                    return false;
+                });
+        navigation.setOnItemReselectedListener(item -> navigateToTab(item.getItemId()));
         detail = new BookDetailView(this);
         bookId = getIntent().getStringExtra(EXTRA_BOOK_ID);
         helper = new DatabaseHelper(getApplicationContext());
@@ -48,6 +58,16 @@ public class BookDetailActivity extends SessionActivity {
                         v -> {
                             if (isSessionReady()) startCatalogue();
                         });
+    }
+
+    private void navigateToTab(int id) {
+        if (!isSessionReady() || leaving) return;
+        leaving = true;
+        int tab = ReaderHomeView.HOME;
+        if (id == R.id.navReaderLoans) tab = ReaderHomeView.LOANS;
+        else if (id == R.id.navReaderNotifications) tab = ReaderHomeView.NOTIFICATIONS;
+        else if (id == R.id.navReaderAccount) tab = ReaderHomeView.ACCOUNT;
+        ReaderNavigation.returnToMain(this, tab);
     }
 
     @Override
@@ -81,7 +101,7 @@ public class BookDetailActivity extends SessionActivity {
                                     if (error != null) {
                                         detail.error(
                                                 "Không thể tải sách. Đang giữ dữ liệu đã lưu; hãy"
-                                                    + " thử lại.");
+                                                        + " thử lại.");
                                         return;
                                     }
                                     if (snapshot == null) return;
