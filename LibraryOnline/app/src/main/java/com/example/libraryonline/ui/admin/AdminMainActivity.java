@@ -131,7 +131,7 @@ public class AdminMainActivity extends AppCompatActivity {
                             });
                         }
                     };
-                    catalogueSyncManager.start(syncListener);
+                    catalogueSyncManager.start(null);
                     catalogueSyncManager.syncLocalToCloud(syncListener);
                 }).show());
     }
