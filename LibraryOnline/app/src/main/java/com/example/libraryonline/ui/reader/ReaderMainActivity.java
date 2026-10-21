@@ -21,6 +21,7 @@ import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
 
 import com.example.libraryonline.R;
+import com.example.libraryonline.data.repository.BookCatalogueSyncManager;
 import com.example.libraryonline.ui.auth.LoginActivity;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
@@ -48,6 +49,7 @@ public class ReaderMainActivity extends AppCompatActivity {
     private FirebaseFirestore firestore;
     private FirebaseAuth auth;
     private ListenerRegistration booksListener;
+    private BookCatalogueSyncManager catalogueSyncManager;
     private LinearLayout categoriesContainer;
     private LinearLayout popularBooksContainer;
     private LinearLayout latestBooksContainer;
@@ -68,6 +70,26 @@ public class ReaderMainActivity extends AppCompatActivity {
         bindActions();
         buildCategories();
         loadReaderProfile();
+        catalogueSyncManager = new BookCatalogueSyncManager(getApplicationContext());
+        catalogueSyncManager.start(new BookCatalogueSyncManager.SyncListener() {
+            @Override
+            public void onSyncCompleted(int changedRows) {
+                runOnUiThread(() -> {
+                    if (!isFinishing() && !isDestroyed()) {
+                        catalogueStatus.setText("Danh mục đã đồng bộ với SQLite (" + changedRows + " thay đổi)");
+                    }
+                });
+            }
+
+            @Override
+            public void onSyncFailed(String message) {
+                runOnUiThread(() -> {
+                    if (!isFinishing() && !isDestroyed()) {
+                        catalogueStatus.setText("Chưa đồng bộ được SQLite. Dữ liệu Firestore vẫn được hiển thị.");
+                    }
+                });
+            }
+        });
         listenForBooks();
     }
 
@@ -345,6 +367,7 @@ public class ReaderMainActivity extends AppCompatActivity {
     @Override
     protected void onDestroy() {
         if (booksListener != null) booksListener.remove();
+        if (catalogueSyncManager != null) catalogueSyncManager.close();
         imageExecutor.shutdownNow();
         super.onDestroy();
     }
