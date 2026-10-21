@@ -19,7 +19,7 @@ import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
 
 import com.example.libraryonline.R;
-import com.example.libraryonline.remote.firebase.BookCatalogueSyncManager;
+import com.example.libraryonline.data.remote.firebase.BookCatalogueSyncManager;
 import com.example.libraryonline.data.local.dao.BookTitleDao;
 import com.example.libraryonline.data.local.db.DatabaseHelper;
 import com.example.libraryonline.data.model.BookTitle;
