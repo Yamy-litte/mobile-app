@@ -158,6 +158,12 @@ service cloud.firestore {
       allow delete: if false;
     }
 
+    // Catalogue is public to authenticated readers; writes are restricted to trusted Admin SDK functions.
+    match /BookTitles/{bookTitleId} {
+      allow read: if signedIn();
+      allow write: if false;
+    }
+
     match /{document=**} {
       allow read, write: if false;
     }
