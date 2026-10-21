@@ -80,10 +80,11 @@ public final class DatabaseHelper extends SQLiteOpenHelper {
             for (int i = 1; i <= copies; i++) {
                 String copyId = b[0] + "_COPY_" + String.format(java.util.Locale.ROOT, "%02d", i);
                 String barcode = "BC-" + b[0] + "-" + String.format(java.util.Locale.ROOT, "%02d", i);
+                String copyStatus = i <= Integer.parseInt(b[10]) ? "SanSang" : "DaMuon";
                 db.execSQL("INSERT OR IGNORE INTO BookCopies " +
                         "(copyId,bookTitleId,barcode,shelfLocation,copyStatus,isHidden,createdAt,updatedAt) " +
-                        "VALUES (?,?,?,?,'SanSang',0," + now + "," + now + ")",
-                        new Object[]{copyId,b[0],barcode,"Kệ " + b[4]});
+                        "VALUES (?,?,?,?,?,0," + now + "," + now + ")",
+                        new Object[]{copyId,b[0],barcode,"Kệ " + b[4],copyStatus});
             }
         }
     }
