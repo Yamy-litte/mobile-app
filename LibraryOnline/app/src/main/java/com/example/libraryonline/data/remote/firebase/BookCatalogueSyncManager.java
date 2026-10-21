@@ -165,12 +165,6 @@ public final class BookCatalogueSyncManager implements AutoCloseable {
                             ? "Không thể đẩy dữ liệu SQLite lên Firestore." : error.getLocalizedMessage());
                 });
     }
-                .addOnFailureListener(error -> {
-                    if (listener != null) listener.onSyncFailed(error.getLocalizedMessage() == null
-                            ? "Không thể đọc danh mục từ Firestore." : error.getLocalizedMessage());
-                });
-    }
-
     private void syncCopiesLocalToCloud(SyncListener listener) {
         firestore.collection("BookCopies").get()
                 .addOnSuccessListener(cloudSnapshot -> executor.execute(() -> {
