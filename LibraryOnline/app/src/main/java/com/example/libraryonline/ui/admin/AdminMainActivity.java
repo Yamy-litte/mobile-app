@@ -75,7 +75,14 @@ public class AdminMainActivity extends AppCompatActivity {
     }
 
     private void addSampleCatalogueSyncButton() {
-        View content = ((android.widget.ScrollView) findViewById(android.R.id.content).getChildAt(0)).getChildAt(0);
+        android.view.ViewGroup decorContent =
+                (android.view.ViewGroup) findViewById(android.R.id.content);
+        if (decorContent.getChildCount() == 0) return;
+        View rootView = decorContent.getChildAt(0);
+        if (!(rootView instanceof android.widget.ScrollView)) return;
+        android.widget.ScrollView scrollView = (android.widget.ScrollView) rootView;
+        if (scrollView.getChildCount() == 0) return;
+        View content = scrollView.getChildAt(0);
         if (!(content instanceof LinearLayout)) return;
         LinearLayout container = (LinearLayout) content;
         Button seedButton = new Button(this);
