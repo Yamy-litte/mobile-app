@@ -3,7 +3,7 @@ const { before, after, beforeEach, test } = require("node:test");
 const fs = require("node:fs");
 const { URL } = require("node:url");
 const { initializeTestEnvironment, assertSucceeds, assertFails } = require("@firebase/rules-unit-testing");
-const { doc, setDoc, getDoc, updateDoc, deleteDoc, writeBatch, serverTimestamp } = require("firebase/firestore");
+const { collection, query, where, getCountFromServer, doc, setDoc, getDoc, updateDoc, deleteDoc, writeBatch, serverTimestamp } = require("firebase/firestore");
 let env;
 const projectId = "demo-library-online";
 const category = { categoryId: "cat", name: "Văn học", isActive: true };
@@ -123,4 +123,17 @@ test("registration cannot smuggle role, uid or a pre-approved profile", async ()
     batch.update(doc(d,"RegistrationRequests/forged"),extra);
     await assertFails(batch.commit());
   }
+});
+
+
+test("admin dashboard counts use existing read permissions and deny reader profile enumeration", async () => {
+  const assert=require("node:assert/strict");
+  const admin=db("admin");
+  for(const name of ["BookTitles","BookCopies"]) {
+    const count=await assertSucceeds(getCountFromServer(collection(admin,name)));
+    assert.equal(count.data().count,1);
+  }
+  const readers=await assertSucceeds(getCountFromServer(query(collection(admin,"Users"),where("role","==","Reader"))));
+  assert.equal(readers.data().count,2);
+  await assertFails(getCountFromServer(query(collection(db("reader"),"Users"),where("role","==","Reader"))));
 });

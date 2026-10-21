@@ -1,0 +1,10 @@
+<?xml version="1.0" ?>
+<resources>
+    <color name="admin_background">#FFF9F2</color>
+    <color name="admin_ink">#163333</color>
+    <color name="admin_teal">#216B68</color>
+    <color name="admin_muted">#637D7D</color>
+    <color name="admin_line">#DDE8E7</color>
+    <color name="admin_soft">#EAF3EF</color>
+    <color name="admin_orange">#B95031</color>
+</resources>

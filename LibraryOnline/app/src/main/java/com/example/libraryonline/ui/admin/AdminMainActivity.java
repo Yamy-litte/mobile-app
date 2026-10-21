@@ -48,10 +48,15 @@ public class AdminMainActivity extends com.example.libraryonline.ui.auth.Session
     private ListenerRegistration resetRequestsListener;
     private BookCatalogueSyncManager catalogueSyncManager;
     private Button syncButton;
+    private AdminHomeView homeView;
+    private long dashboardGeneration, requestsGeneration;
+    private Integer registrationCount, resetCount;
+    private boolean registrationCached, resetCached, registrationError, resetError;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        androidx.core.view.WindowCompat.setDecorFitsSystemWindows(getWindow(),false);
         setContentView(R.layout.activity_admin_main);
         firestore = FirebaseFirestore.getInstance();
         auth = FirebaseAuth.getInstance();
@@ -70,7 +75,24 @@ public class AdminMainActivity extends com.example.libraryonline.ui.auth.Session
         resetRequestsContainer = findViewById(R.id.containerPasswordResetRequests);
         resetPendingCount = findViewById(R.id.textPasswordResetPendingCount);
         resetEmptyMessage = findViewById(R.id.textEmptyPasswordResetRequests);
-        addCatalogueSyncButton();
+        homeView=new AdminHomeView(this,savedInstanceState==null?AdminHomeView.HOME:savedInstanceState.getInt("adminTab",AdminHomeView.HOME));
+        androidx.core.view.ViewCompat.setOnApplyWindowInsetsListener(findViewById(R.id.adminRoot),(view,insets) -> {
+            androidx.core.graphics.Insets bars=insets.getInsets(androidx.core.view.WindowInsetsCompat.Type.systemBars());
+            view.setPadding(bars.left,bars.top,bars.right,bars.bottom);return insets;
+        });
+        getOnBackPressedDispatcher().addCallback(this,new androidx.activity.OnBackPressedCallback(true) {
+            @Override public void handleOnBackPressed() {
+                if(homeView.selectedTab()!=AdminHomeView.HOME)homeView.show(AdminHomeView.HOME);
+                else {setEnabled(false);getOnBackPressedDispatcher().onBackPressed();setEnabled(true);}
+            }
+        });
+        bindCatalogueSyncButton();
+        findViewById(R.id.actionAdminSync).setOnClickListener(v -> {if(isSessionReady() && syncButton.isEnabled())syncButton.performClick();});
+        findViewById(R.id.buttonAdminRefresh).setOnClickListener(v -> {if(isSessionReady()){loadDashboard();stopRequestListeners();startRequests();}});
+        findViewById(R.id.buttonAdminRefreshRequests).setOnClickListener(v -> {
+            if(!isSessionReady())return;
+            stopRequestListeners();startRequests();
+        });
         findViewById(R.id.buttonAdminLogout).setOnClickListener(v -> logoutSession());
 
     }
@@ -79,42 +101,65 @@ public class AdminMainActivity extends com.example.libraryonline.ui.auth.Session
         return com.example.libraryonline.data.session.SessionProfile.Role.ADMIN;
     }
     @Override protected void onSessionAuthorized(com.example.libraryonline.data.session.SessionProfile profile) {
-        ((TextView)findViewById(R.id.textAdminSession)).setText(profile.displayName+" · Admin");
-        listenForRequests();listenForPasswordResetRequests();
+        ((TextView)findViewById(R.id.textAdminSession)).setText("Admin " + profile.displayName);
+        ((TextView)findViewById(R.id.textAdminProfileName)).setText(profile.displayName);
+        ((TextView)findViewById(R.id.textAdminProfileEmail)).setText(profile.email==null?"":profile.email);
+        startRequests();loadDashboard();
     }
-    @Override protected void onSessionStopped() {
+    @Override protected void onSaveInstanceState(Bundle state) {
+        state.putInt("adminTab",homeView.selectedTab());super.onSaveInstanceState(state);
+    }
+    private void stopRequestListeners() {
+        requestsGeneration++;
         if(requestsListener!=null) {requestsListener.remove();requestsListener=null;}
         if(resetRequestsListener!=null) {resetRequestsListener.remove();resetRequestsListener=null;}
+    }
+    @Override protected void onSessionStopped() {
+        dashboardGeneration++;stopRequestListeners();
         if(catalogueSyncManager!=null) {catalogueSyncManager.close();catalogueSyncManager=null;}
         requestsContainer.removeAllViews();resetRequestsContainer.removeAllViews();
-        if(syncButton!=null){syncButton.setEnabled(true);syncButton.setText("Đồng bộ SQLite ↔ Firestore");}
+        if(syncButton!=null){syncButton.setEnabled(true);syncButton.setText(R.string.admin_sync);}
     }
-    private void addCatalogueSyncButton() {
-        android.view.ViewGroup decorContent =
-                (android.view.ViewGroup) findViewById(android.R.id.content);
-        if (decorContent.getChildCount() == 0) return;
-        View rootView = decorContent.getChildAt(0);
-        if (!(rootView instanceof android.widget.ScrollView)) return;
-        android.widget.ScrollView scrollView = (android.widget.ScrollView) rootView;
-        if (scrollView.getChildCount() == 0) return;
-        View content = scrollView.getChildAt(0);
-        if (!(content instanceof LinearLayout)) return;
-
-        LinearLayout container = (LinearLayout) content;
-        syncButton = new Button(this);
-        syncButton.setText("Đồng bộ SQLite ↔ Firestore");
-        syncButton.setTextColor(android.graphics.Color.WHITE);
-        syncButton.setBackgroundTintList(android.content.res.ColorStateList.valueOf(
-                android.graphics.Color.rgb(49, 94, 251)));
-        LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
-        params.topMargin = dp(12);
-        params.bottomMargin = dp(8);
-        container.addView(syncButton, Math.min(4, container.getChildCount()), params);
-
+    private void startRequests() {
+        registrationCount=null;resetCount=null;registrationError=false;resetError=false;
+        requestsContainer.removeAllViews();resetRequestsContainer.removeAllViews();
+        progress.setVisibility(View.VISIBLE);emptyMessage.setVisibility(View.VISIBLE);
+        emptyMessage.setText(R.string.admin_count_loading);resetEmptyMessage.setVisibility(View.VISIBLE);
+        resetEmptyMessage.setText(R.string.admin_count_loading);
+        updateRequestSummary();listenForRequests();listenForPasswordResetRequests();
+    }
+    private void updateRequestSummary() {
+        ((TextView)findViewById(R.id.textAdminRegistrationCount)).setText(registrationCount==null?"—":String.valueOf(registrationCount));
+        ((TextView)findViewById(R.id.textAdminPendingSummary)).setText(registrationError?getString(R.string.admin_request_error):registrationCount==null?getString(R.string.admin_count_loading):registrationCount+" yêu cầu đăng ký chờ duyệt");
+        ((TextView)findViewById(R.id.textAdminResetSummary)).setText(resetError?getString(R.string.admin_request_error):resetCount==null?getString(R.string.admin_count_loading):resetCount+" yêu cầu khôi phục mật khẩu");
+        ((TextView)findViewById(R.id.textAdminRequestsStatus)).setText(registrationError||resetError?R.string.admin_request_error:registrationCount==null||resetCount==null?R.string.admin_count_loading:registrationCached||resetCached?R.string.admin_cached_requests:R.string.admin_live_requests);
+    }
+    private void loadDashboard() {
+        final long request=++dashboardGeneration;
+        Button refresh=findViewById(R.id.buttonAdminRefresh);refresh.setEnabled(false);
+        TextView status=findViewById(R.id.textAdminDataStatus);status.setText(R.string.admin_loading);
+        int[] ids={R.id.textAdminBookCount,R.id.textAdminReaderCount,R.id.textAdminCopyCount};
+        for(int id:ids)((TextView)findViewById(id)).setText(R.string.admin_dash);
+        java.util.List<com.google.android.gms.tasks.Task<com.google.firebase.firestore.AggregateQuerySnapshot>> tasks=java.util.Arrays.asList(
+            firestore.collection("BookTitles").count().get(com.google.firebase.firestore.AggregateSource.SERVER),
+            firestore.collection("Users").whereEqualTo("role","Reader").count().get(com.google.firebase.firestore.AggregateSource.SERVER),
+            firestore.collection("BookCopies").count().get(com.google.firebase.firestore.AggregateSource.SERVER));
+        com.google.android.gms.tasks.Tasks.whenAllComplete(tasks).addOnCompleteListener(done -> {
+            if(!isSessionReady() || request!=dashboardGeneration)return;
+            boolean failed=false;
+            for(int i=0;i<tasks.size();i++) {
+                if(tasks.get(i).isSuccessful())((TextView)findViewById(ids[i])).setText(java.text.NumberFormat.getIntegerInstance(new Locale("vi","VN")).format(tasks.get(i).getResult().getCount()));
+                else failed=true;
+            }
+            refresh.setEnabled(true);
+            status.setText(failed?getString(R.string.admin_load_error):getString(R.string.admin_updated,new java.text.SimpleDateFormat("HH:mm",Locale.getDefault()).format(new Date())));
+        });
+    }
+    private void bindCatalogueSyncButton() {
+        syncButton=findViewById(R.id.buttonAdminSync);
         syncButton.setOnClickListener(v -> privateDialog()
-                .setTitle("Đồng bộ SQLite và Cloud Firestore")
-                .setMessage("Tải thay đổi từ Firestore xuống SQLite và đẩy các đầu sách chỉ có ở SQLite lên Firestore. Nếu mã sách đã tồn tại trên cloud, dữ liệu cloud được ưu tiên để tránh ghi đè dữ liệu mới hơn.")
+                .setTitle(R.string.admin_sync)
+                .setMessage("Cập nhật danh mục sách trên thiết bị và gửi những sách mới trên thiết bị lên thư viện. Dữ liệu hiện có của thư viện được ưu tiên.")
                 .setNegativeButton("Hủy", (dialog, which) -> dialog.dismiss())
                 .setPositiveButton("Đồng bộ", (dialog, which) -> {
                     if(!isSessionReady())return;
@@ -128,7 +173,7 @@ public class AdminMainActivity extends com.example.libraryonline.ui.auth.Session
                             runOnUiThread(() -> {
                                 if (!isSessionReady() || isFinishing() || isDestroyed()) return;
                                 syncButton.setEnabled(true);
-                                syncButton.setText("Đồng bộ SQLite ↔ Firestore");
+                                syncButton.setText(R.string.admin_sync);
                                 Toast.makeText(AdminMainActivity.this,
                                         "Đồng bộ hoàn tất. Số bản ghi xử lý: " + changedRows,
                                         Toast.LENGTH_LONG).show();
@@ -139,7 +184,7 @@ public class AdminMainActivity extends com.example.libraryonline.ui.auth.Session
                             runOnUiThread(() -> {
                                 if (!isSessionReady() || isFinishing() || isDestroyed()) return;
                                 syncButton.setEnabled(true);
-                                syncButton.setText("Đồng bộ SQLite ↔ Firestore");
+                                syncButton.setText(R.string.admin_sync);
                                 Toast.makeText(AdminMainActivity.this,
                                         "Đồng bộ thất bại: " + message,
                                         Toast.LENGTH_LONG).show();
@@ -152,13 +197,15 @@ public class AdminMainActivity extends com.example.libraryonline.ui.auth.Session
     }
 
     private void listenForRequests() {
+        final long generation=requestsGeneration;
         requestsListener = firestore.collection("RegistrationRequests")
-                .addSnapshotListener((snapshot, error) -> {
+                .addSnapshotListener(com.google.firebase.firestore.MetadataChanges.INCLUDE,(snapshot, error) -> {
+                    if(!isSessionReady() || generation!=requestsGeneration)return;
                     progress.setVisibility(View.GONE);
                     if (error != null) {
+                        registrationError=true;registrationCount=null;requestsContainer.removeAllViews();updateRequestSummary();
                         emptyMessage.setVisibility(View.VISIBLE);
-                        emptyMessage.setText("Không tải được yêu cầu. Kiểm tra kết nối và Firestore Rules dành cho Admin.");
-                        Toast.makeText(this, "Lỗi tải yêu cầu: " + error.getCode(), Toast.LENGTH_LONG).show();
+                        emptyMessage.setText(R.string.admin_request_error);
                         return;
                     }
                     if (snapshot == null) return;
@@ -169,7 +216,8 @@ public class AdminMainActivity extends com.example.libraryonline.ui.auth.Session
                         count++;
                         requestsContainer.addView(createRequestCard(doc));
                     }
-                    pendingCount.setText("YÊU CẦU ĐANG CHỜ (" + count + ")");
+                    registrationError=false;registrationCount=count;registrationCached=snapshot.getMetadata().isFromCache();updateRequestSummary();
+                    pendingCount.setText("Đăng ký thành viên (" + count + ")");
                     emptyMessage.setVisibility(count == 0 ? View.VISIBLE : View.GONE);
                     if (count == 0) emptyMessage.setText("Hiện chưa có yêu cầu đăng ký đang chờ duyệt.");
                 });
@@ -177,11 +225,14 @@ public class AdminMainActivity extends com.example.libraryonline.ui.auth.Session
 
 
     private void listenForPasswordResetRequests() {
+        final long generation=requestsGeneration;
         resetRequestsListener = firestore.collection("PasswordResetRequests")
-                .addSnapshotListener((snapshot, error) -> {
+                .addSnapshotListener(com.google.firebase.firestore.MetadataChanges.INCLUDE,(snapshot, error) -> {
+                    if(!isSessionReady() || generation!=requestsGeneration)return;
                     if (error != null) {
+                        resetError=true;resetCount=null;resetRequestsContainer.removeAllViews();updateRequestSummary();
                         resetEmptyMessage.setVisibility(View.VISIBLE);
-                        resetEmptyMessage.setText("Không tải được yêu cầu quên mật khẩu. Kiểm tra Firestore Rules.");
+                        resetEmptyMessage.setText(R.string.admin_request_error);
                         return;
                     }
                     if (snapshot == null) return;
@@ -192,7 +243,8 @@ public class AdminMainActivity extends com.example.libraryonline.ui.auth.Session
                         count++;
                         resetRequestsContainer.addView(createPasswordResetCard(doc));
                     }
-                    resetPendingCount.setText("YÊU CẦU QUÊN MẬT KHẨU ĐANG CHỜ (" + count + ")");
+                    resetError=false;resetCount=count;resetCached=snapshot.getMetadata().isFromCache();updateRequestSummary();
+                    resetPendingCount.setText("Khôi phục mật khẩu (" + count + ")");
                     resetEmptyMessage.setVisibility(count == 0 ? View.VISIBLE : View.GONE);
                     if (count == 0) resetEmptyMessage.setText("Hiện chưa có yêu cầu quên mật khẩu đang chờ duyệt.");
                 });
@@ -203,17 +255,17 @@ public class AdminMainActivity extends com.example.libraryonline.ui.auth.Session
         LinearLayout card = new LinearLayout(this);
         card.setOrientation(LinearLayout.VERTICAL);
         card.setPadding(pad, pad, pad, pad);
-        card.setBackgroundResource(R.drawable.bg_auth_card);
+        card.setBackgroundResource(R.drawable.bg_admin_card);
         LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
         params.topMargin = dp(12);
         card.setLayoutParams(params);
 
-        card.addView(makeText(value(doc, "fullName", "Chưa có họ tên"), 18, "#172554", true));
+        card.addView(makeText(value(doc, "fullName", "Chưa có họ tên"), 18, "#163333", true));
         card.addView(makeText("CHỜ XÁC MINH", 11, "#B45309", true));
-        card.addView(makeText("Ngày sinh: " + value(doc, "birthDate", "Chưa cung cấp"), 14, "#475569", false));
-        card.addView(makeText("Email: " + value(doc, "email", "Chưa cung cấp"), 14, "#475569", false));
-        card.addView(makeText("Số điện thoại: " + value(doc, "phone", "Chưa cung cấp"), 14, "#475569", false));
+        card.addView(makeText("Ngày sinh: " + value(doc, "birthDate", "Chưa cung cấp"), 14, "#637D7D", false));
+        card.addView(makeText("Email: " + value(doc, "email", "Chưa cung cấp"), 14, "#637D7D", false));
+        card.addView(makeText("Số điện thoại: " + value(doc, "phone", "Chưa cung cấp"), 14, "#637D7D", false));
 
         LinearLayout actions = new LinearLayout(this);
         actions.setOrientation(LinearLayout.HORIZONTAL);
@@ -224,7 +276,7 @@ public class AdminMainActivity extends com.example.libraryonline.ui.auth.Session
         approve.setText("Duyệt & gửi email");
         approve.setTextColor(android.graphics.Color.WHITE);
         approve.setBackgroundTintList(android.content.res.ColorStateList.valueOf(
-                android.graphics.Color.rgb(37, 99, 235)));
+                android.graphics.Color.rgb(33, 107, 104)));
         LinearLayout.LayoutParams rejectParams = new LinearLayout.LayoutParams(0,
                 LinearLayout.LayoutParams.WRAP_CONTENT, 1);
         rejectParams.rightMargin = dp(8);
@@ -351,20 +403,20 @@ public class AdminMainActivity extends com.example.libraryonline.ui.auth.Session
         LinearLayout card = new LinearLayout(this);
         card.setOrientation(LinearLayout.VERTICAL);
         card.setPadding(pad, pad, pad, pad);
-        card.setBackgroundResource(R.drawable.bg_auth_card);
+        card.setBackgroundResource(R.drawable.bg_admin_card);
         LinearLayout.LayoutParams cardParams = new LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
         cardParams.topMargin = dp(12);
         card.setLayoutParams(cardParams);
 
-        card.addView(makeText(value(doc, "fullName", "Chưa có họ tên"), 18, "#172554", true));
+        card.addView(makeText(value(doc, "fullName", "Chưa có họ tên"), 18, "#163333", true));
         TextView status = makeText("CHỜ DUYỆT", 11, "#B45309", true);
         status.setPadding(0, dp(4), 0, dp(10));
         card.addView(status);
         card.addView(makeText("Ngày sinh: " + value(doc, "birthDate",
-                value(doc, "dateOfBirth", "Chưa cung cấp")), 14, "#475569", false));
-        card.addView(makeText("Email: " + value(doc, "email", "Chưa cung cấp"), 14, "#475569", false));
-        card.addView(makeText("Số điện thoại: " + value(doc, "phone", "Chưa cung cấp"), 14, "#475569", false));
+                value(doc, "dateOfBirth", "Chưa cung cấp")), 14, "#637D7D", false));
+        card.addView(makeText("Email: " + value(doc, "email", "Chưa cung cấp"), 14, "#637D7D", false));
+        card.addView(makeText("Số điện thoại: " + value(doc, "phone", "Chưa cung cấp"), 14, "#637D7D", false));
 
         Object createdAt = doc.get("createdAt");
         String created = "Thời gian gửi: Chưa rõ";
@@ -386,7 +438,7 @@ public class AdminMainActivity extends com.example.libraryonline.ui.auth.Session
         approve.setText("Duyệt hồ sơ");
         approve.setTextColor(android.graphics.Color.WHITE);
         approve.setBackgroundTintList(android.content.res.ColorStateList.valueOf(
-                android.graphics.Color.rgb(37, 99, 235)));
+                android.graphics.Color.rgb(33, 107, 104)));
         LinearLayout.LayoutParams rejectParams = new LinearLayout.LayoutParams(0,
                 LinearLayout.LayoutParams.WRAP_CONTENT, 1);
         rejectParams.rightMargin = dp(8);
