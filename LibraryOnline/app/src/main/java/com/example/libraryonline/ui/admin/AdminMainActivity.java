@@ -84,44 +84,49 @@ public class AdminMainActivity extends AppCompatActivity {
         if (scrollView.getChildCount() == 0) return;
         View content = scrollView.getChildAt(0);
         if (!(content instanceof LinearLayout)) return;
+
         LinearLayout container = (LinearLayout) content;
-        Button seedButton = new Button(this);
-        seedButton.setText("Đồng bộ SQLite ↔ Firestore");
-        seedButton.setTextColor(android.graphics.Color.WHITE);
-        seedButton.setBackgroundTintList(android.content.res.ColorStateList.valueOf(
+        Button syncButton = new Button(this);
+        syncButton.setText("Đồng bộ SQLite ↔ Firestore");
+        syncButton.setTextColor(android.graphics.Color.WHITE);
+        syncButton.setBackgroundTintList(android.content.res.ColorStateList.valueOf(
                 android.graphics.Color.rgb(49, 94, 251)));
         LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
         params.topMargin = dp(12);
         params.bottomMargin = dp(8);
-        container.addView(seedButton, 4, params);
-        seedButton.setOnClickListener(v -> new AlertDialog.Builder(this)
-                .setTitle("Đồng bộ danh mục sách mẫu")
-                .setMessage("Thêm hoặc cập nhật 10 đầu sách mẫu trong Firestore. Các tài liệu cùng mã sẽ được cập nhật; dữ liệu khác không bị xóa.")
+        container.addView(syncButton, Math.min(4, container.getChildCount()), params);
+
+        syncButton.setOnClickListener(v -> new AlertDialog.Builder(this)
+                .setTitle("Đồng bộ SQLite và Cloud Firestore")
+                .setMessage("Tải thay đổi từ Firestore xuống SQLite và đẩy các đầu sách chỉ có ở SQLite lên Firestore. Nếu mã sách đã tồn tại trên cloud, dữ liệu cloud được ưu tiên để tránh ghi đè dữ liệu mới hơn.")
                 .setNegativeButton("Hủy", (dialog, which) -> dialog.dismiss())
                 .setPositiveButton("Đồng bộ", (dialog, which) -> {
-                    seedButton.setEnabled(false);
-                    seedButton.setText("Đang đồng bộ...");
+                    syncButton.setEnabled(false);
+                    syncButton.setText("Đang đồng bộ...");
                     if (catalogueSyncManager != null) catalogueSyncManager.close();
                     catalogueSyncManager = new BookCatalogueSyncManager(getApplicationContext());
-                    BookCatalogueSyncManager.SyncListener syncListener = new BookCatalogueSyncManager.SyncListener() {
+                    BookCatalogueSyncManager.SyncListener syncListener =
+                            new BookCatalogueSyncManager.SyncListener() {
                         @Override public void onSyncCompleted(int changedRows) {
                             runOnUiThread(() -> {
                                 if (isFinishing() || isDestroyed()) return;
-                                seedButton.setEnabled(true);
-                                seedButton.setText("Đồng bộ SQLite ↔ Firestore");
+                                syncButton.setEnabled(true);
+                                syncButton.setText("Đồng bộ SQLite ↔ Firestore");
                                 Toast.makeText(AdminMainActivity.this,
-                                        "Đồng bộ danh mục hoàn tất. Số bản ghi xử lý: " + changedRows,
+                                        "Đồng bộ hoàn tất. Số bản ghi xử lý: " + changedRows,
                                         Toast.LENGTH_LONG).show();
                             });
                         }
+
                         @Override public void onSyncFailed(String message) {
                             runOnUiThread(() -> {
                                 if (isFinishing() || isDestroyed()) return;
-                                seedButton.setEnabled(true);
-                                seedButton.setText("Đồng bộ SQLite ↔ Firestore");
+                                syncButton.setEnabled(true);
+                                syncButton.setText("Đồng bộ SQLite ↔ Firestore");
                                 Toast.makeText(AdminMainActivity.this,
-                                        "Đồng bộ thất bại: " + message, Toast.LENGTH_LONG).show();
+                                        "Đồng bộ thất bại: " + message,
+                                        Toast.LENGTH_LONG).show();
                             });
                         }
                     };
@@ -405,10 +410,16 @@ public class AdminMainActivity extends AppCompatActivity {
                                 String fullName = value(doc, "fullName", "bạn");
                                 EmailSender.send(email,
                                         "Library Online - Kết quả đăng ký",
-                                        "Xin chào " + fullName + ",\\n\\n"
-                                                + "Rất tiếc, yêu cầu đăng ký thư viện của bạn chưa được chấp thuận.\\n"
-                                                + "Lý do: " + reason + "\\n\\n"
-                                                + "Bạn có thể liên hệ thư viện để được hỗ trợ.\\n"
+                                        "Xin chào " + fullName + ",
+
+"
+                                                + "Rất tiếc, yêu cầu đăng ký thư viện của bạn chưa được chấp thuận.
+"
+                                                + "Lý do: " + reason + "
+
+"
+                                                + "Bạn có thể liên hệ thư viện để được hỗ trợ.
+"
                                                 + "Đây là email tự động, vui lòng không trả lời.",
                                         (success, message) -> {
                                             if (!success) Toast.makeText(this,
@@ -522,12 +533,21 @@ public class AdminMainActivity extends AppCompatActivity {
                                 setCardActionsEnabled(reject, approve, true);
                                 EmailSender.send(email,
                                         "Library Online - Hồ sơ đã được duyệt",
-                                        "Xin chào " + fullName + ",\\n\\n"
-                                                + "Hồ sơ đăng ký thư viện của bạn đã được duyệt.\\n"
-                                                + "Thông tin đăng nhập:\\n"
-                                                + "Email: " + email + "\\n"
-                                                + "Mật khẩu tạm: " + temporaryPassword + "\\n\\n"
-                                                + "Vì lý do bảo mật, vui lòng đổi mật khẩu ngay ở lần đăng nhập đầu tiên.\\n\\n"
+                                        "Xin chào " + fullName + ",
+
+"
+                                                + "Hồ sơ đăng ký thư viện của bạn đã được duyệt.
+"
+                                                + "Thông tin đăng nhập:
+"
+                                                + "Email: " + email + "
+"
+                                                + "Mật khẩu tạm: " + temporaryPassword + "
+
+"
+                                                + "Vì lý do bảo mật, vui lòng đổi mật khẩu ngay ở lần đăng nhập đầu tiên.
+
+"
                                                 + "Đây là email tự động, vui lòng không trả lời.",
                                         (success, message) -> {
                                             if (!success) Toast.makeText(this,
@@ -605,7 +625,9 @@ public class AdminMainActivity extends AppCompatActivity {
 
     @Override
     protected void onDestroy() {
-        if (requestsListener != null) requestsListener.remove();\n        if (resetRequestsListener != null) resetRequestsListener.remove();\n        if (catalogueSyncManager != null) catalogueSyncManager.close();
+        if (requestsListener != null) requestsListener.remove();
+        if (resetRequestsListener != null) resetRequestsListener.remove();
+        if (catalogueSyncManager != null) catalogueSyncManager.close();
         super.onDestroy();
     }
 }
