@@ -11,7 +11,7 @@ import com.google.firebase.firestore.DocumentChange;
 import com.google.firebase.firestore.DocumentSnapshot;
 import com.google.firebase.firestore.FirebaseFirestore;
 import com.google.firebase.firestore.ListenerRegistration;
-import com.google.firebase.firestore.QuerySnapshot;
+import com.google.firebase.firestore.QuerySnapshot;\nimport com.google.firebase.firestore.SetOptions;\nimport com.google.android.gms.tasks.Task;\nimport com.google.firebase.auth.FirebaseAuth;\nimport java.util.ArrayList;\nimport java.util.HashMap;\nimport java.util.List;\nimport java.util.Map;
 
 import java.text.SimpleDateFormat;
 import java.util.Date;
@@ -56,6 +56,79 @@ public final class BookCatalogueSyncManager implements AutoCloseable {
 
             executor.execute(() -> applyChanges(snapshot, listener));
         });
+    }
+
+    /** Push local-only catalogue rows; existing cloud documents remain authoritative on initial sync. */
+    public void syncLocalToCloud(SyncListener listener) {
+        if (closed) throw new IllegalStateException("Sync manager is closed");
+        if (FirebaseAuth.getInstance().getCurrentUser() == null) {
+            if (listener != null) listener.onSyncFailed("Bạn cần đăng nhập trước khi đồng bộ.");
+            return;
+        }
+        firestore.collection("BookTitles").get()
+                .addOnSuccessListener(cloudSnapshot -> executor.execute(() -> {
+                    if (closed) return;
+                    List<BookTitle> localBooks = new BookTitleDao(
+                            databaseHelper.getReadableDatabase()).getAll();
+                    Map<String, Boolean> cloudIds = new HashMap<>();
+                    for (DocumentSnapshot document : cloudSnapshot.getDocuments()) {
+                        cloudIds.put(document.getId(), true);
+                    }
+                    List<BookTitle> missing = new ArrayList<>();
+                    for (BookTitle book : localBooks) {
+                        if (book.bookTitleId != null && !cloudIds.containsKey(book.bookTitleId)) missing.add(book);
+                    }
+                    if (missing.isEmpty()) {
+                        if (listener != null) listener.onSyncCompleted(0);
+                        return;
+                    }
+                    if (missing.size() > 450) {
+                        if (listener != null) listener.onSyncFailed("Có hơn 450 đầu sách mới; hãy chia thành nhiều đợt.");
+                        return;
+                    }
+                    com.google.firebase.firestore.WriteBatch batch = firestore.batch();
+                    for (BookTitle book : missing) {
+                        batch.set(firestore.collection("BookTitles").document(book.bookTitleId), toCloudMap(book));
+                    }
+                    batch.commit().addOnSuccessListener(unused -> {
+                        if (listener != null) listener.onSyncCompleted(missing.size());
+                    }).addOnFailureListener(error -> {
+                        if (listener != null) listener.onSyncFailed(error.getLocalizedMessage() == null
+                                ? "Không thể đẩy dữ liệu SQLite lên Firestore." : error.getLocalizedMessage());
+                    });
+                }))
+                .addOnFailureListener(error -> {
+                    if (listener != null) listener.onSyncFailed(error.getLocalizedMessage() == null
+                            ? "Không thể đọc danh mục từ Firestore." : error.getLocalizedMessage());
+                });
+    }
+
+    /** Upload one local create/update. Firestore rules enforce the active-admin requirement. */
+    public static Task<Void> uploadBookToCloud(BookTitle book) {
+        if (book == null || book.bookTitleId == null || book.bookTitleId.trim().isEmpty()) {
+            throw new IllegalArgumentException("bookTitleId is required");
+        }
+        return FirebaseFirestore.getInstance().collection("BookTitles")
+                .document(book.bookTitleId).set(toCloudMap(book), SetOptions.merge());
+    }
+
+    private static Map<String, Object> toCloudMap(BookTitle book) {
+        Map<String, Object> data = new HashMap<>();
+        data.put("title", book.title == null ? "" : book.title);
+        data.put("author", book.author == null ? "" : book.author);
+        data.put("isbn", book.isbn == null ? "" : book.isbn);
+        data.put("category", book.category == null ? "" : book.category);
+        data.put("publisher", book.publisher == null ? "" : book.publisher);
+        data.put("publishYear", book.publishYear);
+        data.put("description", book.description == null ? "" : book.description);
+        data.put("coverUrl", book.coverUrl == null ? "" : book.coverUrl);
+        data.put("totalCopies", book.totalCopies);
+        data.put("availableCopies", book.availableCopies);
+        data.put("isHidden", book.isHidden);
+        data.put("createdAt", book.createdAt == null || book.createdAt.isEmpty()
+                ? com.google.firebase.firestore.FieldValue.serverTimestamp() : book.createdAt);
+        data.put("updatedAt", com.google.firebase.firestore.FieldValue.serverTimestamp());
+        return data;
     }
 
     private void applyChanges(QuerySnapshot snapshot, SyncListener listener) {
