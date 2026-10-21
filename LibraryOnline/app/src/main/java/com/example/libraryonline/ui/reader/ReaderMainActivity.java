@@ -35,7 +35,10 @@ import java.io.InputStream;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Set;
 import java.util.Locale;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -126,7 +129,13 @@ public class ReaderMainActivity extends AppCompatActivity {
     }
 
     private void buildCategories() {
-        String[] names = {"Tất cả", "Văn học", "Khoa học", "Lịch sử", "Tâm lý", "Kinh tế", "Công nghệ"};
+        Set<String> names = new LinkedHashSet<>();
+        names.add("Tất cả");
+        for (BookTitle book : books) {
+            String category = safe(book.category, "Khác");
+            if (!category.isEmpty()) names.add(category);
+        }
+        if (!names.contains(selectedCategory)) selectedCategory = "Tất cả";
         categoriesContainer.removeAllViews();
         for (String name : names) {
             TextView chip = new TextView(this);
@@ -181,6 +190,7 @@ public class ReaderMainActivity extends AppCompatActivity {
                 for (BookTitle book : local) {
                     if (book != null && !book.isHidden) books.add(book);
                 }
+                buildCategories();
                 renderBooks();
             });
         });
@@ -205,7 +215,7 @@ public class ReaderMainActivity extends AppCompatActivity {
         }
 
         popularCount.setText(filtered.size() + " đầu sách");
-        catalogueStatus.setText(filtered.size() + " cuốn sách phù hợp");
+        catalogueStatus.setText(filtered.size() + " đầu sách đang hiển thị từ SQLite");
         if (filtered.isEmpty()) {
             TextView empty = new TextView(this);
             empty.setText(books.isEmpty()
@@ -225,7 +235,13 @@ public class ReaderMainActivity extends AppCompatActivity {
             params.rightMargin = dp(10);
             popularBooksContainer.addView(card, params);
         }
-        for (BookTitle doc : filtered) latestBooksContainer.addView(createBookCard(doc));
+        List<BookTitle> latest = new ArrayList<>(filtered);
+        Collections.sort(latest, (left, right) -> {
+            String leftDate = safe(left.updatedAt, safe(left.createdAt, ""));
+            String rightDate = safe(right.updatedAt, safe(right.createdAt, ""));
+            return rightDate.compareTo(leftDate);
+        });
+        for (BookTitle doc : latest) latestBooksContainer.addView(createBookCard(doc));
     }
 
     private View createBookCard(BookTitle doc) {
