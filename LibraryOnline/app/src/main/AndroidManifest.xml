@@ -49,7 +49,7 @@
             android:name=".ui.reader.ReaderMainActivity"
             android:exported="false" />
         <activity android:name=".ui.reader.BookDetailActivity" android:exported="false" />
-        <activity android:name=".ui.admin.InventoryActivity" android:exported="false" android:windowSoftInputMode="adjustResize" />
+        <activity android:name=".ui.admin.inventory.InventoryActivity" android:exported="false" android:windowSoftInputMode="adjustResize" />
         <activity
             android:name=".ui.admin.AdminMainActivity"
             android:exported="false" />

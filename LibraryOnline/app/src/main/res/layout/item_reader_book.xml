@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<LinearLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
     android:orientation="horizontal"
@@ -7,7 +8,6 @@
     android:background="@drawable/bg_reader_book_card"
     android:padding="12dp"
     android:layout_marginBottom="10dp">
-
     <FrameLayout
         android:layout_width="76dp"
         android:layout_height="104dp"
@@ -29,7 +29,6 @@
             android:textSize="10sp"
             android:textStyle="bold" />
     </FrameLayout>
-
     <LinearLayout
         android:layout_width="0dp"
         android:layout_height="wrap_content"

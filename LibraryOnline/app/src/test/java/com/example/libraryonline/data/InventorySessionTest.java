@@ -2,7 +2,7 @@ package com.example.libraryonline.data;
 import android.os.Bundle;
 import com.example.libraryonline.R;
 import com.example.libraryonline.data.session.*;
-import com.example.libraryonline.ui.admin.InventoryActivity;
+import com.example.libraryonline.ui.admin.inventory.InventoryActivity;
 import com.example.libraryonline.ui.reader.BookDetailActivity;
 import com.example.libraryonline.ui.reader.ReaderMainActivity;
 import com.google.android.gms.tasks.*;

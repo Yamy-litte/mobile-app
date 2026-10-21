@@ -1,0 +1,59 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:layout_marginTop="12dp"
+    android:orientation="vertical"
+    android:padding="16dp"
+    android:background="@drawable/bg_admin_card">
+    <TextView
+        android:id="@+id/requestName"
+        style="@style/AdminRequestText"
+        android:textSize="18sp"
+        android:textColor="@color/library_text"
+        android:textStyle="bold" />
+    <TextView
+        android:id="@+id/requestStatus"
+        style="@style/AdminRequestText"
+        android:textSize="11sp"
+        android:textColor="@color/library_warning"
+        android:textStyle="bold"
+        android:paddingTop="4dp"
+        android:paddingBottom="10dp" />
+    <TextView
+        android:id="@+id/requestBirthDate"
+        style="@style/AdminRequestText" />
+    <TextView
+        android:id="@+id/requestEmail"
+        style="@style/AdminRequestText" />
+    <TextView
+        android:id="@+id/requestPhone"
+        style="@style/AdminRequestText" />
+    <TextView
+        android:id="@+id/requestCreatedAt"
+        style="@style/AdminRequestText"
+        android:textSize="12sp"
+        android:paddingTop="8dp"
+        android:paddingBottom="12dp" />
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal">
+        <Button
+            android:id="@+id/requestReject"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:layout_marginEnd="8dp"
+            android:text="@string/admin_request_reject"
+            android:textColor="@color/library_danger" />
+        <Button
+            android:id="@+id/requestApprove"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:textColor="@color/library_surface"
+            android:backgroundTint="@color/library_blue" />
+    </LinearLayout>
+</LinearLayout>

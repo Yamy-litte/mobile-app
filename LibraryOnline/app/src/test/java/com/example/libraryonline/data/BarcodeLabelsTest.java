@@ -1,5 +1,5 @@
 package com.example.libraryonline.data;
-import com.example.libraryonline.ui.admin.BarcodeLabels;
+import com.example.libraryonline.ui.admin.inventory.BarcodeLabels;
 import com.google.zxing.*;
 import com.google.zxing.common.HybridBinarizer;
 import com.google.zxing.oned.Code128Reader;

@@ -5,6 +5,7 @@ import android.util.Log;
 import android.view.View;
 import android.widget.ImageView;
 import android.widget.TextView;
+
 import com.bumptech.glide.Glide;
 import com.bumptech.glide.load.DataSource;
 import com.bumptech.glide.load.HttpException;
@@ -15,6 +16,7 @@ import com.bumptech.glide.request.target.Target;
 /** Cached image requests bound to the target view and its Activity lifecycle. */
 public final class BookCoverLoader {
     private static final String TAG = "BookCoverLoader";
+
     private BookCoverLoader() {}
 
     public static void load(String address, ImageView image, TextView fallback) {
@@ -27,30 +29,42 @@ public final class BookCoverLoader {
                 .load(address.trim())
                 .timeout(20_000)
                 .centerCrop()
-                .listener(new RequestListener<Drawable>() {
-                    @Override
-                    public boolean onLoadFailed(GlideException error, Object model,
-                                                Target<Drawable> target, boolean firstResource) {
-                        fallback.setVisibility(View.VISIBLE);
-                        // Log the failure type/status, never signed URL query parameters.
-                        Throwable cause = error != null && !error.getRootCauses().isEmpty()
-                                ? error.getRootCauses().get(0) : error;
-                        String reason = cause == null ? "unknown" : cause.getClass().getSimpleName();
-                        if (cause instanceof HttpException) {
-                            reason += " HTTP " + ((HttpException) cause).getStatusCode();
-                        }
-                        Log.w(TAG, "Không tải được ảnh bìa: " + reason);
-                        return false;
-                    }
+                .listener(
+                        new RequestListener<Drawable>() {
+                            @Override
+                            public boolean onLoadFailed(
+                                    GlideException error,
+                                    Object model,
+                                    Target<Drawable> target,
+                                    boolean firstResource) {
+                                fallback.setVisibility(View.VISIBLE);
+                                // Log the failure type/status, never signed URL query parameters.
+                                Throwable cause =
+                                        error != null && !error.getRootCauses().isEmpty()
+                                                ? error.getRootCauses().get(0)
+                                                : error;
+                                String reason =
+                                        cause == null
+                                                ? "unknown"
+                                                : cause.getClass().getSimpleName();
+                                if (cause instanceof HttpException) {
+                                    reason += " HTTP " + ((HttpException) cause).getStatusCode();
+                                }
+                                Log.w(TAG, "Không tải được ảnh bìa: " + reason);
+                                return false;
+                            }
 
-                    @Override
-                    public boolean onResourceReady(Drawable resource, Object model,
-                                                    Target<Drawable> target, DataSource source,
-                                                    boolean firstResource) {
-                        fallback.setVisibility(View.GONE);
-                        return false;
-                    }
-                })
+                            @Override
+                            public boolean onResourceReady(
+                                    Drawable resource,
+                                    Object model,
+                                    Target<Drawable> target,
+                                    DataSource source,
+                                    boolean firstResource) {
+                                fallback.setVisibility(View.GONE);
+                                return false;
+                            }
+                        })
                 .into(image);
     }
 }

@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical">
+    <TextView
+        android:id="@+id/inventoryDetailTitle"
+        style="@style/CatalogueHeading" />
+    <TextView
+        android:id="@+id/inventoryDetailMetadata"
+        style="@style/CatalogueBody" />
+    <TextView
+        android:id="@+id/inventoryDetailCounts"
+        style="@style/CatalogueBody"
+        android:paddingTop="12dp"
+        android:paddingBottom="12dp" />
+    <TextView
+        style="@style/CatalogueCaption"
+        android:text="@string/stock_total_hint" />
+    <Button
+        android:id="@+id/inventoryEditTitle"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="@string/stock_edit" />
+    <Button
+        android:id="@+id/inventoryIntake"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="@string/stock_intake" />
+    <Button
+        android:id="@+id/inventoryHideTitle"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="@string/stock_hide_title" />
+    <TextView
+        style="@style/CatalogueHeading"
+        android:text="@string/stock_copies" />
+</LinearLayout>

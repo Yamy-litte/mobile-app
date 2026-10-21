@@ -1,0 +1,80 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ScrollView
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:fillViewport="true">
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:padding="20dp">
+        <TextView
+            style="@style/CatalogueCaption"
+            android:text="@string/book_title_label" />
+        <EditText
+            android:id="@+id/formTitle"
+            style="@style/CatalogueInput"
+            android:contentDescription="@string/book_title_label"
+            android:maxLength="300" />
+        <TextView
+            style="@style/CatalogueCaption"
+            android:text="@string/book_author_label" />
+        <EditText
+            android:id="@+id/formAuthor"
+            style="@style/CatalogueInput"
+            android:contentDescription="@string/book_author_label"
+            android:maxLength="200" />
+        <TextView
+            style="@style/CatalogueCaption"
+            android:text="@string/book_category_label" />
+        <Spinner
+            android:id="@+id/formCategory"
+            android:layout_width="match_parent"
+            android:layout_height="52dp"
+            android:background="@drawable/bg_reader_book_card"
+            android:contentDescription="@string/book_category_label" />
+        <TextView
+            style="@style/CatalogueCaption"
+            android:text="@string/book_publisher_label" />
+        <EditText
+            android:id="@+id/formPublisher"
+            style="@style/CatalogueInput"
+            android:contentDescription="@string/book_publisher_label"
+            android:maxLength="200" />
+        <TextView
+            style="@style/CatalogueCaption"
+            android:text="@string/book_year_label" />
+        <EditText
+            android:id="@+id/formYear"
+            style="@style/CatalogueInput"
+            android:contentDescription="@string/book_year_label"
+            android:inputType="number"
+            android:maxLength="4" />
+        <TextView
+            style="@style/CatalogueCaption"
+            android:text="@string/book_isbn_label" />
+        <EditText
+            android:id="@+id/formIsbn"
+            style="@style/CatalogueInput"
+            android:contentDescription="@string/book_isbn_label"
+            android:inputType="text" />
+        <TextView
+            style="@style/CatalogueCaption"
+            android:text="@string/book_cover_label" />
+        <EditText
+            android:id="@+id/formCover"
+            style="@style/CatalogueInput"
+            android:contentDescription="@string/book_cover_label"
+            android:inputType="textUri" />
+        <TextView
+            style="@style/CatalogueCaption"
+            android:text="@string/book_description_label" />
+        <EditText
+            android:id="@+id/formDescription"
+            style="@style/CatalogueInput"
+            android:contentDescription="@string/book_description_label"
+            android:inputType="textMultiLine"
+            android:minLines="3" />
+    </LinearLayout>
+</ScrollView>

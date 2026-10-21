@@ -1,7 +1,7 @@
 package com.example.libraryonline.data;
 import android.os.Bundle;
 import com.example.libraryonline.data.inventory.StockIntake;
-import com.example.libraryonline.ui.admin.PendingInventoryStore;
+import com.example.libraryonline.ui.admin.inventory.PendingInventoryStore;
 import org.junit.*;
 import org.junit.runner.RunWith;
 import org.robolectric.*;

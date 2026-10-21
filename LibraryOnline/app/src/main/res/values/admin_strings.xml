@@ -36,4 +36,6 @@
     <string name="admin_live_requests">Danh sách yêu cầu đã cập nhật.</string>
     <string name="admin_request_error">Không tải được yêu cầu. Nhấn Làm mới để thử lại.</string>
     <string name="admin_refresh_requests">Làm mới yêu cầu</string>
+    <string name="admin_rejection_reason_hint">Nhập lý do từ chối</string>
+    <string name="admin_request_reject">Từ chối</string>
 </resources>

@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
-<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+<ScrollView
+    xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:background="@color/library_background"
@@ -9,7 +10,7 @@
         android:layout_height="wrap_content"
         android:orientation="vertical"
         android:paddingStart="24dp"
-        android:paddingTop="26dp"
+        android:paddingTop="32dp"
         android:paddingEnd="24dp"
         android:paddingBottom="28dp">
         <ImageView
@@ -24,28 +25,21 @@
             android:layout_height="wrap_content"
             android:text="MyLibrary"
             android:textColor="@color/library_blue"
-            android:textSize="28sp"
+            android:textSize="30sp"
             android:textStyle="bold" />
         <TextView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="24dp"
-            android:text="Quên mật khẩu"
-            android:textColor="@color/library_navy"
-            android:textSize="25sp"
-            android:textStyle="bold" />
-        <TextView
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="8dp"
-            android:layout_marginBottom="20dp"
-            android:text="Nhập thông tin trùng khớp với hồ sơ thẻ thư viện. Admin sẽ kiểm tra và phê duyệt yêu cầu trước khi Firebase gửi email đặt lại mật khẩu."
+            android:layout_marginTop="4dp"
+            android:text="KHU VỰC QUẢN TRỊ"
             android:textColor="@color/library_muted"
-            android:textSize="14sp"
-            android:lineSpacingExtra="3dp" />
+            android:textSize="13sp"
+            android:textStyle="bold"
+            android:letterSpacing="0.08" />
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
+            android:layout_marginTop="30dp"
             android:orientation="vertical"
             android:padding="20dp"
             android:background="@drawable/bg_auth_card"
@@ -53,73 +47,82 @@
             <TextView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:text="Xác minh thông tin độc giả"
+                android:text="Đăng nhập Admin"
                 android:textColor="@color/library_navy"
-                android:textSize="18sp"
-                android:textStyle="bold"
-                android:layout_marginBottom="14dp" />
+                android:textSize="24sp"
+                android:textStyle="bold" />
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:layout_marginBottom="20dp"
+                android:text="Chỉ tài khoản đã được cấp quyền trong hồ sơ Admin mới có thể truy cập."
+                android:textColor="@color/library_muted"
+                android:textSize="14sp" />
             <EditText
-                android:id="@+id/editForgotFullName"
+                android:id="@+id/editAdminEmail"
                 android:layout_width="match_parent"
                 android:layout_height="52dp"
                 android:background="@drawable/bg_auth_input"
                 android:paddingStart="14dp"
                 android:paddingEnd="14dp"
-                android:hint="Họ và tên"
-                android:inputType="textPersonName"
-                android:singleLine="true"
-                android:textColor="@color/library_text"
-                android:textColorHint="@color/library_muted" />
-            <EditText
-                android:id="@+id/editForgotBirthDate"
-                android:layout_width="match_parent"
-                android:layout_height="52dp"
-                android:layout_marginTop="12dp"
-                android:background="@drawable/bg_auth_input"
-                android:paddingStart="14dp"
-                android:paddingEnd="14dp"
-                android:hint="Ngày sinh"
-                android:focusable="false"
-                android:clickable="true"
-                android:inputType="none"
-                android:textColor="@color/library_text"
-                android:textColorHint="@color/library_muted" />
-            <EditText
-                android:id="@+id/editForgotPhone"
-                android:layout_width="match_parent"
-                android:layout_height="52dp"
-                android:layout_marginTop="12dp"
-                android:background="@drawable/bg_auth_input"
-                android:paddingStart="14dp"
-                android:paddingEnd="14dp"
-                android:hint="Số điện thoại"
-                android:inputType="phone"
-                android:singleLine="true"
-                android:textColor="@color/library_text"
-                android:textColorHint="@color/library_muted" />
-            <EditText
-                android:id="@+id/editForgotEmail"
-                android:layout_width="match_parent"
-                android:layout_height="52dp"
-                android:layout_marginTop="12dp"
-                android:background="@drawable/bg_auth_input"
-                android:paddingStart="14dp"
-                android:paddingEnd="14dp"
-                android:hint="Email / Gmail đăng ký"
+                android:hint="Email quản trị viên"
                 android:inputType="textEmailAddress"
+                android:autofillHints="emailAddress"
                 android:singleLine="true"
                 android:textColor="@color/library_text"
                 android:textColorHint="@color/library_muted" />
+            <EditText
+                android:id="@+id/editAdminPassword"
+                android:layout_width="match_parent"
+                android:layout_height="52dp"
+                android:layout_marginTop="12dp"
+                android:background="@drawable/bg_auth_input"
+                android:paddingStart="14dp"
+                android:paddingEnd="14dp"
+                android:drawableEnd="@drawable/ic_visibility_off"
+                android:drawablePadding="8dp"
+                android:hint="Mật khẩu"
+                android:inputType="textPassword"
+                android:saveEnabled="false"
+                android:autofillHints="password"
+                android:singleLine="true"
+                android:textColor="@color/library_text"
+                android:textColorHint="@color/library_muted" />
+            <CheckBox
+                android:id="@+id/checkAdminLogin"
+                android:layout_width="match_parent"
+                android:layout_height="52dp"
+                android:layout_marginTop="12dp"
+                android:buttonTint="@color/library_blue"
+                android:buttonTintMode="src_in"
+                android:paddingEnd="4dp"
+                android:text="Ghi nhớ đăng nhập"
+                android:textColor="@color/library_muted"
+                android:textSize="13sp" />
             <Button
-                android:id="@+id/buttonSubmitPasswordResetRequest"
+                android:id="@+id/buttonAdminLogin"
                 android:layout_width="match_parent"
                 android:layout_height="52dp"
                 android:layout_marginTop="18dp"
                 android:backgroundTint="@color/library_blue"
-                android:text="Gửi yêu cầu quên mật khẩu"
+                android:text="Đăng nhập Admin"
                 android:textAllCaps="false"
                 android:textSize="16sp"
                 android:textStyle="bold" />
+            <TextView
+                android:id="@+id/textBackToReaderLogin"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="18dp"
+                android:gravity="center"
+                android:padding="10dp"
+                android:text="Quay lại đăng nhập độc giả"
+                android:textColor="@color/library_blue"
+                android:textSize="14sp"
+                android:textStyle="bold"
+                android:clickable="true"
+                android:focusable="true" />
         </LinearLayout>
     </LinearLayout>
 </ScrollView>

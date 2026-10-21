@@ -1,9 +1,6 @@
 package com.example.libraryonline.ui.admin;
 
-import android.app.AlertDialog;
-import android.graphics.Typeface;
 import android.os.Bundle;
-import android.text.InputType;
 import android.view.View;
 import android.widget.Button;
 import android.widget.EditText;
@@ -12,9 +9,9 @@ import android.widget.ProgressBar;
 import android.widget.TextView;
 import android.widget.Toast;
 
-import androidx.appcompat.app.AppCompatActivity;
-
 import com.example.libraryonline.R;
+import com.example.libraryonline.data.remote.firebase.BookCatalogueSyncManager;
+import com.example.libraryonline.ui.admin.inventory.InventoryActivity;
 import com.example.libraryonline.utils.EmailSender;
 import com.google.firebase.FirebaseApp;
 import com.google.firebase.auth.FirebaseAuth;
@@ -24,13 +21,12 @@ import com.google.firebase.firestore.FieldValue;
 import com.google.firebase.firestore.FirebaseFirestore;
 import com.google.firebase.firestore.ListenerRegistration;
 import com.google.firebase.firestore.WriteBatch;
-import com.example.libraryonline.data.remote.firebase.BookCatalogueSyncManager;
 
+import java.security.SecureRandom;
 import java.text.DateFormat;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.Locale;
-import java.security.SecureRandom;
 import java.util.Map;
 
 public class AdminMainActivity extends com.example.libraryonline.ui.auth.SessionActivity {
@@ -56,7 +52,7 @@ public class AdminMainActivity extends com.example.libraryonline.ui.auth.Session
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        androidx.core.view.WindowCompat.setDecorFitsSystemWindows(getWindow(),false);
+        androidx.core.view.WindowCompat.setDecorFitsSystemWindows(getWindow(), false);
         setContentView(R.layout.activity_admin_main);
         firestore = FirebaseFirestore.getInstance();
         auth = FirebaseAuth.getInstance();
@@ -64,8 +60,9 @@ public class AdminMainActivity extends com.example.libraryonline.ui.auth.Session
         try {
             secondaryApp = FirebaseApp.getInstance(SECONDARY_APP_NAME);
         } catch (IllegalStateException notInitialized) {
-            secondaryApp = FirebaseApp.initializeApp(this,
-                    FirebaseApp.getInstance().getOptions(), SECONDARY_APP_NAME);
+            secondaryApp =
+                    FirebaseApp.initializeApp(
+                            this, FirebaseApp.getInstance().getOptions(), SECONDARY_APP_NAME);
         }
         secondaryAuth = FirebaseAuth.getInstance(secondaryApp);
         requestsContainer = findViewById(R.id.containerRegistrationRequests);
@@ -75,223 +72,404 @@ public class AdminMainActivity extends com.example.libraryonline.ui.auth.Session
         resetRequestsContainer = findViewById(R.id.containerPasswordResetRequests);
         resetPendingCount = findViewById(R.id.textPasswordResetPendingCount);
         resetEmptyMessage = findViewById(R.id.textEmptyPasswordResetRequests);
-        homeView=new AdminHomeView(this,savedInstanceState==null?AdminHomeView.HOME:savedInstanceState.getInt("adminTab",AdminHomeView.HOME));
-        androidx.core.view.ViewCompat.setOnApplyWindowInsetsListener(findViewById(R.id.adminRoot),(view,insets) -> {
-            androidx.core.graphics.Insets bars=insets.getInsets(androidx.core.view.WindowInsetsCompat.Type.systemBars());
-            view.setPadding(bars.left,bars.top,bars.right,bars.bottom);return insets;
-        });
-        getOnBackPressedDispatcher().addCallback(this,new androidx.activity.OnBackPressedCallback(true) {
-            @Override public void handleOnBackPressed() {
-                if(homeView.selectedTab()!=AdminHomeView.HOME)homeView.show(AdminHomeView.HOME);
-                else {setEnabled(false);getOnBackPressedDispatcher().onBackPressed();setEnabled(true);}
-            }
-        });
-        findViewById(R.id.actionAdminInventory).setOnClickListener(v -> {
-            if(isSessionReady())startActivity(new android.content.Intent(this,InventoryActivity.class));
-        });
+        homeView =
+                new AdminHomeView(
+                        this,
+                        savedInstanceState == null
+                                ? AdminHomeView.HOME
+                                : savedInstanceState.getInt("adminTab", AdminHomeView.HOME));
+        androidx.core.view.ViewCompat.setOnApplyWindowInsetsListener(
+                findViewById(R.id.adminRoot),
+                (view, insets) -> {
+                    androidx.core.graphics.Insets bars =
+                            insets.getInsets(
+                                    androidx.core.view.WindowInsetsCompat.Type.systemBars());
+                    view.setPadding(bars.left, bars.top, bars.right, bars.bottom);
+                    return insets;
+                });
+        getOnBackPressedDispatcher()
+                .addCallback(
+                        this,
+                        new androidx.activity.OnBackPressedCallback(true) {
+                            @Override
+                            public void handleOnBackPressed() {
+                                if (homeView.selectedTab() != AdminHomeView.HOME)
+                                    homeView.show(AdminHomeView.HOME);
+                                else {
+                                    setEnabled(false);
+                                    getOnBackPressedDispatcher().onBackPressed();
+                                    setEnabled(true);
+                                }
+                            }
+                        });
+        findViewById(R.id.actionAdminInventory)
+                .setOnClickListener(
+                        v -> {
+                            if (isSessionReady())
+                                startActivity(
+                                        new android.content.Intent(this, InventoryActivity.class));
+                        });
         bindCatalogueSyncButton();
-        findViewById(R.id.actionAdminSync).setOnClickListener(v -> {if(isSessionReady() && syncButton.isEnabled())syncButton.performClick();});
-        findViewById(R.id.buttonAdminRefresh).setOnClickListener(v -> {if(isSessionReady()){loadDashboard();stopRequestListeners();startRequests();}});
-        findViewById(R.id.buttonAdminRefreshRequests).setOnClickListener(v -> {
-            if(!isSessionReady())return;
-            stopRequestListeners();startRequests();
-        });
+        findViewById(R.id.actionAdminSync)
+                .setOnClickListener(
+                        v -> {
+                            if (isSessionReady() && syncButton.isEnabled())
+                                syncButton.performClick();
+                        });
+        findViewById(R.id.buttonAdminRefresh)
+                .setOnClickListener(
+                        v -> {
+                            if (isSessionReady()) {
+                                loadDashboard();
+                                stopRequestListeners();
+                                startRequests();
+                            }
+                        });
+        findViewById(R.id.buttonAdminRefreshRequests)
+                .setOnClickListener(
+                        v -> {
+                            if (!isSessionReady()) return;
+                            stopRequestListeners();
+                            startRequests();
+                        });
         findViewById(R.id.buttonAdminLogout).setOnClickListener(v -> logoutSession());
-
     }
 
-    @Override protected com.example.libraryonline.data.session.SessionProfile.Role expectedRole() {
+    @Override
+    protected com.example.libraryonline.data.session.SessionProfile.Role expectedRole() {
         return com.example.libraryonline.data.session.SessionProfile.Role.ADMIN;
     }
-    @Override protected void onSessionAuthorized(com.example.libraryonline.data.session.SessionProfile profile) {
-        ((TextView)findViewById(R.id.textAdminSession)).setText("Admin " + profile.displayName);
-        ((TextView)findViewById(R.id.textAdminProfileName)).setText(profile.displayName);
-        ((TextView)findViewById(R.id.textAdminProfileEmail)).setText(profile.email==null?"":profile.email);
-        startRequests();loadDashboard();
+
+    @Override
+    protected void onSessionAuthorized(
+            com.example.libraryonline.data.session.SessionProfile profile) {
+        ((TextView) findViewById(R.id.textAdminSession)).setText("Admin " + profile.displayName);
+        ((TextView) findViewById(R.id.textAdminProfileName)).setText(profile.displayName);
+        ((TextView) findViewById(R.id.textAdminProfileEmail))
+                .setText(profile.email == null ? "" : profile.email);
+        startRequests();
+        loadDashboard();
     }
-    @Override protected void onSaveInstanceState(Bundle state) {
-        state.putInt("adminTab",homeView.selectedTab());super.onSaveInstanceState(state);
+
+    @Override
+    protected void onSaveInstanceState(Bundle state) {
+        state.putInt("adminTab", homeView.selectedTab());
+        super.onSaveInstanceState(state);
     }
+
     private void stopRequestListeners() {
         requestsGeneration++;
-        if(requestsListener!=null) {requestsListener.remove();requestsListener=null;}
-        if(resetRequestsListener!=null) {resetRequestsListener.remove();resetRequestsListener=null;}
+        if (requestsListener != null) {
+            requestsListener.remove();
+            requestsListener = null;
+        }
+        if (resetRequestsListener != null) {
+            resetRequestsListener.remove();
+            resetRequestsListener = null;
+        }
     }
-    @Override protected void onSessionStopped() {
-        dashboardGeneration++;stopRequestListeners();
-        if(catalogueSyncManager!=null) {catalogueSyncManager.close();catalogueSyncManager=null;}
-        requestsContainer.removeAllViews();resetRequestsContainer.removeAllViews();
-        if(syncButton!=null){syncButton.setEnabled(true);syncButton.setText(R.string.admin_sync);}
-    }
-    private void startRequests() {
-        registrationCount=null;resetCount=null;registrationError=false;resetError=false;
-        requestsContainer.removeAllViews();resetRequestsContainer.removeAllViews();
-        progress.setVisibility(View.VISIBLE);emptyMessage.setVisibility(View.VISIBLE);
-        emptyMessage.setText(R.string.admin_count_loading);resetEmptyMessage.setVisibility(View.VISIBLE);
-        resetEmptyMessage.setText(R.string.admin_count_loading);
-        updateRequestSummary();listenForRequests();listenForPasswordResetRequests();
-    }
-    private void updateRequestSummary() {
-        ((TextView)findViewById(R.id.textAdminRegistrationCount)).setText(registrationCount==null?"—":String.valueOf(registrationCount));
-        ((TextView)findViewById(R.id.textAdminPendingSummary)).setText(registrationError?getString(R.string.admin_request_error):registrationCount==null?getString(R.string.admin_count_loading):registrationCount+" yêu cầu đăng ký chờ duyệt");
-        ((TextView)findViewById(R.id.textAdminResetSummary)).setText(resetError?getString(R.string.admin_request_error):resetCount==null?getString(R.string.admin_count_loading):resetCount+" yêu cầu khôi phục mật khẩu");
-        ((TextView)findViewById(R.id.textAdminRequestsStatus)).setText(registrationError||resetError?R.string.admin_request_error:registrationCount==null||resetCount==null?R.string.admin_count_loading:registrationCached||resetCached?R.string.admin_cached_requests:R.string.admin_live_requests);
-    }
-    private void loadDashboard() {
-        final long request=++dashboardGeneration;
-        Button refresh=findViewById(R.id.buttonAdminRefresh);refresh.setEnabled(false);
-        TextView status=findViewById(R.id.textAdminDataStatus);status.setText(R.string.admin_loading);
-        int[] ids={R.id.textAdminBookCount,R.id.textAdminReaderCount,R.id.textAdminCopyCount};
-        for(int id:ids)((TextView)findViewById(id)).setText(R.string.admin_dash);
-        java.util.List<com.google.android.gms.tasks.Task<com.google.firebase.firestore.AggregateQuerySnapshot>> tasks=java.util.Arrays.asList(
-            firestore.collection("BookTitles").count().get(com.google.firebase.firestore.AggregateSource.SERVER),
-            firestore.collection("Users").whereEqualTo("role","Reader").count().get(com.google.firebase.firestore.AggregateSource.SERVER),
-            firestore.collection("BookCopies").count().get(com.google.firebase.firestore.AggregateSource.SERVER));
-        com.google.android.gms.tasks.Tasks.whenAllComplete(tasks).addOnCompleteListener(done -> {
-            if(!isSessionReady() || request!=dashboardGeneration)return;
-            boolean failed=false;
-            for(int i=0;i<tasks.size();i++) {
-                if(tasks.get(i).isSuccessful())((TextView)findViewById(ids[i])).setText(java.text.NumberFormat.getIntegerInstance(new Locale("vi","VN")).format(tasks.get(i).getResult().getCount()));
-                else failed=true;
-            }
-            refresh.setEnabled(true);
-            status.setText(failed?getString(R.string.admin_load_error):getString(R.string.admin_updated,new java.text.SimpleDateFormat("HH:mm",Locale.getDefault()).format(new Date())));
-        });
-    }
-    private void bindCatalogueSyncButton() {
-        syncButton=findViewById(R.id.buttonAdminSync);
-        syncButton.setOnClickListener(v -> privateDialog()
-                .setTitle(R.string.admin_sync)
-                .setMessage("Tải danh mục Firebase về thiết bị. Thêm và thay đổi sách qua mục Quản lý kho để giữ số lượng nhất quán.")
-                .setNegativeButton("Hủy", (dialog, which) -> dialog.dismiss())
-                .setPositiveButton("Đồng bộ", (dialog, which) -> {
-                    if(!isSessionReady())return;
-                    syncButton.setEnabled(false);
-                    syncButton.setText("Đang đồng bộ...");
-                    if (catalogueSyncManager != null) catalogueSyncManager.close();
-                    catalogueSyncManager = new BookCatalogueSyncManager(getApplicationContext());
-                    BookCatalogueSyncManager.SyncListener syncListener =
-                            new BookCatalogueSyncManager.SyncListener() {
-                        @Override public void onSyncCompleted(int changedRows) {
-                            runOnUiThread(() -> {
-                                if (!isSessionReady() || isFinishing() || isDestroyed()) return;
-                                syncButton.setEnabled(true);
-                                syncButton.setText(R.string.admin_sync);
-                                Toast.makeText(AdminMainActivity.this,
-                                        "Đồng bộ hoàn tất. Số bản ghi xử lý: " + changedRows,
-                                        Toast.LENGTH_LONG).show();
-                            });
-                        }
 
-                        @Override public void onSyncFailed(String message) {
-                            runOnUiThread(() -> {
-                                if (!isSessionReady() || isFinishing() || isDestroyed()) return;
-                                syncButton.setEnabled(true);
-                                syncButton.setText(R.string.admin_sync);
-                                Toast.makeText(AdminMainActivity.this,
-                                        "Đồng bộ thất bại: " + message,
-                                        Toast.LENGTH_LONG).show();
-                            });
-                        }
-                    };
-                    catalogueSyncManager.start(syncListener);
-                }).show());
+    @Override
+    protected void onSessionStopped() {
+        dashboardGeneration++;
+        stopRequestListeners();
+        if (catalogueSyncManager != null) {
+            catalogueSyncManager.close();
+            catalogueSyncManager = null;
+        }
+        requestsContainer.removeAllViews();
+        resetRequestsContainer.removeAllViews();
+        if (syncButton != null) {
+            syncButton.setEnabled(true);
+            syncButton.setText(R.string.admin_sync);
+        }
+    }
+
+    private void startRequests() {
+        registrationCount = null;
+        resetCount = null;
+        registrationError = false;
+        resetError = false;
+        requestsContainer.removeAllViews();
+        resetRequestsContainer.removeAllViews();
+        progress.setVisibility(View.VISIBLE);
+        emptyMessage.setVisibility(View.VISIBLE);
+        emptyMessage.setText(R.string.admin_count_loading);
+        resetEmptyMessage.setVisibility(View.VISIBLE);
+        resetEmptyMessage.setText(R.string.admin_count_loading);
+        updateRequestSummary();
+        listenForRequests();
+        listenForPasswordResetRequests();
+    }
+
+    private void updateRequestSummary() {
+        ((TextView) findViewById(R.id.textAdminRegistrationCount))
+                .setText(registrationCount == null ? "—" : String.valueOf(registrationCount));
+        ((TextView) findViewById(R.id.textAdminPendingSummary))
+                .setText(
+                        registrationError
+                                ? getString(R.string.admin_request_error)
+                                : registrationCount == null
+                                        ? getString(R.string.admin_count_loading)
+                                        : registrationCount + " yêu cầu đăng ký chờ duyệt");
+        ((TextView) findViewById(R.id.textAdminResetSummary))
+                .setText(
+                        resetError
+                                ? getString(R.string.admin_request_error)
+                                : resetCount == null
+                                        ? getString(R.string.admin_count_loading)
+                                        : resetCount + " yêu cầu khôi phục mật khẩu");
+        ((TextView) findViewById(R.id.textAdminRequestsStatus))
+                .setText(
+                        registrationError || resetError
+                                ? R.string.admin_request_error
+                                : registrationCount == null || resetCount == null
+                                        ? R.string.admin_count_loading
+                                        : registrationCached || resetCached
+                                                ? R.string.admin_cached_requests
+                                                : R.string.admin_live_requests);
+    }
+
+    private void loadDashboard() {
+        final long request = ++dashboardGeneration;
+        Button refresh = findViewById(R.id.buttonAdminRefresh);
+        refresh.setEnabled(false);
+        TextView status = findViewById(R.id.textAdminDataStatus);
+        status.setText(R.string.admin_loading);
+        int[] ids = {R.id.textAdminBookCount, R.id.textAdminReaderCount, R.id.textAdminCopyCount};
+        for (int id : ids) ((TextView) findViewById(id)).setText(R.string.admin_dash);
+        java.util.List<
+                        com.google.android.gms.tasks.Task<
+                                com.google.firebase.firestore.AggregateQuerySnapshot>>
+                tasks =
+                        java.util.Arrays.asList(
+                                firestore
+                                        .collection("BookTitles")
+                                        .count()
+                                        .get(com.google.firebase.firestore.AggregateSource.SERVER),
+                                firestore
+                                        .collection("Users")
+                                        .whereEqualTo("role", "Reader")
+                                        .count()
+                                        .get(com.google.firebase.firestore.AggregateSource.SERVER),
+                                firestore
+                                        .collection("BookCopies")
+                                        .count()
+                                        .get(com.google.firebase.firestore.AggregateSource.SERVER));
+        com.google.android.gms.tasks.Tasks.whenAllComplete(tasks)
+                .addOnCompleteListener(
+                        done -> {
+                            if (!isSessionReady() || request != dashboardGeneration) return;
+                            boolean failed = false;
+                            for (int i = 0; i < tasks.size(); i++) {
+                                if (tasks.get(i).isSuccessful())
+                                    ((TextView) findViewById(ids[i]))
+                                            .setText(
+                                                    java.text.NumberFormat.getIntegerInstance(
+                                                                    new Locale("vi", "VN"))
+                                                            .format(
+                                                                    tasks.get(i)
+                                                                            .getResult()
+                                                                            .getCount()));
+                                else failed = true;
+                            }
+                            refresh.setEnabled(true);
+                            status.setText(
+                                    failed
+                                            ? getString(R.string.admin_load_error)
+                                            : getString(
+                                                    R.string.admin_updated,
+                                                    new java.text.SimpleDateFormat(
+                                                                    "HH:mm", Locale.getDefault())
+                                                            .format(new Date())));
+                        });
+    }
+
+    private void bindCatalogueSyncButton() {
+        syncButton = findViewById(R.id.buttonAdminSync);
+        syncButton.setOnClickListener(
+                v ->
+                        privateDialog()
+                                .setTitle(R.string.admin_sync)
+                                .setMessage(
+                                        "Tải danh mục Firebase về thiết bị. Thêm và thay đổi sách"
+                                            + " qua mục Quản lý kho để giữ số lượng nhất quán.")
+                                .setNegativeButton("Hủy", (dialog, which) -> dialog.dismiss())
+                                .setPositiveButton(
+                                        "Đồng bộ",
+                                        (dialog, which) -> {
+                                            if (!isSessionReady()) return;
+                                            syncButton.setEnabled(false);
+                                            syncButton.setText("Đang đồng bộ...");
+                                            if (catalogueSyncManager != null)
+                                                catalogueSyncManager.close();
+                                            catalogueSyncManager =
+                                                    new BookCatalogueSyncManager(
+                                                            getApplicationContext());
+                                            BookCatalogueSyncManager.SyncListener syncListener =
+                                                    new BookCatalogueSyncManager.SyncListener() {
+                                                        @Override
+                                                        public void onSyncCompleted(
+                                                                int changedRows) {
+                                                            runOnUiThread(
+                                                                    () -> {
+                                                                        if (!isSessionReady()
+                                                                                || isFinishing()
+                                                                                || isDestroyed())
+                                                                            return;
+                                                                        syncButton.setEnabled(true);
+                                                                        syncButton.setText(
+                                                                                R.string
+                                                                                        .admin_sync);
+                                                                        Toast.makeText(
+                                                                                        AdminMainActivity
+                                                                                                .this,
+                                                                                        "Đồng bộ"
+                                                                                            + " hoàn"
+                                                                                            + " tất."
+                                                                                            + " Số bản"
+                                                                                            + " ghi xử"
+                                                                                            + " lý: "
+                                                                                                + changedRows,
+                                                                                        Toast
+                                                                                                .LENGTH_LONG)
+                                                                                .show();
+                                                                    });
+                                                        }
+
+                                                        @Override
+                                                        public void onSyncFailed(String message) {
+                                                            runOnUiThread(
+                                                                    () -> {
+                                                                        if (!isSessionReady()
+                                                                                || isFinishing()
+                                                                                || isDestroyed())
+                                                                            return;
+                                                                        syncButton.setEnabled(true);
+                                                                        syncButton.setText(
+                                                                                R.string
+                                                                                        .admin_sync);
+                                                                        Toast.makeText(
+                                                                                        AdminMainActivity
+                                                                                                .this,
+                                                                                        "Đồng bộ"
+                                                                                            + " thất"
+                                                                                            + " bại:"
+                                                                                            + " "
+                                                                                                + message,
+                                                                                        Toast
+                                                                                                .LENGTH_LONG)
+                                                                                .show();
+                                                                    });
+                                                        }
+                                                    };
+                                            catalogueSyncManager.start(syncListener);
+                                        })
+                                .show());
     }
 
     private void listenForRequests() {
-        final long generation=requestsGeneration;
-        requestsListener = firestore.collection("RegistrationRequests")
-                .addSnapshotListener(com.google.firebase.firestore.MetadataChanges.INCLUDE,(snapshot, error) -> {
-                    if(!isSessionReady() || generation!=requestsGeneration)return;
-                    progress.setVisibility(View.GONE);
-                    if (error != null) {
-                        registrationError=true;registrationCount=null;requestsContainer.removeAllViews();updateRequestSummary();
-                        emptyMessage.setVisibility(View.VISIBLE);
-                        emptyMessage.setText(R.string.admin_request_error);
-                        return;
-                    }
-                    if (snapshot == null) return;
-                    requestsContainer.removeAllViews();
-                    int count = 0;
-                    for (DocumentSnapshot doc : snapshot.getDocuments()) {
-                        if (!isPending(doc.getString("status"))) continue;
-                        count++;
-                        requestsContainer.addView(createRequestCard(doc));
-                    }
-                    registrationError=false;registrationCount=count;registrationCached=snapshot.getMetadata().isFromCache();updateRequestSummary();
-                    pendingCount.setText("Đăng ký thành viên (" + count + ")");
-                    emptyMessage.setVisibility(count == 0 ? View.VISIBLE : View.GONE);
-                    if (count == 0) emptyMessage.setText("Hiện chưa có yêu cầu đăng ký đang chờ duyệt.");
-                });
+        final long generation = requestsGeneration;
+        requestsListener =
+                firestore
+                        .collection("RegistrationRequests")
+                        .addSnapshotListener(
+                                com.google.firebase.firestore.MetadataChanges.INCLUDE,
+                                (snapshot, error) -> {
+                                    if (!isSessionReady() || generation != requestsGeneration)
+                                        return;
+                                    progress.setVisibility(View.GONE);
+                                    if (error != null) {
+                                        registrationError = true;
+                                        registrationCount = null;
+                                        requestsContainer.removeAllViews();
+                                        updateRequestSummary();
+                                        emptyMessage.setVisibility(View.VISIBLE);
+                                        emptyMessage.setText(R.string.admin_request_error);
+                                        return;
+                                    }
+                                    if (snapshot == null) return;
+                                    requestsContainer.removeAllViews();
+                                    int count = 0;
+                                    for (DocumentSnapshot doc : snapshot.getDocuments()) {
+                                        if (!isPending(doc.getString("status"))) continue;
+                                        count++;
+                                        requestsContainer.addView(createRequestCard(doc));
+                                    }
+                                    registrationError = false;
+                                    registrationCount = count;
+                                    registrationCached = snapshot.getMetadata().isFromCache();
+                                    updateRequestSummary();
+                                    pendingCount.setText("Đăng ký thành viên (" + count + ")");
+                                    emptyMessage.setVisibility(
+                                            count == 0 ? View.VISIBLE : View.GONE);
+                                    if (count == 0)
+                                        emptyMessage.setText(
+                                                "Hiện chưa có yêu cầu đăng ký đang chờ duyệt.");
+                                });
     }
 
-
     private void listenForPasswordResetRequests() {
-        final long generation=requestsGeneration;
-        resetRequestsListener = firestore.collection("PasswordResetRequests")
-                .addSnapshotListener(com.google.firebase.firestore.MetadataChanges.INCLUDE,(snapshot, error) -> {
-                    if(!isSessionReady() || generation!=requestsGeneration)return;
-                    if (error != null) {
-                        resetError=true;resetCount=null;resetRequestsContainer.removeAllViews();updateRequestSummary();
-                        resetEmptyMessage.setVisibility(View.VISIBLE);
-                        resetEmptyMessage.setText(R.string.admin_request_error);
-                        return;
-                    }
-                    if (snapshot == null) return;
-                    resetRequestsContainer.removeAllViews();
-                    int count = 0;
-                    for (DocumentSnapshot doc : snapshot.getDocuments()) {
-                        if (!"Pending".equalsIgnoreCase(doc.getString("status"))) continue;
-                        count++;
-                        resetRequestsContainer.addView(createPasswordResetCard(doc));
-                    }
-                    resetError=false;resetCount=count;resetCached=snapshot.getMetadata().isFromCache();updateRequestSummary();
-                    resetPendingCount.setText("Khôi phục mật khẩu (" + count + ")");
-                    resetEmptyMessage.setVisibility(count == 0 ? View.VISIBLE : View.GONE);
-                    if (count == 0) resetEmptyMessage.setText("Hiện chưa có yêu cầu quên mật khẩu đang chờ duyệt.");
-                });
+        final long generation = requestsGeneration;
+        resetRequestsListener =
+                firestore
+                        .collection("PasswordResetRequests")
+                        .addSnapshotListener(
+                                com.google.firebase.firestore.MetadataChanges.INCLUDE,
+                                (snapshot, error) -> {
+                                    if (!isSessionReady() || generation != requestsGeneration)
+                                        return;
+                                    if (error != null) {
+                                        resetError = true;
+                                        resetCount = null;
+                                        resetRequestsContainer.removeAllViews();
+                                        updateRequestSummary();
+                                        resetEmptyMessage.setVisibility(View.VISIBLE);
+                                        resetEmptyMessage.setText(R.string.admin_request_error);
+                                        return;
+                                    }
+                                    if (snapshot == null) return;
+                                    resetRequestsContainer.removeAllViews();
+                                    int count = 0;
+                                    for (DocumentSnapshot doc : snapshot.getDocuments()) {
+                                        if (!"Pending".equalsIgnoreCase(doc.getString("status")))
+                                            continue;
+                                        count++;
+                                        resetRequestsContainer.addView(
+                                                createPasswordResetCard(doc));
+                                    }
+                                    resetError = false;
+                                    resetCount = count;
+                                    resetCached = snapshot.getMetadata().isFromCache();
+                                    updateRequestSummary();
+                                    resetPendingCount.setText("Khôi phục mật khẩu (" + count + ")");
+                                    resetEmptyMessage.setVisibility(
+                                            count == 0 ? View.VISIBLE : View.GONE);
+                                    if (count == 0)
+                                        resetEmptyMessage.setText(
+                                                "Hiện chưa có yêu cầu quên mật khẩu đang chờ"
+                                                    + " duyệt.");
+                                });
     }
 
     private View createPasswordResetCard(DocumentSnapshot doc) {
-        int pad = dp(16);
-        LinearLayout card = new LinearLayout(this);
-        card.setOrientation(LinearLayout.VERTICAL);
-        card.setPadding(pad, pad, pad, pad);
-        card.setBackgroundResource(R.drawable.bg_admin_card);
-        LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
-        params.topMargin = dp(12);
-        card.setLayoutParams(params);
-
-        card.addView(makeText(value(doc, "fullName", "Chưa có họ tên"), 18, R.color.library_text, true));
-        card.addView(makeText("CHỜ XÁC MINH", 11, R.color.library_warning, true));
-        card.addView(makeText("Ngày sinh: " + value(doc, "birthDate", "Chưa cung cấp"), 14, R.color.library_muted, false));
-        card.addView(makeText("Email: " + value(doc, "email", "Chưa cung cấp"), 14, R.color.library_muted, false));
-        card.addView(makeText("Số điện thoại: " + value(doc, "phone", "Chưa cung cấp"), 14, R.color.library_muted, false));
-
-        LinearLayout actions = new LinearLayout(this);
-        actions.setOrientation(LinearLayout.HORIZONTAL);
-        Button reject = new Button(this);
-        reject.setText("Từ chối");
-        reject.setTextColor(androidx.core.content.ContextCompat.getColor(this,R.color.library_danger));
-        Button approve = new Button(this);
+        View card =
+                bindRequestCard(
+                        doc,
+                        resetRequestsContainer,
+                        "CHỜ XÁC MINH",
+                        value(doc, "birthDate", "Chưa cung cấp"));
+        card.findViewById(R.id.requestCreatedAt).setVisibility(View.GONE);
+        Button reject = card.findViewById(R.id.requestReject);
+        Button approve = card.findViewById(R.id.requestApprove);
         approve.setText("Duyệt & gửi email");
-        approve.setTextColor(androidx.core.content.ContextCompat.getColor(this,R.color.library_surface));
-        approve.setBackgroundTintList(android.content.res.ColorStateList.valueOf(
-                androidx.core.content.ContextCompat.getColor(this,R.color.library_blue)));
-        LinearLayout.LayoutParams rejectParams = new LinearLayout.LayoutParams(0,
-                LinearLayout.LayoutParams.WRAP_CONTENT, 1);
-        rejectParams.rightMargin = dp(8);
-        actions.addView(reject, rejectParams);
-        actions.addView(approve, new LinearLayout.LayoutParams(0,
-                LinearLayout.LayoutParams.WRAP_CONTENT, 1));
-        card.addView(actions);
         reject.setOnClickListener(v -> showPasswordResetRejectDialog(doc, reject, approve));
         approve.setOnClickListener(v -> approvePasswordResetRequest(doc, reject, approve));
         return card;
     }
 
-    private void approvePasswordResetRequest(DocumentSnapshot request, Button reject, Button approve) {
+    private void approvePasswordResetRequest(
+            DocumentSnapshot request, Button reject, Button approve) {
         String email = value(request, "email", "").trim().toLowerCase(Locale.ROOT);
         String name = value(request, "fullName", "").trim().replaceAll("\\s+", " ");
         String birthDate = value(request, "birthDate", "").trim();
@@ -303,87 +481,204 @@ public class AdminMainActivity extends com.example.libraryonline.ui.auth.Session
 
         privateDialog()
                 .setTitle("Duyệt yêu cầu quên mật khẩu")
-                .setMessage("Chỉ duyệt nếu họ tên, ngày sinh và số điện thoại khớp hoàn toàn với hồ sơ độc giả. Firebase sẽ gửi email đặt lại mật khẩu đến " + email + ".")
+                .setMessage(
+                        "Chỉ duyệt nếu họ tên, ngày sinh và số điện thoại khớp hoàn toàn với hồ sơ"
+                            + " độc giả. Firebase sẽ gửi email đặt lại mật khẩu đến "
+                                + email
+                                + ".")
                 .setNegativeButton("Hủy", (dialog, which) -> dialog.dismiss())
-                .setPositiveButton("Xác minh và gửi", (dialog, which) -> {
-                    if(!isSessionReady())return;
-                    setResetActionsEnabled(reject, approve, false);
-                    firestore.collection("Users").whereEqualTo("email", email).limit(1).get()
-                            .addOnSuccessListener(matches -> {
-                                if (matches.isEmpty()) {
-                                    failResetAction(reject, approve, "Không tìm thấy tài khoản độc giả khớp email.");
-                                    return;
-                                }
-                                DocumentSnapshot user = matches.getDocuments().get(0);
-                                String storedName = value(user, "fullName", "").trim().replaceAll("\\s+", " ");
-                                String storedBirth = value(user, "dateOfBirth", value(user, "birthDate", "")).trim();
-                                String storedPhone = value(user, "phone", "").trim();
-                                if (!name.equalsIgnoreCase(storedName)
-                                        || !birthDate.equals(storedBirth)
-                                        || !phone.equals(storedPhone)
-                                        || !"Reader".equalsIgnoreCase(value(user, "role", ""))) {
-                                    failResetAction(reject, approve,
-                                            "Thông tin không khớp hồ sơ độc giả. Chưa gửi email.");
-                                    return;
-                                }
+                .setPositiveButton(
+                        "Xác minh và gửi",
+                        (dialog, which) -> {
+                            if (!isSessionReady()) return;
+                            setResetActionsEnabled(reject, approve, false);
+                            firestore
+                                    .collection("Users")
+                                    .whereEqualTo("email", email)
+                                    .limit(1)
+                                    .get()
+                                    .addOnSuccessListener(
+                                            matches -> {
+                                                if (matches.isEmpty()) {
+                                                    failResetAction(
+                                                            reject,
+                                                            approve,
+                                                            "Không tìm thấy tài khoản độc giả khớp"
+                                                                + " email.");
+                                                    return;
+                                                }
+                                                DocumentSnapshot user =
+                                                        matches.getDocuments().get(0);
+                                                String storedName =
+                                                        value(user, "fullName", "")
+                                                                .trim()
+                                                                .replaceAll("\\s+", " ");
+                                                String storedBirth =
+                                                        value(
+                                                                        user,
+                                                                        "dateOfBirth",
+                                                                        value(
+                                                                                user,
+                                                                                "birthDate",
+                                                                                ""))
+                                                                .trim();
+                                                String storedPhone =
+                                                        value(user, "phone", "").trim();
+                                                if (!name.equalsIgnoreCase(storedName)
+                                                        || !birthDate.equals(storedBirth)
+                                                        || !phone.equals(storedPhone)
+                                                        || !"Reader"
+                                                                .equalsIgnoreCase(
+                                                                        value(user, "role", ""))) {
+                                                    failResetAction(
+                                                            reject,
+                                                            approve,
+                                                            "Thông tin không khớp hồ sơ độc giả."
+                                                                + " Chưa gửi email.");
+                                                    return;
+                                                }
 
-                                secondaryAuth.sendPasswordResetEmail(email)
-                                        .addOnSuccessListener(unused ->
-                                                firestore.collection("PasswordResetRequests").document(request.getId())
-                                                        .update(
-                                                                "status", "Approved",
-                                                                "rejectionReason", "",
-                                                                "reviewedBy", auth.getCurrentUser() == null ? "" : auth.getCurrentUser().getUid(),
-                                                                "reviewedAt", FieldValue.serverTimestamp())
-                                                        .addOnSuccessListener(done -> {
-                                                            setResetActionsEnabled(reject, approve, true);
-                                                            Toast.makeText(this,
-                                                                    "Đã xác minh và yêu cầu Firebase gửi email đặt lại mật khẩu.",
-                                                                    Toast.LENGTH_LONG).show();
-                                                        })
-                                                        .addOnFailureListener(error -> failResetAction(reject, approve,
-                                                                "Firebase đã gửi email nhưng không cập nhật được trạng thái yêu cầu: "
-                                                                        + error.getLocalizedMessage())))
-                                        .addOnFailureListener(error -> failResetAction(reject, approve,
-                                                "Firebase chưa gửi được email đặt lại mật khẩu: "
-                                                        + error.getLocalizedMessage()));
-                            })
-                            .addOnFailureListener(error -> failResetAction(reject, approve,
-                                    "Không xác minh được hồ sơ: " + error.getLocalizedMessage()));
-                }).show();
+                                                secondaryAuth
+                                                        .sendPasswordResetEmail(email)
+                                                        .addOnSuccessListener(
+                                                                unused ->
+                                                                        firestore
+                                                                                .collection(
+                                                                                        "PasswordResetRequests")
+                                                                                .document(
+                                                                                        request
+                                                                                                .getId())
+                                                                                .update(
+                                                                                        "status",
+                                                                                        "Approved",
+                                                                                        "rejectionReason",
+                                                                                        "",
+                                                                                        "reviewedBy",
+                                                                                        auth
+                                                                                                                .getCurrentUser()
+                                                                                                        == null
+                                                                                                ? ""
+                                                                                                : auth.getCurrentUser()
+                                                                                                        .getUid(),
+                                                                                        "reviewedAt",
+                                                                                        FieldValue
+                                                                                                .serverTimestamp())
+                                                                                .addOnSuccessListener(
+                                                                                        done -> {
+                                                                                            setResetActionsEnabled(
+                                                                                                    reject,
+                                                                                                    approve,
+                                                                                                    true);
+                                                                                            Toast
+                                                                                                    .makeText(
+                                                                                                            this,
+                                                                                                            "Đã xác"
+                                                                                                                + " minh"
+                                                                                                                + " và yêu"
+                                                                                                                + " cầu Firebase"
+                                                                                                                + " gửi email"
+                                                                                                                + " đặt lại"
+                                                                                                                + " mật khẩu.",
+                                                                                                            Toast
+                                                                                                                    .LENGTH_LONG)
+                                                                                                    .show();
+                                                                                        })
+                                                                                .addOnFailureListener(
+                                                                                        error ->
+                                                                                                failResetAction(
+                                                                                                        reject,
+                                                                                                        approve,
+                                                                                                        "Firebase"
+                                                                                                            + " đã gửi"
+                                                                                                            + " email"
+                                                                                                            + " nhưng"
+                                                                                                            + " không"
+                                                                                                            + " cập nhật"
+                                                                                                            + " được"
+                                                                                                            + " trạng"
+                                                                                                            + " thái"
+                                                                                                            + " yêu cầu:"
+                                                                                                            + " "
+                                                                                                                + error
+                                                                                                                        .getLocalizedMessage())))
+                                                        .addOnFailureListener(
+                                                                error ->
+                                                                        failResetAction(
+                                                                                reject,
+                                                                                approve,
+                                                                                "Firebase chưa gửi"
+                                                                                    + " được email"
+                                                                                    + " đặt lại mật"
+                                                                                    + " khẩu: "
+                                                                                        + error
+                                                                                                .getLocalizedMessage()));
+                                            })
+                                    .addOnFailureListener(
+                                            error ->
+                                                    failResetAction(
+                                                            reject,
+                                                            approve,
+                                                            "Không xác minh được hồ sơ: "
+                                                                    + error.getLocalizedMessage()));
+                        })
+                .show();
     }
 
-    private void showPasswordResetRejectDialog(DocumentSnapshot doc, Button reject, Button approve) {
-        EditText reasonInput = new EditText(this);
-        reasonInput.setHint("Nhập lý do từ chối");
-        reasonInput.setInputType(InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_FLAG_CAP_SENTENCES);
-        int pad = dp(20);
-        reasonInput.setPadding(pad, dp(12), pad, dp(12));
+    private void showPasswordResetRejectDialog(
+            DocumentSnapshot doc, Button reject, Button approve) {
+        EditText reasonInput =
+                (EditText)
+                        getLayoutInflater().inflate(R.layout.dialog_admin_rejection_reason, null);
         privateDialog()
                 .setTitle("Từ chối yêu cầu quên mật khẩu")
                 .setView(reasonInput)
                 .setNegativeButton("Hủy", (dialog, which) -> dialog.dismiss())
-                .setPositiveButton("Xác nhận từ chối", (dialog, which) -> {
-                    if(!isSessionReady())return;
-                    String reason = reasonInput.getText().toString().trim();
-                    if (reason.length() < 3 || reason.length() > 500) {
-                        Toast.makeText(this, "Lý do từ chối phải từ 3 đến 500 ký tự.", Toast.LENGTH_LONG).show();
-                        return;
-                    }
-                    setResetActionsEnabled(reject, approve, false);
-                    firestore.collection("PasswordResetRequests").document(doc.getId())
-                            .update(
-                                    "status", "Rejected",
-                                    "rejectionReason", reason,
-                                    "reviewedBy", auth.getCurrentUser() == null ? "" : auth.getCurrentUser().getUid(),
-                                    "reviewedAt", FieldValue.serverTimestamp())
-                            .addOnSuccessListener(unused -> {
-                                setResetActionsEnabled(reject, approve, true);
-                                Toast.makeText(this, "Đã từ chối yêu cầu quên mật khẩu.", Toast.LENGTH_SHORT).show();
-                            })
-                            .addOnFailureListener(error -> failResetAction(reject, approve,
-                                    "Không thể từ chối yêu cầu: " + error.getLocalizedMessage()));
-                }).show();
+                .setPositiveButton(
+                        "Xác nhận từ chối",
+                        (dialog, which) -> {
+                            if (!isSessionReady()) return;
+                            String reason = reasonInput.getText().toString().trim();
+                            if (reason.length() < 3 || reason.length() > 500) {
+                                Toast.makeText(
+                                                this,
+                                                "Lý do từ chối phải từ 3 đến 500 ký tự.",
+                                                Toast.LENGTH_LONG)
+                                        .show();
+                                return;
+                            }
+                            setResetActionsEnabled(reject, approve, false);
+                            firestore
+                                    .collection("PasswordResetRequests")
+                                    .document(doc.getId())
+                                    .update(
+                                            "status",
+                                            "Rejected",
+                                            "rejectionReason",
+                                            reason,
+                                            "reviewedBy",
+                                            auth.getCurrentUser() == null
+                                                    ? ""
+                                                    : auth.getCurrentUser().getUid(),
+                                            "reviewedAt",
+                                            FieldValue.serverTimestamp())
+                                    .addOnSuccessListener(
+                                            unused -> {
+                                                setResetActionsEnabled(reject, approve, true);
+                                                Toast.makeText(
+                                                                this,
+                                                                "Đã từ chối yêu cầu quên mật khẩu.",
+                                                                Toast.LENGTH_SHORT)
+                                                        .show();
+                                            })
+                                    .addOnFailureListener(
+                                            error ->
+                                                    failResetAction(
+                                                            reject,
+                                                            approve,
+                                                            "Không thể từ chối yêu cầu: "
+                                                                    + error.getLocalizedMessage()));
+                        })
+                .show();
     }
 
     private void setResetActionsEnabled(Button reject, Button approve, boolean enabled) {
@@ -396,111 +691,126 @@ public class AdminMainActivity extends com.example.libraryonline.ui.auth.Session
         setResetActionsEnabled(reject, approve, true);
         Toast.makeText(this, message, Toast.LENGTH_LONG).show();
     }
+
     private boolean isPending(String status) {
         return "Pending".equalsIgnoreCase(status) || "PendingVerification".equalsIgnoreCase(status);
     }
 
     private View createRequestCard(DocumentSnapshot doc) {
-        int pad = dp(16);
-        LinearLayout card = new LinearLayout(this);
-        card.setOrientation(LinearLayout.VERTICAL);
-        card.setPadding(pad, pad, pad, pad);
-        card.setBackgroundResource(R.drawable.bg_admin_card);
-        LinearLayout.LayoutParams cardParams = new LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
-        cardParams.topMargin = dp(12);
-        card.setLayoutParams(cardParams);
-
-        card.addView(makeText(value(doc, "fullName", "Chưa có họ tên"), 18, R.color.library_text, true));
-        TextView status = makeText("CHỜ DUYỆT", 11, R.color.library_warning, true);
-        status.setPadding(0, dp(4), 0, dp(10));
-        card.addView(status);
-        card.addView(makeText("Ngày sinh: " + value(doc, "birthDate",
-                value(doc, "dateOfBirth", "Chưa cung cấp")), 14, R.color.library_muted, false));
-        card.addView(makeText("Email: " + value(doc, "email", "Chưa cung cấp"), 14, R.color.library_muted, false));
-        card.addView(makeText("Số điện thoại: " + value(doc, "phone", "Chưa cung cấp"), 14, R.color.library_muted, false));
-
+        View card =
+                bindRequestCard(
+                        doc,
+                        requestsContainer,
+                        "CHỜ DUYỆT",
+                        value(doc, "birthDate", value(doc, "dateOfBirth", "Chưa cung cấp")));
         Object createdAt = doc.get("createdAt");
         String created = "Thời gian gửi: Chưa rõ";
         if (createdAt instanceof com.google.firebase.Timestamp) {
             Date date = ((com.google.firebase.Timestamp) createdAt).toDate();
-            created = "Thời gian gửi: " + DateFormat.getDateTimeInstance(
-                    DateFormat.SHORT, DateFormat.SHORT, new Locale("vi", "VN")).format(date);
+            created =
+                    "Thời gian gửi: "
+                            + DateFormat.getDateTimeInstance(
+                                            DateFormat.SHORT,
+                                            DateFormat.SHORT,
+                                            new Locale("vi", "VN"))
+                                    .format(date);
         }
-        TextView time = makeText(created, 12, R.color.library_muted, false);
-        time.setPadding(0, dp(8), 0, dp(12));
-        card.addView(time);
-
-        LinearLayout actions = new LinearLayout(this);
-        actions.setOrientation(LinearLayout.HORIZONTAL);
-        Button reject = new Button(this);
-        reject.setText("Từ chối");
-        reject.setTextColor(androidx.core.content.ContextCompat.getColor(this,R.color.library_danger));
-        Button approve = new Button(this);
+        ((TextView) card.findViewById(R.id.requestCreatedAt)).setText(created);
+        Button reject = card.findViewById(R.id.requestReject);
+        Button approve = card.findViewById(R.id.requestApprove);
         approve.setText("Duyệt hồ sơ");
-        approve.setTextColor(androidx.core.content.ContextCompat.getColor(this,R.color.library_surface));
-        approve.setBackgroundTintList(android.content.res.ColorStateList.valueOf(
-                androidx.core.content.ContextCompat.getColor(this,R.color.library_blue)));
-        LinearLayout.LayoutParams rejectParams = new LinearLayout.LayoutParams(0,
-                LinearLayout.LayoutParams.WRAP_CONTENT, 1);
-        rejectParams.rightMargin = dp(8);
-        actions.addView(reject, rejectParams);
-        actions.addView(approve, new LinearLayout.LayoutParams(0,
-                LinearLayout.LayoutParams.WRAP_CONTENT, 1));
-        card.addView(actions);
         reject.setOnClickListener(v -> showRejectDialog(doc, reject, approve));
         approve.setOnClickListener(v -> approveRequest(doc, reject, approve));
         return card;
     }
 
     private void showRejectDialog(DocumentSnapshot doc, Button reject, Button approve) {
-        EditText reasonInput = new EditText(this);
-        reasonInput.setHint("Nhập lý do từ chối");
-        reasonInput.setInputType(InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_FLAG_CAP_SENTENCES);
-        int pad = dp(20);
-        reasonInput.setPadding(pad, dp(12), pad, dp(12));
+        EditText reasonInput =
+                (EditText)
+                        getLayoutInflater().inflate(R.layout.dialog_admin_rejection_reason, null);
         privateDialog()
                 .setTitle("Từ chối hồ sơ")
                 .setMessage("Lý do sẽ được lưu cùng yêu cầu đăng ký và gửi email thông báo.")
                 .setView(reasonInput)
                 .setNegativeButton("Hủy", (dialog, which) -> dialog.dismiss())
-                .setPositiveButton("Xác nhận từ chối", (dialog, which) -> {
-                    if(!isSessionReady())return;
-                    String reason = reasonInput.getText().toString().trim();
-                    if (reason.length() < 3 || reason.length() > 500) {
-                        Toast.makeText(this, "Lý do từ chối phải từ 3 đến 500 ký tự.", Toast.LENGTH_LONG).show();
-                        return;
-                    }
-                    setCardActionsEnabled(reject, approve, false);
-                    Map<String, Object> changes = new HashMap<>();
-                    changes.put("status", "Rejected");
-                    changes.put("rejectionReason", reason);
-                    changes.put("reviewedBy", auth.getCurrentUser() == null ? "" : auth.getCurrentUser().getUid());
-                    changes.put("reviewedAt", FieldValue.serverTimestamp());
-                    firestore.collection("RegistrationRequests").document(doc.getId()).update(changes)
-                            .addOnSuccessListener(unused -> {
-                                String email = value(doc, "email", "").trim();
-                                String fullName = value(doc, "fullName", "bạn");
-                                EmailSender.send(email,
-                                        "Library Online - Kết quả đăng ký",
-                                        "Xin chào " + fullName + ",\n\n"
-                                                + "Rất tiếc, yêu cầu đăng ký thư viện của bạn chưa được chấp thuận.\n"
-                                                + "Lý do: " + reason + "\n\n"
-                                                + "Bạn có thể liên hệ thư viện để được hỗ trợ.\n"
-                                                + "Đây là email tự động, vui lòng không trả lời.",
-                                        (success, message) -> {
-                                            if (!success) Toast.makeText(this,
-                                                    "Đã lưu từ chối nhưng gửi email thất bại: " + message,
-                                                    Toast.LENGTH_LONG).show();
-                                        });
-                                Toast.makeText(this, "Đã lưu kết quả từ chối.", Toast.LENGTH_LONG).show();
-                            })
-                            .addOnFailureListener(error -> {
-                                setCardActionsEnabled(reject, approve, true);
-                                Toast.makeText(this, "Không thể từ chối: " + error.getLocalizedMessage(),
-                                        Toast.LENGTH_LONG).show();
-                            });
-                }).show();
+                .setPositiveButton(
+                        "Xác nhận từ chối",
+                        (dialog, which) -> {
+                            if (!isSessionReady()) return;
+                            String reason = reasonInput.getText().toString().trim();
+                            if (reason.length() < 3 || reason.length() > 500) {
+                                Toast.makeText(
+                                                this,
+                                                "Lý do từ chối phải từ 3 đến 500 ký tự.",
+                                                Toast.LENGTH_LONG)
+                                        .show();
+                                return;
+                            }
+                            setCardActionsEnabled(reject, approve, false);
+                            Map<String, Object> changes = new HashMap<>();
+                            changes.put("status", "Rejected");
+                            changes.put("rejectionReason", reason);
+                            changes.put(
+                                    "reviewedBy",
+                                    auth.getCurrentUser() == null
+                                            ? ""
+                                            : auth.getCurrentUser().getUid());
+                            changes.put("reviewedAt", FieldValue.serverTimestamp());
+                            firestore
+                                    .collection("RegistrationRequests")
+                                    .document(doc.getId())
+                                    .update(changes)
+                                    .addOnSuccessListener(
+                                            unused -> {
+                                                String email = value(doc, "email", "").trim();
+                                                String fullName = value(doc, "fullName", "bạn");
+                                                EmailSender.send(
+                                                        email,
+                                                        "Library Online - Kết quả đăng ký",
+                                                        "Xin chào "
+                                                                + fullName
+                                                                + ",\n\n"
+                                                                + "Rất tiếc, yêu cầu đăng ký thư"
+                                                                + " viện của bạn chưa được chấp"
+                                                                + " thuận.\n"
+                                                                + "Lý do: "
+                                                                + reason
+                                                                + "\n\n"
+                                                                + "Bạn có thể liên hệ thư viện để"
+                                                                + " được hỗ trợ.\n"
+                                                                + "Đây là email tự động, vui lòng"
+                                                                + " không trả lời.",
+                                                        (success, message) -> {
+                                                            if (!success)
+                                                                Toast.makeText(
+                                                                                this,
+                                                                                "Đã lưu từ chối"
+                                                                                    + " nhưng gửi"
+                                                                                    + " email thất"
+                                                                                    + " bại: "
+                                                                                        + message,
+                                                                                Toast.LENGTH_LONG)
+                                                                        .show();
+                                                        });
+                                                Toast.makeText(
+                                                                this,
+                                                                "Đã lưu kết quả từ chối.",
+                                                                Toast.LENGTH_LONG)
+                                                        .show();
+                                            })
+                                    .addOnFailureListener(
+                                            error -> {
+                                                setCardActionsEnabled(reject, approve, true);
+                                                Toast.makeText(
+                                                                this,
+                                                                "Không thể từ chối: "
+                                                                        + error
+                                                                                .getLocalizedMessage(),
+                                                                Toast.LENGTH_LONG)
+                                                        .show();
+                                            });
+                        })
+                .show();
     }
 
     private void approveRequest(DocumentSnapshot doc, Button reject, Button approve) {
@@ -508,47 +818,90 @@ public class AdminMainActivity extends com.example.libraryonline.ui.auth.Session
         String phone = value(doc, "phone", "").trim();
         String fullName = value(doc, "fullName", "").trim();
         if (email.isEmpty() || phone.isEmpty() || fullName.isEmpty()) {
-            Toast.makeText(this, "Hồ sơ thiếu họ tên, email hoặc số điện thoại.", Toast.LENGTH_LONG).show();
+            Toast.makeText(this, "Hồ sơ thiếu họ tên, email hoặc số điện thoại.", Toast.LENGTH_LONG)
+                    .show();
             return;
         }
 
         privateDialog()
                 .setTitle("Duyệt hồ sơ thành viên")
-                .setMessage("Duyệt hồ sơ cho " + email
-                        + ". Tài khoản dùng mật khẩu tạm ban đầu và bắt buộc đổi ở lần đăng nhập đầu tiên. Tiếp tục?")
+                .setMessage(
+                        "Duyệt hồ sơ cho "
+                                + email
+                                + ". Tài khoản dùng mật khẩu tạm ban đầu và bắt buộc đổi ở lần đăng"
+                                + " nhập đầu tiên. Tiếp tục?")
                 .setNegativeButton("Hủy", (dialog, which) -> dialog.dismiss())
-                .setPositiveButton("Duyệt", (dialog, which) -> {
-                    if(!isSessionReady())return;
-                    setCardActionsEnabled(reject, approve, false);
-                    checkDuplicatesThenCreate(doc, fullName, email, phone, reject, approve);
-                }).show();
+                .setPositiveButton(
+                        "Duyệt",
+                        (dialog, which) -> {
+                            if (!isSessionReady()) return;
+                            setCardActionsEnabled(reject, approve, false);
+                            checkDuplicatesThenCreate(doc, fullName, email, phone, reject, approve);
+                        })
+                .show();
     }
 
-    private void checkDuplicatesThenCreate(DocumentSnapshot doc, String fullName, String email,
-                                            String phone, Button reject, Button approve) {
-        firestore.collection("Users").whereEqualTo("email", email).limit(1).get()
-                .addOnSuccessListener(emailMatches -> {
-                    if (!emailMatches.isEmpty()) {
-                        failAction(reject, approve, "Email đã được sử dụng bởi một độc giả.");
-                        return;
-                    }
-                    firestore.collection("Users").whereEqualTo("phone", phone).limit(1).get()
-                            .addOnSuccessListener(phoneMatches -> {
-                                if (!phoneMatches.isEmpty()) {
-                                    failAction(reject, approve, "Số điện thoại đã được sử dụng.");
-                                    return;
-                                }
-                                createApprovedAccount(doc, fullName, email, phone, reject, approve);
-                            })
-                            .addOnFailureListener(error -> failAction(reject, approve,
-                                    "Không kiểm tra được số điện thoại: " + error.getLocalizedMessage()));
-                })
-                .addOnFailureListener(error -> failAction(reject, approve,
-                        "Không kiểm tra được email: " + error.getLocalizedMessage()));
+    private void checkDuplicatesThenCreate(
+            DocumentSnapshot doc,
+            String fullName,
+            String email,
+            String phone,
+            Button reject,
+            Button approve) {
+        firestore
+                .collection("Users")
+                .whereEqualTo("email", email)
+                .limit(1)
+                .get()
+                .addOnSuccessListener(
+                        emailMatches -> {
+                            if (!emailMatches.isEmpty()) {
+                                failAction(
+                                        reject, approve, "Email đã được sử dụng bởi một độc giả.");
+                                return;
+                            }
+                            firestore
+                                    .collection("Users")
+                                    .whereEqualTo("phone", phone)
+                                    .limit(1)
+                                    .get()
+                                    .addOnSuccessListener(
+                                            phoneMatches -> {
+                                                if (!phoneMatches.isEmpty()) {
+                                                    failAction(
+                                                            reject,
+                                                            approve,
+                                                            "Số điện thoại đã được sử dụng.");
+                                                    return;
+                                                }
+                                                createApprovedAccount(
+                                                        doc, fullName, email, phone, reject,
+                                                        approve);
+                                            })
+                                    .addOnFailureListener(
+                                            error ->
+                                                    failAction(
+                                                            reject,
+                                                            approve,
+                                                            "Không kiểm tra được số điện thoại: "
+                                                                    + error.getLocalizedMessage()));
+                        })
+                .addOnFailureListener(
+                        error ->
+                                failAction(
+                                        reject,
+                                        approve,
+                                        "Không kiểm tra được email: "
+                                                + error.getLocalizedMessage()));
     }
 
-    private void createApprovedAccount(DocumentSnapshot request, String fullName, String email,
-                                        String phone, Button reject, Button approve) {
+    private void createApprovedAccount(
+            DocumentSnapshot request,
+            String fullName,
+            String email,
+            String phone,
+            Button reject,
+            Button approve) {
         String requestEmail = value(request, "email", "").trim();
         if (!email.equalsIgnoreCase(requestEmail)) {
             failAction(reject, approve, "Email hồ sơ không khớp.");
@@ -558,85 +911,147 @@ public class AdminMainActivity extends com.example.libraryonline.ui.auth.Session
         // Chỉ tạo tài khoản Firebase Auth sau khi admin đã bấm duyệt.
         // Mỗi độc giả nhận một mật khẩu tạm ngẫu nhiên, không dùng chung mật khẩu cố định.
         String temporaryPassword = generateTemporaryPassword();
-        secondaryAuth.createUserWithEmailAndPassword(email, temporaryPassword)
-                .addOnSuccessListener(result -> {
-                    FirebaseUser createdUser = result.getUser();
-                    if (createdUser == null) {
-                        secondaryAuth.signOut();
-                        failAction(reject, approve, "Firebase không trả về tài khoản vừa tạo.");
-                        return;
-                    }
-                    String uid = createdUser.getUid();
-                    String barcode = "TV-" + uid.substring(0, Math.min(8, uid.length()))
-                            .toUpperCase(Locale.ROOT);
-
-                    Map<String, Object> userData = new HashMap<>();
-                    userData.put("userId", uid);
-                    userData.put("fullName", fullName);
-                    userData.put("dateOfBirth", value(request, "birthDate", ""));
-                    userData.put("email", email);
-                    userData.put("phone", phone);
-                    userData.put("barcode", barcode);
-                    userData.put("role", "Reader");
-                    userData.put("cardStatus", "HoatDong");
-                    userData.put("mustChangePassword", true);
-                    userData.put("createdAt", FieldValue.serverTimestamp());
-                    userData.put("updatedAt", FieldValue.serverTimestamp());
-
-                    Map<String, Object> requestChanges = new HashMap<>();
-                    requestChanges.put("status", "Approved");
-                    requestChanges.put("reviewedBy",
-                            auth.getCurrentUser() == null ? "" : auth.getCurrentUser().getUid());
-                    requestChanges.put("reviewedAt", FieldValue.serverTimestamp());
-                    requestChanges.put("userId", uid);
-                    requestChanges.put("barcode", barcode);
-
-                    WriteBatch batch = firestore.batch();
-                    batch.set(firestore.collection("Users").document(uid), userData);
-                    batch.update(firestore.collection("RegistrationRequests").document(request.getId()),
-                            requestChanges);
-                    batch.commit()
-                            .addOnSuccessListener(unused -> {
+        secondaryAuth
+                .createUserWithEmailAndPassword(email, temporaryPassword)
+                .addOnSuccessListener(
+                        result -> {
+                            FirebaseUser createdUser = result.getUser();
+                            if (createdUser == null) {
                                 secondaryAuth.signOut();
-                                setCardActionsEnabled(reject, approve, true);
-                                EmailSender.send(email,
-                                        "Library Online - Hồ sơ đã được duyệt",
-                                        "Xin chào " + fullName + ",\n\n"
-                                                + "Hồ sơ đăng ký thư viện của bạn đã được duyệt.\n"
-                                                + "Thông tin đăng nhập:\n"
-                                                + "Email: " + email + "\n"
-                                                + "Mật khẩu tạm: " + temporaryPassword + "\n\n"
-                                                + "Vì lý do bảo mật, vui lòng đổi mật khẩu ngay ở lần đăng nhập đầu tiên.\n\n"
-                                                + "Đây là email tự động, vui lòng không trả lời.",
-                                        (success, message) -> {
-                                            if (!success) Toast.makeText(this,
-                                                    "Đã tạo tài khoản và duyệt hồ sơ nhưng gửi email thất bại: "
-                                                            + message,
-                                                    Toast.LENGTH_LONG).show();
-                                        });
-                                Toast.makeText(this,
-                                        "Đã duyệt hồ sơ và tạo tài khoản Firebase. Mật khẩu tạm đã được gửi qua email.",
-                                        Toast.LENGTH_LONG).show();
-                            })
-                            .addOnFailureListener(error -> {
-                                // Nếu không lưu được hồ sơ Firestore, xóa tài khoản Auth vừa tạo
-                                // để lần duyệt lại không bị kẹt vì email đã tồn tại.
-                                createdUser.delete().addOnCompleteListener(deleteTask -> {
-                                    secondaryAuth.signOut();
-                                    failAction(reject, approve,
-                                            "Không thể lưu hồ sơ đã duyệt: " + error.getLocalizedMessage()
-                                                    + (deleteTask.isSuccessful() ? ""
-                                                    : ". Không xóa được tài khoản Auth tạm; cần kiểm tra Firebase."));
-                                });
-                            });
-                })
-                .addOnFailureListener(error -> {
-                    secondaryAuth.signOut();
-                    String detail = error.getLocalizedMessage() == null ? "" : error.getLocalizedMessage();
-                    failAction(reject, approve,
-                            "Không thể tạo tài khoản Firebase sau khi duyệt. Email có thể đã có tài khoản Auth. "
-                                    + detail);
-                });
+                                failAction(
+                                        reject,
+                                        approve,
+                                        "Firebase không trả về tài khoản vừa tạo.");
+                                return;
+                            }
+                            String uid = createdUser.getUid();
+                            String barcode =
+                                    "TV-"
+                                            + uid.substring(0, Math.min(8, uid.length()))
+                                                    .toUpperCase(Locale.ROOT);
+
+                            Map<String, Object> userData = new HashMap<>();
+                            userData.put("userId", uid);
+                            userData.put("fullName", fullName);
+                            userData.put("dateOfBirth", value(request, "birthDate", ""));
+                            userData.put("email", email);
+                            userData.put("phone", phone);
+                            userData.put("barcode", barcode);
+                            userData.put("role", "Reader");
+                            userData.put("cardStatus", "HoatDong");
+                            userData.put("mustChangePassword", true);
+                            userData.put("createdAt", FieldValue.serverTimestamp());
+                            userData.put("updatedAt", FieldValue.serverTimestamp());
+
+                            Map<String, Object> requestChanges = new HashMap<>();
+                            requestChanges.put("status", "Approved");
+                            requestChanges.put(
+                                    "reviewedBy",
+                                    auth.getCurrentUser() == null
+                                            ? ""
+                                            : auth.getCurrentUser().getUid());
+                            requestChanges.put("reviewedAt", FieldValue.serverTimestamp());
+                            requestChanges.put("userId", uid);
+                            requestChanges.put("barcode", barcode);
+
+                            WriteBatch batch = firestore.batch();
+                            batch.set(firestore.collection("Users").document(uid), userData);
+                            batch.update(
+                                    firestore
+                                            .collection("RegistrationRequests")
+                                            .document(request.getId()),
+                                    requestChanges);
+                            batch.commit()
+                                    .addOnSuccessListener(
+                                            unused -> {
+                                                secondaryAuth.signOut();
+                                                setCardActionsEnabled(reject, approve, true);
+                                                EmailSender.send(
+                                                        email,
+                                                        "Library Online - Hồ sơ đã được duyệt",
+                                                        "Xin chào "
+                                                                + fullName
+                                                                + ",\n\n"
+                                                                + "Hồ sơ đăng ký thư viện của bạn"
+                                                                + " đã được duyệt.\n"
+                                                                + "Thông tin đăng nhập:\n"
+                                                                + "Email: "
+                                                                + email
+                                                                + "\n"
+                                                                + "Mật khẩu tạm: "
+                                                                + temporaryPassword
+                                                                + "\n\n"
+                                                                + "Vì lý do bảo mật, vui lòng đổi"
+                                                                + " mật khẩu ngay ở lần đăng nhập"
+                                                                + " đầu tiên.\n\n"
+                                                                + "Đây là email tự động, vui lòng"
+                                                                + " không trả lời.",
+                                                        (success, message) -> {
+                                                            if (!success)
+                                                                Toast.makeText(
+                                                                                this,
+                                                                                "Đã tạo tài khoản"
+                                                                                    + " và duyệt hồ"
+                                                                                    + " sơ nhưng"
+                                                                                    + " gửi email"
+                                                                                    + " thất bại: "
+                                                                                        + message,
+                                                                                Toast.LENGTH_LONG)
+                                                                        .show();
+                                                        });
+                                                Toast.makeText(
+                                                                this,
+                                                                "Đã duyệt hồ sơ và tạo tài khoản"
+                                                                    + " Firebase. Mật khẩu tạm đã"
+                                                                    + " được gửi qua email.",
+                                                                Toast.LENGTH_LONG)
+                                                        .show();
+                                            })
+                                    .addOnFailureListener(
+                                            error -> {
+                                                // Nếu không lưu được hồ sơ Firestore, xóa tài khoản
+                                                // Auth vừa tạo
+                                                // để lần duyệt lại không bị kẹt vì email đã tồn
+                                                // tại.
+                                                createdUser
+                                                        .delete()
+                                                        .addOnCompleteListener(
+                                                                deleteTask -> {
+                                                                    secondaryAuth.signOut();
+                                                                    failAction(
+                                                                            reject,
+                                                                            approve,
+                                                                            "Không thể lưu hồ sơ đã"
+                                                                                + " duyệt: "
+                                                                                    + error
+                                                                                            .getLocalizedMessage()
+                                                                                    + (deleteTask
+                                                                                                    .isSuccessful()
+                                                                                            ? ""
+                                                                                            : ". Không"
+                                                                                                  + " xóa được"
+                                                                                                  + " tài khoản"
+                                                                                                  + " Auth"
+                                                                                                  + " tạm;"
+                                                                                                  + " cần kiểm"
+                                                                                                  + " tra Firebase."));
+                                                                });
+                                            });
+                        })
+                .addOnFailureListener(
+                        error -> {
+                            secondaryAuth.signOut();
+                            String detail =
+                                    error.getLocalizedMessage() == null
+                                            ? ""
+                                            : error.getLocalizedMessage();
+                            failAction(
+                                    reject,
+                                    approve,
+                                    "Không thể tạo tài khoản Firebase sau khi duyệt. Email có thể"
+                                        + " đã có tài khoản Auth. "
+                                            + detail);
+                        });
     }
 
     private String generateTemporaryPassword() {
@@ -665,21 +1080,19 @@ public class AdminMainActivity extends com.example.libraryonline.ui.auth.Session
         return value == null || value.trim().isEmpty() ? fallback : value;
     }
 
-    private TextView makeText(String text, int sizeSp, @androidx.annotation.ColorRes int color, boolean bold) {
-        TextView view = new TextView(this);
-        view.setText(text);
-        view.setTextSize(sizeSp);
-        view.setTextColor(androidx.core.content.ContextCompat.getColor(this,color));
-        if (bold) view.setTypeface(Typeface.DEFAULT, Typeface.BOLD);
-        LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
-        params.bottomMargin = dp(4);
-        view.setLayoutParams(params);
-        return view;
-    }
-
-    private int dp(int value) {
-        return (int) (value * getResources().getDisplayMetrics().density + 0.5f);
+    private View bindRequestCard(
+            DocumentSnapshot doc, LinearLayout parent, String state, String birthDate) {
+        View card =
+                getLayoutInflater().inflate(R.layout.item_admin_approval_request, parent, false);
+        ((TextView) card.findViewById(R.id.requestName))
+                .setText(value(doc, "fullName", "Chưa có họ tên"));
+        ((TextView) card.findViewById(R.id.requestStatus)).setText(state);
+        ((TextView) card.findViewById(R.id.requestBirthDate)).setText("Ngày sinh: " + birthDate);
+        ((TextView) card.findViewById(R.id.requestEmail))
+                .setText("Email: " + value(doc, "email", "Chưa cung cấp"));
+        ((TextView) card.findViewById(R.id.requestPhone))
+                .setText("Số điện thoại: " + value(doc, "phone", "Chưa cung cấp"));
+        return card;
     }
 
     @Override

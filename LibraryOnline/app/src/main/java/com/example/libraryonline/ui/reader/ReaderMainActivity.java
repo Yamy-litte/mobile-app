@@ -13,15 +13,11 @@ import android.widget.LinearLayout;
 import android.widget.TextView;
 import android.widget.Toast;
 
-import androidx.appcompat.app.AlertDialog;
-import androidx.appcompat.app.AppCompatActivity;
-
 import com.example.libraryonline.R;
-import com.example.libraryonline.data.remote.firebase.BookCatalogueSyncManager;
 import com.example.libraryonline.data.local.dao.BookTitleDao;
 import com.example.libraryonline.data.local.db.DatabaseHelper;
 import com.example.libraryonline.data.model.BookTitle;
-import com.example.libraryonline.ui.auth.LoginActivity;
+import com.example.libraryonline.data.remote.firebase.BookCatalogueSyncManager;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
 import com.google.firebase.firestore.DocumentSnapshot;
@@ -29,16 +25,14 @@ import com.google.firebase.firestore.FirebaseFirestore;
 
 import java.util.ArrayList;
 import java.util.Collections;
-import java.util.LinkedHashSet;
 import java.util.List;
-import java.util.Set;
 import java.util.Locale;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
 /**
- * Reader home screen. Layout is defined in home_reader_activity.xml and item_reader_book.xml.
- * This Activity handles profile/catalogue data and user interactions only.
+ * Reader home screen. Layout is defined in activity_reader_main.xml and item_reader_book.xml. This
+ * Activity handles profile/catalogue data and user interactions only.
  */
 public class ReaderMainActivity extends com.example.libraryonline.ui.auth.SessionActivity {
     private static final int TEAL = Color.rgb(23, 102, 91);
@@ -63,52 +57,61 @@ public class ReaderMainActivity extends com.example.libraryonline.ui.auth.Sessio
         super.onCreate(savedInstanceState);
         auth = FirebaseAuth.getInstance();
         firestore = FirebaseFirestore.getInstance();
-        setContentView(R.layout.home_reader_activity);
+        setContentView(R.layout.activity_reader_main);
 
         bindViews();
         bindActions();
         buildCategories();
     }
 
-    @Override protected com.example.libraryonline.data.session.SessionProfile.Role expectedRole() {
+    @Override
+    protected com.example.libraryonline.data.session.SessionProfile.Role expectedRole() {
         return com.example.libraryonline.data.session.SessionProfile.Role.READER;
     }
-    @Override protected void onSessionAuthorized(com.example.libraryonline.data.session.SessionProfile profile) {
+
+    @Override
+    protected void onSessionAuthorized(
+            com.example.libraryonline.data.session.SessionProfile profile) {
         loadReaderProfile();
-        if(databaseHelper==null) databaseHelper = new DatabaseHelper(getApplicationContext());
+        if (databaseHelper == null) databaseHelper = new DatabaseHelper(getApplicationContext());
         loadBooksFromSqlite();
         catalogueSyncManager = new BookCatalogueSyncManager(getApplicationContext());
-        catalogueSyncManager.start(new BookCatalogueSyncManager.SyncListener() {
-            @Override
-            public void onSyncCompleted(int changedRows) {
-                runOnUiThread(() -> {
-                    if (isSessionReady() && !isFinishing() && !isDestroyed()) {
-                        loadBooksFromSqlite();
+        catalogueSyncManager.start(
+                new BookCatalogueSyncManager.SyncListener() {
+                    @Override
+                    public void onSyncCompleted(int changedRows) {
+                        runOnUiThread(
+                                () -> {
+                                    if (isSessionReady() && !isFinishing() && !isDestroyed()) {
+                                        loadBooksFromSqlite();
+                                    }
+                                });
+                    }
 
+                    @Override
+                    public void onCatalogueSnapshot(boolean fromCache, int documentCount) {
+                        runOnUiThread(
+                                () -> {
+                                    if (isSessionReady() && !isFinishing() && !isDestroyed()) {
+                                        catalogueLoadStatus.remoteSnapshot(
+                                                fromCache, documentCount);
+                                        refreshCatalogueStatus();
+                                    }
+                                });
+                    }
+
+                    @Override
+                    public void onSyncFailed(String message) {
+                        runOnUiThread(
+                                () -> {
+                                    if (isSessionReady() && !isFinishing() && !isDestroyed()) {
+                                        catalogueLoadStatus.remoteFailed(
+                                                safe(message, "Không rõ nguyên nhân"));
+                                        refreshCatalogueStatus();
+                                    }
+                                });
                     }
                 });
-            }
-
-            @Override
-            public void onCatalogueSnapshot(boolean fromCache, int documentCount) {
-                runOnUiThread(() -> {
-                    if (isSessionReady() && !isFinishing() && !isDestroyed()) {
-                        catalogueLoadStatus.remoteSnapshot(fromCache, documentCount);
-                        refreshCatalogueStatus();
-                    }
-                });
-            }
-
-            @Override
-            public void onSyncFailed(String message) {
-                runOnUiThread(() -> {
-                    if (isSessionReady() && !isFinishing() && !isDestroyed()) {
-                        catalogueLoadStatus.remoteFailed(safe(message, "Không rõ nguyên nhân"));
-                        refreshCatalogueStatus();
-                    }
-                });
-            }
-        });
     }
 
     private void bindViews() {
@@ -124,46 +127,67 @@ public class ReaderMainActivity extends com.example.libraryonline.ui.auth.Sessio
 
     private void bindActions() {
         findViewById(R.id.buttonReaderAccount).setOnClickListener(v -> showAccount());
-        findViewById(R.id.navReaderHome).setOnClickListener(v ->
-                ((android.widget.ScrollView) findViewById(R.id.readerScroll)).smoothScrollTo(0, 0));
-        findViewById(R.id.navReaderLoans).setOnClickListener(v ->
-                showMessage("Màn hình mượn sách sẽ được nối với phiếu mượn trong bước nghiệp vụ mượn/trả."));
-        findViewById(R.id.navReaderNotifications).setOnClickListener(v ->
-                showMessage("Màn hình thông báo sẽ hiển thị thông báo mượn, trả và hạn trả khi được nối dữ liệu."));
+        findViewById(R.id.navReaderHome)
+                .setOnClickListener(
+                        v ->
+                                ((android.widget.ScrollView) findViewById(R.id.readerScroll))
+                                        .smoothScrollTo(0, 0));
+        findViewById(R.id.navReaderLoans)
+                .setOnClickListener(
+                        v ->
+                                showMessage(
+                                        "Màn hình mượn sách sẽ được nối với phiếu mượn trong bước"
+                                            + " nghiệp vụ mượn/trả."));
+        findViewById(R.id.navReaderNotifications)
+                .setOnClickListener(
+                        v ->
+                                showMessage(
+                                        "Màn hình thông báo sẽ hiển thị thông báo mượn, trả và hạn"
+                                            + " trả khi được nối dữ liệu."));
         findViewById(R.id.navReaderAccount).setOnClickListener(v -> showAccount());
 
-        searchInput.addTextChangedListener(new TextWatcher() {
-            @Override public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
-            @Override public void onTextChanged(CharSequence s, int start, int before, int count) { renderBooks(); }
-            @Override public void afterTextChanged(Editable s) {}
-        });
+        searchInput.addTextChangedListener(
+                new TextWatcher() {
+                    @Override
+                    public void beforeTextChanged(
+                            CharSequence s, int start, int count, int after) {}
+
+                    @Override
+                    public void onTextChanged(CharSequence s, int start, int before, int count) {
+                        renderBooks();
+                    }
+
+                    @Override
+                    public void afterTextChanged(Editable s) {}
+                });
     }
 
     private void buildCategories() {
-        java.util.Map<String,String> names=new java.util.LinkedHashMap<>();
+        java.util.Map<String, String> names = new java.util.LinkedHashMap<>();
         names.put("", "Tất cả");
-        for(BookTitle book:books)if(book.categoryId!=null && !book.categoryId.isEmpty())
-            names.put(book.categoryId,safe(book.category,"Chưa cập nhật"));
-        if(!names.containsKey(selectedCategory))selectedCategory="";
+        for (BookTitle book : books)
+            if (book.categoryId != null && !book.categoryId.isEmpty())
+                names.put(book.categoryId, safe(book.category, "Chưa cập nhật"));
+        if (!names.containsKey(selectedCategory)) selectedCategory = "";
         categoriesContainer.removeAllViews();
-        for (java.util.Map.Entry<String,String> categoryEntry : names.entrySet()) {
-            String name=categoryEntry.getValue(), categoryId=categoryEntry.getKey();
-            TextView chip = new TextView(this);
+        for (java.util.Map.Entry<String, String> categoryEntry : names.entrySet()) {
+            String name = categoryEntry.getValue(), categoryId = categoryEntry.getKey();
+            TextView chip =
+                    (TextView)
+                            getLayoutInflater()
+                                    .inflate(
+                                            R.layout.item_reader_category,
+                                            categoriesContainer,
+                                            false);
             chip.setText(name);
-            chip.setTextSize(12);
-            chip.setGravity(android.view.Gravity.CENTER);
-            chip.setPadding(dp(15), 0, dp(15), 0);
-            chip.setTextColor(categoryId.equals(selectedCategory) ? androidx.core.content.ContextCompat.getColor(this,R.color.white) : androidx.core.content.ContextCompat.getColor(this,R.color.library_blue));
-            chip.setBackgroundResource(categoryId.equals(selectedCategory)
-                    ? R.drawable.bg_reader_chip_selected : R.drawable.bg_reader_chip);
-            LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(-2, dp(36));
-            params.rightMargin = dp(8);
-            categoriesContainer.addView(chip, params);
-            chip.setOnClickListener(v -> {
-                selectedCategory = categoryId;
-                buildCategories();
-                renderBooks();
-            });
+            chip.setSelected(categoryId.equals(selectedCategory));
+            categoriesContainer.addView(chip);
+            chip.setOnClickListener(
+                    v -> {
+                        selectedCategory = categoryId;
+                        buildCategories();
+                        renderBooks();
+                    });
         }
     }
 
@@ -173,50 +197,67 @@ public class ReaderMainActivity extends com.example.libraryonline.ui.auth.Sessio
             goToLogin();
             return;
         }
-        firestore.collection("Users").document(current.getUid()).get()
-                .addOnSuccessListener(doc -> {
-                    if (!isSessionReady() || !doc.exists()) return;
-                    String name = value(doc, "fullName", "Độc giả");
-                    String firstName = name.trim().isEmpty() ? "Độc giả" :
-                            name.trim().split("\\s+")[name.trim().split("\\s+").length - 1];
-                    greeting.setText(firstName);
-                    String[] parts = name.trim().split("\\s+");
-                    String initials = parts.length > 1
-                            ? (parts[0].substring(0, 1) + parts[parts.length - 1].substring(0, 1))
-                            : (parts.length == 1 && !parts[0].isEmpty() ? parts[0].substring(0, 1) : "TV");
-                    avatar.setText(initials.toUpperCase(Locale.ROOT));
-                })
+        firestore
+                .collection("Users")
+                .document(current.getUid())
+                .get()
+                .addOnSuccessListener(
+                        doc -> {
+                            if (!isSessionReady() || !doc.exists()) return;
+                            String name = value(doc, "fullName", "Độc giả");
+                            String firstName =
+                                    name.trim().isEmpty()
+                                            ? "Độc giả"
+                                            : name.trim()
+                                                    .split("\\s+")[
+                                                    name.trim().split("\\s+").length - 1];
+                            greeting.setText(firstName);
+                            String[] parts = name.trim().split("\\s+");
+                            String initials =
+                                    parts.length > 1
+                                            ? (parts[0].substring(0, 1)
+                                                    + parts[parts.length - 1].substring(0, 1))
+                                            : (parts.length == 1 && !parts[0].isEmpty()
+                                                    ? parts[0].substring(0, 1)
+                                                    : "TV");
+                            avatar.setText(initials.toUpperCase(Locale.ROOT));
+                        })
                 .addOnFailureListener(e -> showMessage("Không tải được thông tin độc giả."));
     }
 
     /** Read catalogue rows from SQLite; the UI never renders Firestore snapshots directly. */
     private void loadBooksFromSqlite() {
         if (databaseHelper == null) return;
-        catalogueExecutor.execute(() -> {
-            final List<BookTitle> local;
-            try {
-                local = new BookTitleDao(databaseHelper.getReadableDatabase()).getAll();
-            } catch (Exception failure) {
-                runOnUiThread(() -> {
-                    if (isSessionReady() && !isFinishing() && !isDestroyed()) {
-                        catalogueLoadStatus.localFailed(safe(failure.getLocalizedMessage(),
-                                failure.getClass().getSimpleName()));
-                        refreshCatalogueStatus();
+        catalogueExecutor.execute(
+                () -> {
+                    final List<BookTitle> local;
+                    try {
+                        local = new BookTitleDao(databaseHelper.getReadableDatabase()).getAll();
+                    } catch (Exception failure) {
+                        runOnUiThread(
+                                () -> {
+                                    if (isSessionReady() && !isFinishing() && !isDestroyed()) {
+                                        catalogueLoadStatus.localFailed(
+                                                safe(
+                                                        failure.getLocalizedMessage(),
+                                                        failure.getClass().getSimpleName()));
+                                        refreshCatalogueStatus();
+                                    }
+                                });
+                        return;
                     }
+                    runOnUiThread(
+                            () -> {
+                                if (!isSessionReady() || isFinishing() || isDestroyed()) return;
+                                books.clear();
+                                for (BookTitle book : local) {
+                                    if (book != null && !book.isHidden) books.add(book);
+                                }
+                                catalogueLoadStatus.localLoaded(local.size(), books.size());
+                                buildCategories();
+                                renderBooks();
+                            });
                 });
-                return;
-            }
-            runOnUiThread(() -> {
-                if (!isSessionReady() || isFinishing() || isDestroyed()) return;
-                books.clear();
-                for (BookTitle book : local) {
-                    if (book != null && !book.isHidden) books.add(book);
-                }
-                catalogueLoadStatus.localLoaded(local.size(), books.size());
-                buildCategories();
-                renderBooks();
-            });
-        });
     }
 
     private void renderBooks() {
@@ -224,15 +265,19 @@ public class ReaderMainActivity extends com.example.libraryonline.ui.auth.Sessio
         popularBooksContainer.removeAllViews();
         latestBooksContainer.removeAllViews();
 
-        String query = searchInput == null ? "" : searchInput.getText().toString().trim().toLowerCase(Locale.ROOT);
+        String query =
+                searchInput == null
+                        ? ""
+                        : searchInput.getText().toString().trim().toLowerCase(Locale.ROOT);
         List<BookTitle> filtered = new ArrayList<>();
         for (BookTitle doc : books) {
             String title = safe(doc.title, "Chưa có tên sách");
             String author = safe(doc.author, "Chưa rõ tác giả");
             String category = safe(doc.category, "Khác");
             if (!selectedCategory.isEmpty() && !selectedCategory.equals(doc.categoryId)) continue;
-            String searchable = (title + " " + author + " " + category + " " + safe(doc.isbn, ""))
-                    .toLowerCase(Locale.ROOT);
+            String searchable =
+                    (title + " " + author + " " + category + " " + safe(doc.isbn, ""))
+                            .toLowerCase(Locale.ROOT);
             if (searchable.contains(query)) filtered.add(doc);
         }
 
@@ -240,42 +285,52 @@ public class ReaderMainActivity extends com.example.libraryonline.ui.auth.Sessio
         popularCount.setText(filtered.size() + " đầu sách");
         catalogueStatus.setText(catalogueLoadStatus.describe(books.size(), filtered.size()));
         if (filtered.isEmpty()) {
-            TextView empty = new TextView(this);
-            empty.setText(books.isEmpty()
-                    ? "Thư viện chưa có sách được công khai."
-                    : "Không tìm thấy sách phù hợp với từ khóa hoặc danh mục này.");
-            empty.setTextColor(androidx.core.content.ContextCompat.getColor(this,R.color.library_muted));
-            empty.setTextSize(13);
-            empty.setPadding(dp(14), dp(16), dp(14), dp(16));
+            TextView empty =
+                    (TextView)
+                            getLayoutInflater()
+                                    .inflate(
+                                            R.layout.item_reader_empty,
+                                            latestBooksContainer,
+                                            false);
+            empty.setText(
+                    books.isEmpty()
+                            ? "Thư viện chưa có sách được công khai."
+                            : "Không tìm thấy sách phù hợp với từ khóa hoặc danh mục này.");
             latestBooksContainer.addView(empty);
             return;
         }
 
         int popularLimit = Math.min(6, filtered.size());
         for (int i = 0; i < popularLimit; i++) {
-            View card = createBookCard(filtered.get(i));
-            LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(dp(292), -2);
-            params.rightMargin = dp(10);
-            popularBooksContainer.addView(card, params);
+            View card =
+                    createBookCard(
+                            filtered.get(i),
+                            popularBooksContainer,
+                            R.layout.item_reader_popular_book);
+            popularBooksContainer.addView(card);
         }
         List<BookTitle> latest = new ArrayList<>(filtered);
-        Collections.sort(latest, (left, right) -> {
-            String leftDate = safe(left.updatedAt, safe(left.createdAt, ""));
-            String rightDate = safe(right.updatedAt, safe(right.createdAt, ""));
-            return rightDate.compareTo(leftDate);
-        });
-        for (BookTitle doc : latest) latestBooksContainer.addView(createBookCard(doc));
+        Collections.sort(
+                latest,
+                (left, right) -> {
+                    String leftDate = safe(left.updatedAt, safe(left.createdAt, ""));
+                    String rightDate = safe(right.updatedAt, safe(right.createdAt, ""));
+                    return rightDate.compareTo(leftDate);
+                });
+        for (BookTitle doc : latest)
+            latestBooksContainer.addView(
+                    createBookCard(doc, latestBooksContainer, R.layout.item_reader_book));
     }
 
     private void refreshCatalogueStatus() {
-        if (catalogueStatus != null) catalogueStatus.setText(
-                catalogueLoadStatus.describe(books.size(), lastDisplayedCount));
+        if (catalogueStatus != null)
+            catalogueStatus.setText(catalogueLoadStatus.describe(books.size(), lastDisplayedCount));
     }
 
     private int lastDisplayedCount;
 
-    private View createBookCard(BookTitle doc) {
-        View card = LayoutInflater.from(this).inflate(R.layout.item_reader_book, latestBooksContainer, false);
+    private View createBookCard(BookTitle doc, android.view.ViewGroup parent, int layout) {
+        View card = LayoutInflater.from(this).inflate(layout, parent, false);
         TextView title = card.findViewById(R.id.textReaderBookTitle);
         TextView author = card.findViewById(R.id.textReaderBookAuthor);
         TextView category = card.findViewById(R.id.textReaderBookCategory);
@@ -288,8 +343,11 @@ public class ReaderMainActivity extends com.example.libraryonline.ui.auth.Sessio
         category.setText(safe(doc.category, "Khác").toUpperCase(Locale.ROOT));
         long available = doc.availableCopies;
         long total = doc.totalCopies;
-        availability.setText(available > 0 ? "Còn " + available + "/" + total + " cuốn" : "Tạm hết sách");
-        availability.setTextColor(androidx.core.content.ContextCompat.getColor(this,available > 0 ? R.color.library_success : R.color.library_muted));
+        availability.setText(
+                available > 0 ? "Còn " + available + "/" + total + " cuốn" : "Tạm hết sách");
+        availability.setTextColor(
+                androidx.core.content.ContextCompat.getColor(
+                        this, available > 0 ? R.color.library_success : R.color.library_muted));
 
         BookCoverLoader.load(doc.coverUrl, cover, fallback);
 
@@ -298,8 +356,10 @@ public class ReaderMainActivity extends com.example.libraryonline.ui.auth.Sessio
     }
 
     private void showBookDetails(BookTitle doc) {
-        if(isSessionReady())startActivity(new Intent(this,BookDetailActivity.class)
-                .putExtra(BookDetailActivity.EXTRA_BOOK_ID,doc.bookTitleId));
+        if (isSessionReady())
+            startActivity(
+                    new Intent(this, BookDetailActivity.class)
+                            .putExtra(BookDetailActivity.EXTRA_BOOK_ID, doc.bookTitleId));
     }
 
     private void showAccount() {
@@ -308,27 +368,49 @@ public class ReaderMainActivity extends com.example.libraryonline.ui.auth.Sessio
             goToLogin();
             return;
         }
-        firestore.collection("Users").document(user.getUid()).get()
-                .addOnSuccessListener(doc -> {
-                    if(!isSessionReady())return;
-                    String message = "Họ tên: " + value(doc, "fullName", "Độc giả")
-                            + "\nEmail: " + value(doc, "email", user.getEmail() == null ? "" : user.getEmail())
-                            + "\nMã thẻ: " + value(doc, "barcode", "Chưa cấp")
-                            + "\nTrạng thái thẻ: " + value(doc, "cardStatus", "Chưa rõ");
-                    privateSupportDialog()
-                            .setTitle("Tài khoản độc giả")
-                            .setMessage(message)
-                            .setNeutralButton("Đăng xuất", (dialog, which) -> logout())
-                            .setPositiveButton("Đóng", (dialog, which) -> dialog.dismiss())
-                            .show();
-                })
+        firestore
+                .collection("Users")
+                .document(user.getUid())
+                .get()
+                .addOnSuccessListener(
+                        doc -> {
+                            if (!isSessionReady()) return;
+                            String message =
+                                    "Họ tên: "
+                                            + value(doc, "fullName", "Độc giả")
+                                            + "\nEmail: "
+                                            + value(
+                                                    doc,
+                                                    "email",
+                                                    user.getEmail() == null ? "" : user.getEmail())
+                                            + "\nMã thẻ: "
+                                            + value(doc, "barcode", "Chưa cấp")
+                                            + "\nTrạng thái thẻ: "
+                                            + value(doc, "cardStatus", "Chưa rõ");
+                            privateSupportDialog()
+                                    .setTitle("Tài khoản độc giả")
+                                    .setMessage(message)
+                                    .setNeutralButton("Đăng xuất", (dialog, which) -> logout())
+                                    .setPositiveButton("Đóng", (dialog, which) -> dialog.dismiss())
+                                    .show();
+                        })
                 .addOnFailureListener(e -> showMessage("Không tải được thông tin tài khoản."));
     }
 
-    private void logout() { logoutSession(); }
-    private void goToLogin() { logoutSession(); }
-    @Override protected void onSessionStopped() {
-        if(catalogueSyncManager!=null) {catalogueSyncManager.close();catalogueSyncManager=null;}
+    private void logout() {
+        logoutSession();
+    }
+
+    private void goToLogin() {
+        logoutSession();
+    }
+
+    @Override
+    protected void onSessionStopped() {
+        if (catalogueSyncManager != null) {
+            catalogueSyncManager.close();
+            catalogueSyncManager = null;
+        }
         books.clear();
     }
 
@@ -346,10 +428,6 @@ public class ReaderMainActivity extends com.example.libraryonline.ui.auth.Sessio
 
     private void showMessage(String message) {
         Toast.makeText(this, message, Toast.LENGTH_LONG).show();
-    }
-
-    private int dp(int value) {
-        return (int) (value * getResources().getDisplayMetrics().density + 0.5f);
     }
 
     @Override

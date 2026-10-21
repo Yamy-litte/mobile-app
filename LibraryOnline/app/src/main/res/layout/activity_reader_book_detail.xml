@@ -1,0 +1,123 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/detailRoot"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:background="@color/library_background">
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:paddingHorizontal="12dp">
+        <Button
+            android:id="@+id/detailBack"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:minHeight="48dp"
+            android:text="@string/catalogue_back" />
+        <TextView
+            style="@style/CatalogueBody"
+            android:layout_width="0dp"
+            android:layout_weight="1"
+            android:gravity="center"
+            android:textStyle="bold"
+            android:text="@string/book_detail_heading" />
+    </LinearLayout>
+    <ScrollView
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:fillViewport="true">
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:padding="20dp">
+            <TextView
+                android:id="@+id/detailStatus"
+                style="@style/CatalogueCaption"
+                android:accessibilityLiveRegion="polite"
+                android:text="@string/catalogue_loading" />
+            <Button
+                android:id="@+id/detailRetry"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:minHeight="48dp"
+                android:text="@string/catalogue_retry" />
+            <LinearLayout
+                android:id="@+id/detailContent"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:visibility="gone">
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:gravity="center_horizontal"
+                    android:background="@drawable/bg_reader_book_card"
+                    android:padding="20dp"
+                    android:layout_marginTop="16dp">
+                    <FrameLayout
+                        android:layout_width="156dp"
+                        android:layout_height="220dp"
+                        android:background="@color/library_accent_background">
+                        <ImageView
+                            android:id="@+id/detailCover"
+                            android:layout_width="match_parent"
+                            android:layout_height="match_parent"
+                            android:scaleType="centerCrop"
+                            android:contentDescription="@string/book_cover" />
+                        <TextView
+                            android:id="@+id/detailCoverFallback"
+                            style="@style/CatalogueCaption"
+                            android:layout_height="match_parent"
+                            android:gravity="center"
+                            android:padding="12dp"
+                            android:text="@string/book_cover_missing" />
+                    </FrameLayout>
+                    <TextView
+                        android:id="@+id/detailCategory"
+                        style="@style/CatalogueCaption"
+                        android:gravity="center"
+                        android:layout_marginTop="20dp"
+                        android:textColor="@color/library_blue" />
+                    <TextView
+                        android:id="@+id/detailTitle"
+                        style="@style/CatalogueHeading"
+                        android:gravity="center" />
+                    <TextView
+                        android:id="@+id/detailAuthor"
+                        style="@style/CatalogueBody"
+                        android:gravity="center" />
+                </LinearLayout>
+                <TextView
+                    android:id="@+id/detailAvailability"
+                    style="@style/CatalogueBody"
+                    android:padding="16dp"
+                    android:layout_marginTop="16dp"
+                    android:background="@drawable/bg_reader_book_card"
+                    android:textStyle="bold" />
+                <TextView
+                    style="@style/CatalogueHeading"
+                    android:text="@string/book_about" />
+                <TextView
+                    android:id="@+id/detailDescription"
+                    style="@style/CatalogueBody"
+                    android:lineSpacingExtra="5dp" />
+                <TextView
+                    style="@style/CatalogueHeading"
+                    android:text="@string/book_information" />
+                <TextView
+                    android:id="@+id/detailMetadata"
+                    style="@style/CatalogueCaption"
+                    android:background="@drawable/bg_reader_book_card"
+                    android:padding="16dp"
+                    android:lineSpacingExtra="8dp" />
+            </LinearLayout>
+        </LinearLayout>
+    </ScrollView>
+</LinearLayout>

@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<EditText
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/rejectionReason"
+    style="@style/CatalogueInput"
+    android:hint="@string/admin_rejection_reason_hint"
+    android:padding="20dp" />

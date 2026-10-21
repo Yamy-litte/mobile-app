@@ -105,7 +105,7 @@ public class InventoryEmulatorTest {
         connection.getOutputStream().write(body.getBytes(StandardCharsets.UTF_8));
         assertEquals(200,connection.getResponseCode());connection.disconnect();
     }
-    private void settle(com.example.libraryonline.ui.admin.InventoryViewModel model) throws Exception {
+    private void settle(com.example.libraryonline.ui.admin.inventory.InventoryViewModel model) throws Exception {
         long end=System.currentTimeMillis()+30000;
         while(model.busy && System.currentTimeMillis()<end){Shadows.shadowOf(Looper.getMainLooper()).idle();Thread.sleep(20);}
         assertFalse("ViewModel operation timed out",model.busy);
@@ -113,7 +113,7 @@ public class InventoryEmulatorTest {
     @Test public void permanentRulesRejectionReconcilesAndUnlocksOtherInventoryWrites() throws Exception {
         BookTitle b=book();await(repo.createTitle(b,new StockIntake(1,"A")));makeLegacyTitle(b.bookTitleId);
         String uid=FirebaseAuth.getInstance(app).getCurrentUser().getUid();
-        com.example.libraryonline.ui.admin.InventoryViewModel model=new com.example.libraryonline.ui.admin.InventoryViewModel(repo);
+        com.example.libraryonline.ui.admin.inventory.InventoryViewModel model=new com.example.libraryonline.ui.admin.inventory.InventoryViewModel(repo);
         model.attach(RuntimeEnvironment.getApplication(),uid);
         model.submit("intake",b.bookTitleId,b,new StockIntake(1,"B"),null,uid);settle(model);
         assertFalse("Definitively rejected intake must not block all later work",model.hasPending());

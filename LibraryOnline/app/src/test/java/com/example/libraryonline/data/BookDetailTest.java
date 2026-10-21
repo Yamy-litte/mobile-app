@@ -13,7 +13,7 @@ import static org.junit.Assert.*;
 @RunWith(RobolectricTestRunner.class) @Config(sdk=28,manifest=Config.NONE)
 public class BookDetailTest {
     private AppCompatActivity activity;private BookDetailView view;
-    @Before public void setup(){activity=Robolectric.buildActivity(AppCompatActivity.class).get();activity.setTheme(R.style.Theme_LibraryOnline);activity.setContentView(R.layout.activity_book_detail);view=new BookDetailView(activity);}
+    @Before public void setup(){activity=Robolectric.buildActivity(AppCompatActivity.class).get();activity.setTheme(R.style.Theme_LibraryOnline);activity.setContentView(R.layout.activity_reader_book_detail);view=new BookDetailView(activity);}
     @Test public void bindsRealMetadataAndAvailability(){BookTitle b=new BookTitle();b.title="Sapiens";b.author="Harari";b.category="Lịch sử";b.description="Mô tả thật";b.totalCopies=4;b.availableCopies=2;view.bind(b);
         assertEquals("Sapiens",((TextView)activity.findViewById(R.id.detailTitle)).getText().toString());
         assertTrue(((TextView)activity.findViewById(R.id.detailAvailability)).getText().toString().contains("2"));

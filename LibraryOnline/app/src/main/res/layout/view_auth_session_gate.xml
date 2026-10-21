@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/sessionGate"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:gravity="center"
+    android:padding="24dp"
+    android:background="#F5F7FF"
+    android:clickable="true"
+    android:focusable="true">
+    <ProgressBar
+        android:id="@+id/progressSession"
+        android:layout_width="48dp"
+        android:layout_height="48dp" />
+    <TextView
+        android:id="@+id/textSessionStatus"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:gravity="center"
+        android:padding="16dp"
+        android:text="Đang xác minh phiên đăng nhập…" />
+    <Button
+        android:id="@+id/buttonSessionRetry"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Thử lại" />
+    <Button
+        android:id="@+id/buttonSessionLogout"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Đăng xuất" />
+</LinearLayout>

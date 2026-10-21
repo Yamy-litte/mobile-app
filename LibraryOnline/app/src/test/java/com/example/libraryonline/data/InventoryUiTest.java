@@ -4,7 +4,7 @@ import android.widget.*;
 import androidx.appcompat.app.AppCompatActivity;
 import com.example.libraryonline.R;
 import com.example.libraryonline.data.local.dao.CategoryDao;
-import com.example.libraryonline.ui.admin.InventoryForm;
+import com.example.libraryonline.ui.admin.inventory.InventoryForm;
 import org.junit.*;
 import org.junit.runner.RunWith;
 import org.robolectric.*;

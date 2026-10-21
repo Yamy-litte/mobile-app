@@ -44,7 +44,7 @@ public class AdminHomeViewTest {
             for(boolean night:new boolean[]{false,true}) {
                 RuntimeEnvironment.setQualifiers("w320dp-h800dp"+(night?"-night":"-notnight")+"-mdpi");
                 screen.getTheme().applyStyle(R.style.Theme_LibraryOnline,true);
-                int[] layouts={R.layout.activity_admin_main,R.layout.activity_login,R.layout.home_reader_activity};
+                int[] layouts={R.layout.activity_admin_main,R.layout.activity_auth_login,R.layout.activity_reader_main};
                 String[] names={"admin","login","reader"};
                 for(int i=0;i<layouts.length;i++) {
                     screen.setContentView(layouts[i]);

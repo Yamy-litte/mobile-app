@@ -12,8 +12,8 @@ import android.widget.Toast;
 import androidx.appcompat.app.AppCompatActivity;
 
 import com.example.libraryonline.R;
-import com.example.libraryonline.utils.PasswordVisibilityToggle;
 import com.example.libraryonline.utils.InputValidator;
+import com.example.libraryonline.utils.PasswordVisibilityToggle;
 import com.google.firebase.auth.FirebaseAuth;
 
 public class LoginActivity extends AppCompatActivity {
@@ -35,7 +35,7 @@ public class LoginActivity extends AppCompatActivity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        setContentView(R.layout.activity_login);
+        setContentView(R.layout.activity_auth_login);
 
         auth = FirebaseAuth.getInstance();
         sessions = createSessionGateway();
@@ -56,17 +56,21 @@ public class LoginActivity extends AppCompatActivity {
         }
 
         loginButton.setOnClickListener(v -> login());
-        registerLink.setOnClickListener(v ->
-                startActivity(new Intent(this, RegisterActivity.class)));
-        forgotPasswordLink.setOnClickListener(v ->
-                startActivity(new Intent(this, ForgotPasswordActivity.class)));
-        adminLoginLink.setOnClickListener(v ->
-                startActivity(new Intent(this, AdminLoginActivity.class)));
+        registerLink.setOnClickListener(
+                v -> startActivity(new Intent(this, RegisterActivity.class)));
+        forgotPasswordLink.setOnClickListener(
+                v -> startActivity(new Intent(this, ForgotPasswordActivity.class)));
+        adminLoginLink.setOnClickListener(
+                v -> startActivity(new Intent(this, AdminLoginActivity.class)));
     }
 
     private void login() {
         if (busy) return;
-        if(sessions.currentUid()!=null) {setLoading(true);resolveProfile();return;}
+        if (sessions.currentUid() != null) {
+            setLoading(true);
+            resolveProfile();
+            return;
+        }
         String email = InputValidator.normalizeEmail(emailInput.getText().toString());
         String password = passwordInput.getText().toString();
 
@@ -81,7 +85,8 @@ public class LoginActivity extends AppCompatActivity {
             return;
         }
 
-        SharedPreferences.Editor preferences = getSharedPreferences(PREFS_NAME, MODE_PRIVATE).edit();
+        SharedPreferences.Editor preferences =
+                getSharedPreferences(PREFS_NAME, MODE_PRIVATE).edit();
         if (rememberLogin.isChecked()) {
             preferences.putString(KEY_REMEMBER_EMAIL, email);
         } else {
@@ -90,46 +95,64 @@ public class LoginActivity extends AppCompatActivity {
         preferences.apply();
 
         setLoading(true);
-        final long attempt=++generation;
+        final long attempt = ++generation;
         auth.signInWithEmailAndPassword(email, password)
-                .addOnCompleteListener(task -> {
-                    if(!foreground || attempt!=generation)return;
-                    if (!task.isSuccessful() || auth.getCurrentUser() == null) {
-                        setLoading(false);
-                        showMessage(AuthErrors.message(task.getException()));
-                        return;
-                    }
+                .addOnCompleteListener(
+                        task -> {
+                            if (!foreground || attempt != generation) return;
+                            if (!task.isSuccessful() || auth.getCurrentUser() == null) {
+                                setLoading(false);
+                                showMessage(AuthErrors.message(task.getException()));
+                                return;
+                            }
 
-                    resolveProfile();
-                });
+                            resolveProfile();
+                        });
     }
 
     protected com.example.libraryonline.data.session.SessionGateway createSessionGateway() {
         return new com.example.libraryonline.data.session.FirebaseSessionGateway(this);
     }
-    @Override protected void onStart() {
-        super.onStart();foreground=true;
-        if (sessions.currentUid()!=null && !busy) { setLoading(true); resolveProfile(); }
-    }
-    private void resolveProfile() {
-        final long attempt=++generation;
-        sessions.resolve().addOnCompleteListener(task -> {
-            if(!foreground || attempt!=generation || isFinishing() || isDestroyed())return;
-            if(task.isSuccessful()) SessionNavigation.open(this,task.getResult());
-            else {
-                if(AuthErrors.rejectsSession(task.getException())) sessions.signOut();
-                setLoading(false);
-                showMessage(AuthErrors.message(task.getException()));
-            }
-        });
+
+    @Override
+    protected void onStart() {
+        super.onStart();
+        foreground = true;
+        if (sessions.currentUid() != null && !busy) {
+            setLoading(true);
+            resolveProfile();
+        }
     }
 
-    @Override protected void onStop() {
-        foreground=false;generation++;setLoading(false);super.onStop();
+    private void resolveProfile() {
+        final long attempt = ++generation;
+        sessions.resolve()
+                .addOnCompleteListener(
+                        task -> {
+                            if (!foreground
+                                    || attempt != generation
+                                    || isFinishing()
+                                    || isDestroyed()) return;
+                            if (task.isSuccessful()) SessionNavigation.open(this, task.getResult());
+                            else {
+                                if (AuthErrors.rejectsSession(task.getException()))
+                                    sessions.signOut();
+                                setLoading(false);
+                                showMessage(AuthErrors.message(task.getException()));
+                            }
+                        });
+    }
+
+    @Override
+    protected void onStop() {
+        foreground = false;
+        generation++;
+        setLoading(false);
+        super.onStop();
     }
 
     private void setLoading(boolean loading) {
-        busy=loading;
+        busy = loading;
         registerLink.setEnabled(!loading);
         forgotPasswordLink.setEnabled(!loading);
         adminLoginLink.setEnabled(!loading);
@@ -138,7 +161,12 @@ public class LoginActivity extends AppCompatActivity {
         emailInput.setEnabled(!loading);
         passwordInput.setEnabled(!loading);
         loginButton.setEnabled(!loading);
-        loginButton.setText(loading ? "Đang đăng nhập..." : (sessions.currentUid()!=null ? "Thử lại phiên đăng nhập" : "Đăng nhập"));
+        loginButton.setText(
+                loading
+                        ? "Đang đăng nhập..."
+                        : (sessions.currentUid() != null
+                                ? "Thử lại phiên đăng nhập"
+                                : "Đăng nhập"));
     }
 
     private void showMessage(String message) {

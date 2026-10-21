@@ -1,10 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<LinearLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:orientation="vertical"
     android:background="@color/library_background">
-
     <ScrollView
         android:id="@+id/readerScroll"
         android:layout_width="match_parent"
@@ -12,7 +12,6 @@
         android:layout_weight="1"
         android:fillViewport="true"
         android:clipToPadding="false">
-
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
@@ -21,13 +20,11 @@
             android:paddingTop="16dp"
             android:paddingEnd="20dp"
             android:paddingBottom="18dp">
-
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:gravity="center_vertical"
                 android:orientation="horizontal">
-
                 <LinearLayout
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
@@ -51,7 +48,6 @@
                         android:textSize="25sp"
                         android:textStyle="bold" />
                 </LinearLayout>
-
                 <TextView
                     android:id="@+id/buttonReaderAccount"
                     android:layout_width="42dp"
@@ -64,7 +60,6 @@
                     android:textStyle="bold"
                     android:contentDescription="Tài khoản độc giả" />
             </LinearLayout>
-
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="48dp"
@@ -95,7 +90,6 @@
                     android:paddingStart="8dp"
                     android:paddingEnd="0dp" />
             </LinearLayout>
-
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
@@ -117,7 +111,6 @@
                     android:textColor="@color/library_blue"
                     android:textSize="12sp" />
             </LinearLayout>
-
             <HorizontalScrollView
                 android:layout_width="match_parent"
                 android:layout_height="44dp"
@@ -131,7 +124,6 @@
                     android:gravity="center_vertical"
                     android:orientation="horizontal" />
             </HorizontalScrollView>
-
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
@@ -154,7 +146,6 @@
                     android:textColor="@color/library_muted"
                     android:textSize="12sp" />
             </LinearLayout>
-
             <HorizontalScrollView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
@@ -167,7 +158,6 @@
                     android:layout_height="wrap_content"
                     android:orientation="horizontal" />
             </HorizontalScrollView>
-
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
@@ -189,7 +179,6 @@
                     android:textColor="@color/library_blue"
                     android:textSize="12sp" />
             </LinearLayout>
-
             <TextView
                 android:id="@+id/textReaderCatalogueStatus"
                 android:layout_width="match_parent"
@@ -198,7 +187,6 @@
                 android:text="Danh sách sách trong thư viện"
                 android:textColor="@color/library_muted"
                 android:textSize="12sp" />
-
             <LinearLayout
                 android:id="@+id/containerLatestBooks"
                 android:layout_width="match_parent"
@@ -207,12 +195,10 @@
                 android:orientation="vertical" />
         </LinearLayout>
     </ScrollView>
-
     <View
         android:layout_width="match_parent"
         android:layout_height="1dp"
         android:background="@color/library_border" />
-
     <LinearLayout
         android:id="@+id/readerBottomNavigation"
         android:layout_width="match_parent"
@@ -222,7 +208,6 @@
         android:orientation="horizontal"
         android:paddingStart="4dp"
         android:paddingEnd="4dp">
-
         <LinearLayout
             android:id="@+id/navReaderHome"
             android:layout_width="0dp"
@@ -230,8 +215,19 @@
             android:layout_weight="1"
             android:gravity="center"
             android:orientation="vertical">
-            <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="⌂" android:textColor="@color/library_blue" android:textSize="21sp" />
-            <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Trang chủ" android:textColor="@color/library_blue" android:textSize="10sp" android:textStyle="bold" />
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="⌂"
+                android:textColor="@color/library_blue"
+                android:textSize="21sp" />
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Trang chủ"
+                android:textColor="@color/library_blue"
+                android:textSize="10sp"
+                android:textStyle="bold" />
         </LinearLayout>
         <LinearLayout
             android:id="@+id/navReaderLoans"
@@ -240,8 +236,18 @@
             android:layout_weight="1"
             android:gravity="center"
             android:orientation="vertical">
-            <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="▤" android:textColor="#82918B" android:textSize="21sp" />
-            <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Mượn sách" android:textColor="#82918B" android:textSize="10sp" />
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="▤"
+                android:textColor="#82918B"
+                android:textSize="21sp" />
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Mượn sách"
+                android:textColor="#82918B"
+                android:textSize="10sp" />
         </LinearLayout>
         <LinearLayout
             android:id="@+id/navReaderNotifications"
@@ -250,8 +256,18 @@
             android:layout_weight="1"
             android:gravity="center"
             android:orientation="vertical">
-            <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="♧" android:textColor="#82918B" android:textSize="21sp" />
-            <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Thông báo" android:textColor="#82918B" android:textSize="10sp" />
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="♧"
+                android:textColor="#82918B"
+                android:textSize="21sp" />
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Thông báo"
+                android:textColor="#82918B"
+                android:textSize="10sp" />
         </LinearLayout>
         <LinearLayout
             android:id="@+id/navReaderAccount"
@@ -260,8 +276,18 @@
             android:layout_weight="1"
             android:gravity="center"
             android:orientation="vertical">
-            <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="♙" android:textColor="#82918B" android:textSize="21sp" />
-            <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Tài khoản" android:textColor="#82918B" android:textSize="10sp" />
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="♙"
+                android:textColor="#82918B"
+                android:textSize="21sp" />
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Tài khoản"
+                android:textColor="#82918B"
+                android:textSize="10sp" />
         </LinearLayout>
     </LinearLayout>
 </LinearLayout>

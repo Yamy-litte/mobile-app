@@ -13,7 +13,7 @@ public class RegistrationSubmittedActivity extends AppCompatActivity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        setContentView(R.layout.activity_registration_submitted);
+        setContentView(R.layout.activity_auth_registration_submitted);
 
         TextView fullName = findViewById(R.id.textSubmittedFullName);
         TextView birthDate = findViewById(R.id.textSubmittedBirthDate);
@@ -26,11 +26,12 @@ public class RegistrationSubmittedActivity extends AppCompatActivity {
         email.setText(getIntent().getStringExtra("email"));
 
         Button backToLogin = findViewById(R.id.buttonBackToLogin);
-        backToLogin.setOnClickListener(v -> {
-            Intent intent = new Intent(this, LoginActivity.class);
-            intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_NEW_TASK);
-            startActivity(intent);
-            finish();
-        });
+        backToLogin.setOnClickListener(
+                v -> {
+                    Intent intent = new Intent(this, LoginActivity.class);
+                    intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_NEW_TASK);
+                    startActivity(intent);
+                    finish();
+                });
     }
 }
