@@ -53,9 +53,32 @@ public final class DatabaseHelper extends SQLiteOpenHelper {
 
     @Override
     public void onUpgrade(SQLiteDatabase db, int oldVersion, int newVersion) {
-        // Seed demo catalogue without deleting any existing user or loan data.
+        // Upgrade existing installs in place. Never delete user, loan, or catalogue data.
         if (oldVersion < 5) {
+            createCategories(db);
+            if (!columnExists(db, "BookTitles", "categoryId")) {
+                db.execSQL("ALTER TABLE BookTitles ADD COLUMN categoryId TEXT");
+            }
+            // Convert legacy category names to stable IDs and ensure parent rows exist first.
+            try (android.database.Cursor cursor = db.query(
+                    "BookTitles", new String[]{"bookTitleId", "category"}, null, null, null, null, null)) {
+                while (cursor.moveToNext()) {
+                    String bookId = cursor.getString(0);
+                    String categoryName = cursor.getString(1);
+                    if (categoryName == null || categoryName.trim().isEmpty()) categoryName = "Khác";
+                    String categoryId = com.example.libraryonline.data.local.dao.CategoryDao.idForName(categoryName);
+                    db.execSQL("INSERT OR IGNORE INTO Categories(categoryId,name) VALUES(?,?)",
+                            new Object[]{categoryId, categoryName});
+                    db.execSQL("UPDATE BookTitles SET categoryId=? WHERE bookTitleId=?",
+                            new Object[]{categoryId, bookId});
+                }
+            }
+            createCategoryIntegrityTriggers(db);
             seedSampleBooks(db);
+            // Backfill IDs for demo books inserted during the upgrade too.
+            db.execSQL("UPDATE BookTitles SET categoryId = " +
+                    "(SELECT categoryId FROM Categories WHERE Categories.name = BookTitles.category) " +
+                    "WHERE categoryId IS NULL");
         }
     }
 
@@ -74,10 +97,13 @@ public final class DatabaseHelper extends SQLiteOpenHelper {
             {"BOOK010","A Brief History of Time","Stephen Hawking","9780553380163","Khoa học","Bantam","1998","Giới thiệu những câu hỏi lớn của vũ trụ học như thời gian, hố đen và nguồn gốc vũ trụ.","https://covers.openlibrary.org/b/isbn/9780553380163-L.jpg","3","3"}
         };
         for (String[] b : books) {
+            String categoryId = com.example.libraryonline.data.local.dao.CategoryDao.idForName(b[4]);
+            db.execSQL("INSERT OR IGNORE INTO Categories(categoryId,name) VALUES(?,?)",
+                    new Object[]{categoryId, b[4]});
             db.execSQL("INSERT OR IGNORE INTO BookTitles " +
-                    "(bookTitleId,title,author,isbn,category,publisher,publishYear,description,coverUrl,totalCopies,availableCopies,isHidden,createdAt,updatedAt) " +
-                    "VALUES (?,?,?,?,?,?,?,?,?,?,?,0," + now + "," + now + ")",
-                    new Object[]{b[0],b[1],b[2],b[3],b[4],b[5],Integer.parseInt(b[6]),b[7],b[8],Integer.parseInt(b[9]),Integer.parseInt(b[10])});
+                    "(bookTitleId,title,author,isbn,categoryId,category,publisher,publishYear,description,coverUrl,totalCopies,availableCopies,isHidden,createdAt,updatedAt) " +
+                    "VALUES (?,?,?,?,?,?,?,?,?,?,?,?,0," + now + "," + now + ")",
+                    new Object[]{b[0],b[1],b[2],b[3],categoryId,b[4],b[5],Integer.parseInt(b[6]),b[7],b[8],Integer.parseInt(b[9]),Integer.parseInt(b[10])});
             int copies = Integer.parseInt(b[9]);
             for (int i = 1; i <= copies; i++) {
                 String copyId = b[0] + "_COPY_" + String.format(java.util.Locale.ROOT, "%02d", i);
@@ -89,6 +115,16 @@ public final class DatabaseHelper extends SQLiteOpenHelper {
                         new Object[]{copyId,b[0],barcode,"Kệ " + b[4],copyStatus});
             }
         }
+    }
+
+    private static boolean columnExists(SQLiteDatabase db, String table, String column) {
+        try (android.database.Cursor cursor = db.rawQuery("PRAGMA table_info(" + table + ")", null)) {
+            int nameIndex = cursor.getColumnIndex("name");
+            while (cursor.moveToNext()) {
+                if (nameIndex >= 0 && column.equalsIgnoreCase(cursor.getString(nameIndex))) return true;
+            }
+        }
+        return false;
     }
 
     private static void createUsers(SQLiteDatabase db) {
