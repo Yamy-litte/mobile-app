@@ -11,7 +11,7 @@ import android.database.sqlite.SQLiteOpenHelper;
 public final class DatabaseHelper extends SQLiteOpenHelper {
 
     public static final String DATABASE_NAME = "library_online.db";
-    public static final int DATABASE_VERSION = 5;
+    public static final int DATABASE_VERSION = 6;
 
     public DatabaseHelper(Context context) {
         super(context.getApplicationContext(), DATABASE_NAME, null, DATABASE_VERSION);
@@ -54,7 +54,7 @@ public final class DatabaseHelper extends SQLiteOpenHelper {
     @Override
     public void onUpgrade(SQLiteDatabase db, int oldVersion, int newVersion) {
         // Upgrade existing installs in place. Never delete user, loan, or catalogue data.
-        if (oldVersion < 5) {
+        if (oldVersion < 6) {
             createCategories(db);
             if (!columnExists(db, "BookTitles", "categoryId")) {
                 db.execSQL("ALTER TABLE BookTitles ADD COLUMN categoryId TEXT");
