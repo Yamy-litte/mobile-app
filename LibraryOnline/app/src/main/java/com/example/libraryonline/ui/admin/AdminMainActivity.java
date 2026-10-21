@@ -261,7 +261,7 @@ public class AdminMainActivity extends AppCompatActivity {
         setResetActionsEnabled(reject, approve, true);
         Toast.makeText(this, message, Toast.LENGTH_LONG).show();
     }
-\n    private boolean isPending(String status) {
+    private boolean isPending(String status) {
         return "Pending".equalsIgnoreCase(status) || "PendingVerification".equalsIgnoreCase(status);
     }
 
@@ -547,7 +547,7 @@ public class AdminMainActivity extends AppCompatActivity {
 
     @Override
     protected void onDestroy() {
-        if (requestsListener != null) requestsListener.remove();\n        if (resetRequestsListener != null) resetRequestsListener.remove();
+        if (requestsListener != null) requestsListener.remove();       if (resetRequestsListener != null) resetRequestsListener.remove();
         super.onDestroy();
     }
 }
