@@ -240,7 +240,10 @@ public final class BookCatalogueSyncManager implements AutoCloseable {
         data.put("title", book.title == null ? "" : book.title);
         data.put("author", book.author == null ? "" : book.author);
         data.put("isbn", book.isbn == null ? "" : book.isbn);
-        data.put("category", book.category == null ? "" : book.category);
+        data.put("category", book.category == null ? "Khác" : book.category);
+        data.put("categoryId", book.categoryId == null || book.categoryId.trim().isEmpty()
+                ? com.example.libraryonline.data.local.dao.CategoryDao.idForName(book.category)
+                : book.categoryId);
         data.put("publisher", book.publisher == null ? "" : book.publisher);
         data.put("publishYear", book.publishYear);
         data.put("description", book.description == null ? "" : book.description);
@@ -321,6 +324,11 @@ public final class BookCatalogueSyncManager implements AutoCloseable {
         book.author = string(doc, "author");
         book.isbn = string(doc, "isbn");
         book.category = string(doc, "category");
+        book.categoryId = string(doc, "categoryId");
+        if (book.categoryId.trim().isEmpty()) {
+            book.categoryId = com.example.libraryonline.data.local.dao.CategoryDao.idForName(
+                    book.category == null || book.category.trim().isEmpty() ? "Khác" : book.category);
+        }
         book.publisher = string(doc, "publisher");
         book.description = string(doc, "description");
         book.coverUrl = string(doc, "coverUrl");
