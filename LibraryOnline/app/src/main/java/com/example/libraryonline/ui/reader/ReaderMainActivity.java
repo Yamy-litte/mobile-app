@@ -93,7 +93,7 @@ public class ReaderMainActivity extends AppCompatActivity {
             public void onSyncFailed(String message) {
                 runOnUiThread(() -> {
                     if (!isFinishing() && !isDestroyed()) {
-                        catalogueStatus.setText("Chưa đồng bộ được SQLite. Dữ liệu Firestore vẫn được hiển thị.");
+                        catalogueStatus.setText("Lỗi đồng bộ: " + safe(message, "Không rõ nguyên nhân"));
                     }
                 });
             }
@@ -131,6 +131,12 @@ public class ReaderMainActivity extends AppCompatActivity {
     private void buildCategories() {
         Set<String> names = new LinkedHashSet<>();
         names.add("Tất cả");
+        names.add("Văn học");
+        names.add("Khoa học");
+        names.add("Lịch sử");
+        names.add("Tâm lý");
+        names.add("Kinh tế");
+        names.add("Công nghệ");
         for (BookTitle book : books) {
             String category = safe(book.category, "Khác");
             if (!category.isEmpty()) names.add(category);
