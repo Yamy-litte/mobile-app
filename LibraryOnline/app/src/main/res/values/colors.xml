@@ -18,5 +18,4 @@
     <color name="reader_border">@color/library_border</color>
     <color name="reader_cover_placeholder">#E8EEF9</color>
     <color name="reader_success">@color/library_success</color>
-    <color name="reader_cover_placeholder">#E8EEF9</color>
 </resources>
