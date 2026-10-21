@@ -4,8 +4,10 @@ import android.content.Context;
 import android.database.sqlite.SQLiteDatabase;
 
 import com.example.libraryonline.data.local.dao.BookTitleDao;
+import com.example.libraryonline.data.local.dao.BookCopyDao;
 import com.example.libraryonline.data.local.db.DatabaseHelper;
 import com.example.libraryonline.data.model.BookTitle;
+import com.example.libraryonline.data.model.BookCopy;
 import com.google.firebase.Timestamp;
 import com.google.firebase.firestore.DocumentChange;
 import com.google.firebase.firestore.DocumentSnapshot;
@@ -41,6 +43,7 @@ public final class BookCatalogueSyncManager implements AutoCloseable {
     private final FirebaseFirestore firestore;
     private final ExecutorService executor = Executors.newSingleThreadExecutor();
     private ListenerRegistration registration;
+    private ListenerRegistration copiesRegistration;
     private volatile boolean closed;
 
     public BookCatalogueSyncManager(Context context) {
@@ -59,9 +62,17 @@ public final class BookCatalogueSyncManager implements AutoCloseable {
                         ? "Không thể đồng bộ danh mục sách." : error.getLocalizedMessage());
                 return;
             }
-            if (snapshot == null) return;
-            // Always apply the complete snapshot so initial catalogue data is persisted locally.
-            executor.execute(() -> applySnapshot(snapshot, listener));
+            if (snapshot != null) executor.execute(() -> applySnapshot(snapshot, listener));
+        });
+        copiesRegistration = firestore.collection("BookCopies").addSnapshotListener((snapshot, error) -> {
+            if (closed) return;
+            if (error != null) {
+                if (listener != null) listener.onSyncFailed(error.getLocalizedMessage() == null
+                        ? "Không thể đồng bộ cuốn sách vật lý. Kiểm tra quyền Firestore BookCopies."
+                        : error.getLocalizedMessage());
+                return;
+            }
+            if (snapshot != null) executor.execute(() -> applyCopiesSnapshot(snapshot, listener));
         });
     }
 
@@ -86,7 +97,7 @@ public final class BookCatalogueSyncManager implements AutoCloseable {
                         if (book.bookTitleId != null && !cloudIds.containsKey(book.bookTitleId)) missing.add(book);
                     }
                     if (missing.isEmpty()) {
-                        if (listener != null) listener.onSyncCompleted(0);
+                        syncCopiesLocalToCloud(listener);
                         return;
                     }
                     if (missing.size() > 450) {
@@ -97,17 +108,77 @@ public final class BookCatalogueSyncManager implements AutoCloseable {
                     for (BookTitle book : missing) {
                         batch.set(firestore.collection("BookTitles").document(book.bookTitleId), toCloudMap(book));
                     }
-                    batch.commit().addOnSuccessListener(unused -> {
-                        if (listener != null) listener.onSyncCompleted(missing.size());
-                    }).addOnFailureListener(error -> {
-                        if (listener != null) listener.onSyncFailed(error.getLocalizedMessage() == null
-                                ? "Không thể đẩy dữ liệu SQLite lên Firestore." : error.getLocalizedMessage());
-                    });
+                    batch.commit().addOnSuccessListener(unused -> syncCopiesLocalToCloud(listener))
+                            .addOnFailureListener(error -> {
+                                if (listener != null) listener.onSyncFailed(error.getLocalizedMessage() == null
+                                        ? "Không thể đẩy dữ liệu SQLite lên Firestore." : error.getLocalizedMessage());
+                            });
                 }))
                 .addOnFailureListener(error -> {
                     if (listener != null) listener.onSyncFailed(error.getLocalizedMessage() == null
                             ? "Không thể đọc danh mục từ Firestore." : error.getLocalizedMessage());
                 });
+    }
+
+    private void syncCopiesLocalToCloud(SyncListener listener) {
+        firestore.collection("BookCopies").get()
+                .addOnSuccessListener(cloudSnapshot -> executor.execute(() -> {
+                    if (closed) return;
+                    List<BookCopy> localCopies = new BookCopyDao(
+                            databaseHelper.getReadableDatabase()).getAll();
+                    Map<String, Boolean> cloudIds = new HashMap<>();
+                    for (DocumentSnapshot document : cloudSnapshot.getDocuments()) {
+                        cloudIds.put(document.getId(), true);
+                    }
+                    List<BookCopy> missing = new ArrayList<>();
+                    for (BookCopy copy : localCopies) {
+                        if (copy.copyId != null && !cloudIds.containsKey(copy.copyId)) missing.add(copy);
+                    }
+                    if (missing.size() > 450) {
+                        if (listener != null) listener.onSyncFailed("Có hơn 450 cuốn sách mới; hãy chia thành nhiều đợt.");
+                        return;
+                    }
+                    if (missing.isEmpty()) {
+                        if (listener != null) listener.onSyncCompleted(0);
+                        return;
+                    }
+                    com.google.firebase.firestore.WriteBatch batch = firestore.batch();
+                    for (BookCopy copy : missing) {
+                        batch.set(firestore.collection("BookCopies").document(copy.copyId), toCloudMap(copy));
+                    }
+                    batch.commit().addOnSuccessListener(unused -> {
+                        if (listener != null) listener.onSyncCompleted(missing.size());
+                    }).addOnFailureListener(error -> {
+                        if (listener != null) listener.onSyncFailed(error.getLocalizedMessage() == null
+                                ? "Không thể đẩy các cuốn sách từ SQLite lên Firestore." : error.getLocalizedMessage());
+                    });
+                }))
+                .addOnFailureListener(error -> {
+                    if (listener != null) listener.onSyncFailed(error.getLocalizedMessage() == null
+                            ? "Không thể đọc BookCopies từ Firestore." : error.getLocalizedMessage());
+                });
+    }
+
+    public static Task<Void> uploadCopyToCloud(BookCopy copy) {
+        if (copy == null || copy.copyId == null || copy.copyId.trim().isEmpty()) {
+            throw new IllegalArgumentException("copyId is required");
+        }
+        return FirebaseFirestore.getInstance().collection("BookCopies")
+                .document(copy.copyId).set(toCloudMap(copy), SetOptions.merge());
+    }
+
+    private static Map<String, Object> toCloudMap(BookCopy copy) {
+        Map<String, Object> data = new HashMap<>();
+        data.put("bookTitleId", copy.bookTitleId);
+        data.put("barcode", copy.barcode == null ? "" : copy.barcode);
+        data.put("shelfLocation", copy.shelfLocation == null ? "" : copy.shelfLocation);
+        data.put("copyStatus", copy.copyStatus == null ? "SanSang" : copy.copyStatus);
+        data.put("priorityUserId", copy.priorityUserId);
+        data.put("isHidden", copy.isHidden);
+        data.put("createdAt", copy.createdAt == null || copy.createdAt.isEmpty()
+                ? com.google.firebase.firestore.FieldValue.serverTimestamp() : copy.createdAt);
+        data.put("updatedAt", com.google.firebase.firestore.FieldValue.serverTimestamp());
+        return data;
     }
 
     /** Upload one local create/update. Firestore rules enforce the active-admin requirement. */
@@ -163,6 +234,38 @@ public final class BookCatalogueSyncManager implements AutoCloseable {
         if (listener != null) listener.onSyncCompleted(changed);
     }
 
+    private void applyCopiesSnapshot(QuerySnapshot snapshot, SyncListener listener) {
+        if (closed) return;
+        int changed = 0;
+        SQLiteDatabase db = databaseHelper.getWritableDatabase();
+        db.beginTransaction();
+        try {
+            BookCopyDao dao = new BookCopyDao(db);
+            for (DocumentSnapshot document : snapshot.getDocuments()) {
+                BookCopy copy = new BookCopy();
+                copy.copyId = document.getId();
+                copy.bookTitleId = string(document, "bookTitleId");
+                copy.barcode = string(document, "barcode");
+                copy.shelfLocation = string(document, "shelfLocation");
+                copy.copyStatus = string(document, "copyStatus");
+                copy.priorityUserId = document.getString("priorityUserId");
+                copy.isHidden = Boolean.TRUE.equals(document.getBoolean("isHidden"));
+                copy.createdAt = timestampString(document.get("createdAt"));
+                copy.updatedAt = timestampString(document.get("updatedAt"));
+                dao.upsertFromCloud(copy);
+                changed++;
+            }
+            db.setTransactionSuccessful();
+        } catch (Exception e) {
+            if (listener != null) listener.onSyncFailed(e.getLocalizedMessage() == null
+                    ? "Không thể lưu BookCopies vào SQLite." : e.getLocalizedMessage());
+            return;
+        } finally {
+            db.endTransaction();
+        }
+        if (listener != null) listener.onSyncCompleted(changed);
+    }
+
     private static BookTitle fromDocument(DocumentSnapshot doc) {
         BookTitle book = new BookTitle();
         book.bookTitleId = doc.getId();
@@ -204,6 +307,10 @@ public final class BookCatalogueSyncManager implements AutoCloseable {
         if (registration != null) {
             registration.remove();
             registration = null;
+        }
+        if (copiesRegistration != null) {
+            copiesRegistration.remove();
+            copiesRegistration = null;
         }
         executor.shutdownNow();
         databaseHelper.close();
