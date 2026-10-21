@@ -46,7 +46,8 @@ public class AdminMainActivity extends AppCompatActivity {
     private ListenerRegistration requestsListener;
     private LinearLayout resetRequestsContainer;
     private TextView resetPendingCount, resetEmptyMessage;
-    private ListenerRegistration resetRequestsListener;\n    private BookCatalogueSyncManager catalogueSyncManager;
+    private ListenerRegistration resetRequestsListener;
+    private BookCatalogueSyncManager catalogueSyncManager;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
