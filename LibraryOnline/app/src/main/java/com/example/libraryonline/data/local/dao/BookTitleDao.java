@@ -28,8 +28,11 @@ public final class BookTitleDao {
         return db.insertOrThrow("BookTitles", null, values);
     }
 
-    public int deleteById(String id) {
-        return db.delete("BookTitles", "bookTitleId = ?", new String[]{id});
+    /** Hide a locally mirrored row when its Firestore document is removed. */
+    public int markHiddenById(String id) {
+        ContentValues values = new ContentValues();
+        values.put("isHidden", 1);
+        return db.update("BookTitles", values, "bookTitleId = ?", new String[]{id});
     }
 
     public int update(BookTitle b) {
