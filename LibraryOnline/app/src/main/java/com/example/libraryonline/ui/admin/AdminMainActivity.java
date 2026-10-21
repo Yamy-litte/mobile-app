@@ -25,7 +25,7 @@ import com.google.firebase.firestore.FirebaseFirestore;
 import com.google.firebase.firestore.ListenerRegistration;
 import com.google.firebase.firestore.QuerySnapshot;
 import com.google.firebase.firestore.WriteBatch;
-import com.google.firebase.functions.FirebaseFunctions;
+import com.example.libraryonline.data.repository.BookCatalogueSyncManager;
 
 import java.text.DateFormat;
 import java.util.Date;
@@ -46,7 +46,7 @@ public class AdminMainActivity extends AppCompatActivity {
     private ListenerRegistration requestsListener;
     private LinearLayout resetRequestsContainer;
     private TextView resetPendingCount, resetEmptyMessage;
-    private ListenerRegistration resetRequestsListener;
+    private ListenerRegistration resetRequestsListener;\n    private BookCatalogueSyncManager catalogueSyncManager;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -86,7 +86,7 @@ public class AdminMainActivity extends AppCompatActivity {
         if (!(content instanceof LinearLayout)) return;
         LinearLayout container = (LinearLayout) content;
         Button seedButton = new Button(this);
-        seedButton.setText("Tạo dữ liệu sách mẫu trên Firebase");
+        seedButton.setText("Đồng bộ SQLite ↔ Firestore");
         seedButton.setTextColor(android.graphics.Color.WHITE);
         seedButton.setBackgroundTintList(android.content.res.ColorStateList.valueOf(
                 android.graphics.Color.rgb(49, 94, 251)));
@@ -102,18 +102,31 @@ public class AdminMainActivity extends AppCompatActivity {
                 .setPositiveButton("Đồng bộ", (dialog, which) -> {
                     seedButton.setEnabled(false);
                     seedButton.setText("Đang đồng bộ...");
-                    FirebaseFunctions.getInstance().getHttpsCallable("seedSampleBooks").call()
-                            .addOnSuccessListener(result -> {
+                    if (catalogueSyncManager != null) catalogueSyncManager.close();
+                    catalogueSyncManager = new BookCatalogueSyncManager(getApplicationContext());
+                    BookCatalogueSyncManager.SyncListener syncListener = new BookCatalogueSyncManager.SyncListener() {
+                        @Override public void onSyncCompleted(int changedRows) {
+                            runOnUiThread(() -> {
+                                if (isFinishing() || isDestroyed()) return;
                                 seedButton.setEnabled(true);
-                                seedButton.setText("Tạo dữ liệu sách mẫu trên Firebase");
-                                Toast.makeText(this, "Đã đồng bộ 10 đầu sách mẫu lên Firestore.", Toast.LENGTH_LONG).show();
-                            })
-                            .addOnFailureListener(error -> {
-                                seedButton.setEnabled(true);
-                                seedButton.setText("Tạo dữ liệu sách mẫu trên Firebase");
-                                Toast.makeText(this, "Đồng bộ thất bại. Hãy triển khai Cloud Function và đăng nhập Admin. " +
-                                        error.getLocalizedMessage(), Toast.LENGTH_LONG).show();
+                                seedButton.setText("Đồng bộ SQLite ↔ Firestore");
+                                Toast.makeText(AdminMainActivity.this,
+                                        "Đồng bộ danh mục hoàn tất. Số bản ghi xử lý: " + changedRows,
+                                        Toast.LENGTH_LONG).show();
                             });
+                        }
+                        @Override public void onSyncFailed(String message) {
+                            runOnUiThread(() -> {
+                                if (isFinishing() || isDestroyed()) return;
+                                seedButton.setEnabled(true);
+                                seedButton.setText("Đồng bộ SQLite ↔ Firestore");
+                                Toast.makeText(AdminMainActivity.this,
+                                        "Đồng bộ thất bại: " + message, Toast.LENGTH_LONG).show();
+                            });
+                        }
+                    };
+                    catalogueSyncManager.start(syncListener);
+                    catalogueSyncManager.syncLocalToCloud(syncListener);
                 }).show());
     }
 
@@ -592,7 +605,7 @@ public class AdminMainActivity extends AppCompatActivity {
 
     @Override
     protected void onDestroy() {
-        if (requestsListener != null) requestsListener.remove();       if (resetRequestsListener != null) resetRequestsListener.remove();
+        if (requestsListener != null) requestsListener.remove();\n        if (resetRequestsListener != null) resetRequestsListener.remove();\n        if (catalogueSyncManager != null) catalogueSyncManager.close();
         super.onDestroy();
     }
 }
