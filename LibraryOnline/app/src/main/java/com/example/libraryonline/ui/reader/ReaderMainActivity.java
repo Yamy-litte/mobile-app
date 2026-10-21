@@ -219,11 +219,11 @@ public class ReaderMainActivity extends AppCompatActivity {
             }
             runOnUiThread(() -> {
                 if (isFinishing() || isDestroyed()) return;
-                catalogueLoadStatus.localLoaded();
                 books.clear();
                 for (BookTitle book : local) {
                     if (book != null && !book.isHidden) books.add(book);
                 }
+                catalogueLoadStatus.localLoaded(local.size(), books.size());
                 buildCategories();
                 renderBooks();
             });

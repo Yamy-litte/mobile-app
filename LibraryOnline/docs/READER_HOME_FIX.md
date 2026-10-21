@@ -49,3 +49,13 @@ bash gradlew :app:assembleDebug :app:testDebugUnitTest --no-daemon --max-workers
 ```
 
 Nếu bản cài mới vẫn chưa có sách, đọc dòng trạng thái Home: lỗi PERMISSION_DENIED/UNAVAILABLE cần xử lý theo lỗi thực tế; Firebase server thực sự không có BookTitles thì cần bổ sung/đồng bộ **kho thật** bằng luồng Admin đã có. Bỏ seed trong tác vụ trước làm DB mới không còn sẵn 10 đầu sách demo; đó khác với mất dữ liệu thật.
+
+## Xác nhận tiếp theo từ dữ liệu thực tế
+
+Người dùng tiếp tục thấy 0 sách và cung cấp document Sapiens: `isHidden: true`, `availableCopies: 4`, `categoryId: lich-su`. Với document này, Reader lọc khỏi danh sách là đúng; có bản sẵn sàng không tự động làm đầu sách đã ẩn trở thành công khai. Bản sửa cache trước đó xử lý lỗi riêng đã tái hiện, không phải bằng chứng rằng document này phải hiển thị.
+
+Muốn công khai đầu sách này, Admin chủ động đổi `BookTitles/{id}.isHidden` sang `false` trong Firebase Console. Chỉ đổi đầu sách muốn công khai. Phiên xử lý này không ghi Firebase, không tự bật lại sách, không sửa OTP/auth.
+
+Home giờ báo rõ số đầu sách đang ẩn; trường hợp Firebase trả N document nhưng SQLite đọc 0 dòng có thông báo riêng, thay vì báo đã nhận danh mục chung chung. Số dòng cache được thống kê trước khi lọc sách ẩn, số kết quả tìm kiếm sau khi lọc được giữ riêng.
+
+Kiểm tra thực tế sau cập nhật: 15 test JVM chạy, 14 đạt; 1 lỗi Android stub của InputValidator đã có. CatalogueCacheTest đạt 4/4, CatalogueLoadStatusTest đạt 6/6. Các test mới xác nhận sách ẩn vẫn ẩn sau đồng bộ lặp và vẫn giữ availableCopies=4; trường hợp tìm kiếm không khớp không được báo nhầm là toàn bộ sách bị ẩn. APK debug đã biên dịch trong lần chạy này; build độc lập được chạy trước khi commit/push.

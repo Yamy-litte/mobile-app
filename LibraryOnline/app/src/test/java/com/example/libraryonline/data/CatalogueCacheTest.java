@@ -92,4 +92,19 @@ public class CatalogueCacheTest {
             assertEquals(1, c.getInt(0));
         }
     }
+    @Test public void syncingAHiddenTitlePreservesItsHiddenFlagAndStockCount() {
+        BookTitle hidden = book("hidden-book", "lich-su", "Lịch sử");
+        hidden.isHidden = true;
+        hidden.totalCopies = 4;
+        hidden.availableCopies = 4;
+        BookTitleDao dao = new BookTitleDao(db);
+        dao.upsertFromCloud(hidden);
+        dao.upsertFromCloud(hidden);
+        BookTitle loaded = dao.findById("hidden-book");
+        assertTrue(loaded.isHidden);
+        assertEquals(4, loaded.availableCopies);
+        assertEquals(1, dao.getAll().size());
+        assertTrue(dao.search("").isEmpty());
+    }
+
 }

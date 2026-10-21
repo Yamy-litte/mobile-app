@@ -29,4 +29,28 @@ public class CatalogueLoadStatusTest {
         assertFalse(status.describe(2, 2).contains("UNAVAILABLE"));
         assertTrue(status.describe(2, 2).contains("2 đầu sách"));
     }
+    @Test public void zeroVisibleBooksExplainsHiddenInventoryInsteadOfClaimingNoData() {
+        CatalogueLoadStatus status = new CatalogueLoadStatus();
+        status.remoteSnapshot(false, 4);
+        status.localLoaded(4, 0);
+        String message = status.describe(0, 0);
+        assertTrue(message.contains("4 đầu sách đang ẩn"));
+        assertFalse(message.contains("Firebase chưa có đầu sách"));
+    }
+    @Test public void aServerSnapshotWithoutLocalRowsReportsTheMismatch() {
+        CatalogueLoadStatus status = new CatalogueLoadStatus();
+        status.remoteSnapshot(false, 4);
+        status.localLoaded(0, 0);
+        String message = status.describe(0, 0);
+        assertTrue(message.contains("Firebase: 4"));
+        assertTrue(message.contains("SQLite: 0"));
+        assertFalse(message.contains("Đã nhận danh mục"));
+    }
+    @Test public void aSearchWithNoMatchesDoesNotClaimThatPublicBooksAreHidden() {
+        CatalogueLoadStatus status = new CatalogueLoadStatus();
+        status.remoteSnapshot(false, 4);
+        status.localLoaded(4, 4);
+        assertFalse(status.describe(4, 0).contains("đang ẩn"));
+    }
+
 }
