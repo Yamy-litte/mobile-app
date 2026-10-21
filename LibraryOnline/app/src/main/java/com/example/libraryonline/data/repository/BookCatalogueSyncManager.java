@@ -232,6 +232,9 @@ public final class BookCatalogueSyncManager implements AutoCloseable {
             db.endTransaction();
         }
         if (listener != null) listener.onSyncCompleted(changed);
+        // Ensure parent BookTitles are persisted before enforcing the BookCopies foreign key.
+        firestore.collection("BookCopies").get()
+                .addOnSuccessListener(copies -> executor.execute(() -> applyCopiesSnapshot(copies, listener)));
     }
 
     private void applyCopiesSnapshot(QuerySnapshot snapshot, SyncListener listener) {
