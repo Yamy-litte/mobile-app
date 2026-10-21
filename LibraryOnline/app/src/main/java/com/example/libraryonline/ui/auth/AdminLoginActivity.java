@@ -81,8 +81,7 @@ public class AdminLoginActivity extends AppCompatActivity {
                                 if (!adminDoc.exists() || !active || !emailMatches) {
                                     auth.signOut();
                                     setLoading(false);
-                                    showMessage("Tài khoản này chưa được cấp quyền quản trị. "
-                                            + "Kiểm tra UID và hồ sơ Admin trong Firestore.");
+                                    showMessage("Tài khoản này chưa được cấp quyền quản trị. ");
                                     return;
                                 }
 
