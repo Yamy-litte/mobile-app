@@ -1,24 +1,26 @@
 package com.example.libraryonline.ui.reader;
 
 import android.content.Intent;
+import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
 import android.graphics.Color;
-import android.graphics.Typeface;
-import android.graphics.drawable.GradientDrawable;
+import android.graphics.drawable.Drawable;
 import android.os.Bundle;
 import android.text.Editable;
 import android.text.TextWatcher;
-import android.view.Gravity;
+import android.view.LayoutInflater;
 import android.view.View;
-import android.widget.Button;
 import android.widget.EditText;
+import android.widget.FrameLayout;
+import android.widget.ImageView;
 import android.widget.LinearLayout;
-import android.widget.ScrollView;
 import android.widget.TextView;
 import android.widget.Toast;
 
 import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
 
+import com.example.libraryonline.R;
 import com.example.libraryonline.ui.auth.LoginActivity;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
@@ -26,30 +28,33 @@ import com.google.firebase.firestore.DocumentSnapshot;
 import com.google.firebase.firestore.FirebaseFirestore;
 import com.google.firebase.firestore.ListenerRegistration;
 
+import java.io.InputStream;
+import java.net.HttpURLConnection;
+import java.net.URL;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 /**
- * Reader landing page. Book catalogue is observed from Firestore collection BookTitles.
- * Fields follow the BookTitle model: title, author, category, publisher, availableCopies,
- * totalCopies, description, isbn and isHidden.
+ * Reader home screen. Layout is defined in activity_reader_main.xml and item_reader_book.xml.
+ * This Activity handles profile/catalogue data and user interactions only.
  */
 public class ReaderMainActivity extends AppCompatActivity {
-    private static final int NAVY = Color.rgb(23, 37, 84);
-    private static final int BLUE = Color.rgb(37, 99, 235);
-    private static final int PALE = Color.rgb(239, 246, 255);
-    private static final int INK = Color.rgb(30, 41, 59);
-    private static final int MUTED = Color.rgb(100, 116, 139);
-    private static final int BORDER = Color.rgb(226, 232, 240);
+    private static final int TEAL = Color.rgb(23, 102, 91);
+    private static final int MUTED = Color.rgb(124, 141, 134);
 
     private FirebaseFirestore firestore;
     private FirebaseAuth auth;
     private ListenerRegistration booksListener;
-    private LinearLayout booksContainer;
+    private LinearLayout categoriesContainer;
+    private LinearLayout popularBooksContainer;
+    private LinearLayout latestBooksContainer;
     private EditText searchInput;
-    private TextView greeting, catalogueStatus;
+    private TextView greeting, avatar, popularCount, catalogueStatus;
     private final List<DocumentSnapshot> books = new ArrayList<>();
+    private final ExecutorService imageExecutor = Executors.newFixedThreadPool(2);
     private String selectedCategory = "Tất cả";
 
     @Override
@@ -57,152 +62,64 @@ public class ReaderMainActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         auth = FirebaseAuth.getInstance();
         firestore = FirebaseFirestore.getInstance();
-        buildHome();
+        setContentView(R.layout.activity_reader_main);
+
+        bindViews();
+        bindActions();
+        buildCategories();
         loadReaderProfile();
         listenForBooks();
     }
 
-    private void buildHome() {
-        LinearLayout root = new LinearLayout(this);
-        root.setOrientation(LinearLayout.VERTICAL);
-        root.setBackgroundColor(Color.rgb(248, 250, 252));
+    private void bindViews() {
+        greeting = findViewById(R.id.textReaderGreeting);
+        avatar = findViewById(R.id.buttonReaderAccount);
+        searchInput = findViewById(R.id.inputBookSearch);
+        categoriesContainer = findViewById(R.id.containerReaderCategories);
+        popularBooksContainer = findViewById(R.id.containerPopularBooks);
+        latestBooksContainer = findViewById(R.id.containerLatestBooks);
+        popularCount = findViewById(R.id.textPopularCount);
+        catalogueStatus = findViewById(R.id.textReaderCatalogueStatus);
+    }
 
-        ScrollView scroll = new ScrollView(this);
-        scroll.setFillViewport(true);
-        LinearLayout content = new LinearLayout(this);
-        content.setOrientation(LinearLayout.VERTICAL);
-        content.setPadding(dp(20), dp(18), dp(20), dp(24));
-        scroll.addView(content, new ScrollView.LayoutParams(
-                ScrollView.LayoutParams.MATCH_PARENT, ScrollView.LayoutParams.WRAP_CONTENT));
+    private void bindActions() {
+        findViewById(R.id.buttonReaderAccount).setOnClickListener(v -> showAccount());
+        findViewById(R.id.navReaderHome).setOnClickListener(v ->
+                ((android.widget.ScrollView) findViewById(R.id.readerScroll)).smoothScrollTo(0, 0));
+        findViewById(R.id.navReaderLoans).setOnClickListener(v ->
+                showMessage("Màn hình mượn sách sẽ được nối với phiếu mượn trong bước nghiệp vụ mượn/trả."));
+        findViewById(R.id.navReaderNotifications).setOnClickListener(v ->
+                showMessage("Màn hình thông báo sẽ hiển thị thông báo mượn, trả và hạn trả khi được nối dữ liệu."));
+        findViewById(R.id.navReaderAccount).setOnClickListener(v -> showAccount());
 
-        LinearLayout header = new LinearLayout(this);
-        header.setGravity(Gravity.CENTER_VERTICAL);
-        header.setOrientation(LinearLayout.HORIZONTAL);
-        LinearLayout brand = new LinearLayout(this);
-        brand.setOrientation(LinearLayout.VERTICAL);
-        TextView logo = text("MyLibrary", 23, NAVY, true);
-        TextView subtitle = text("THƯ VIỆN CỘNG ĐỒNG", 10, MUTED, true);
-        brand.addView(logo);
-        brand.addView(subtitle);
-        header.addView(brand, new LinearLayout.LayoutParams(0, -2, 1));
-        Button logout = new Button(this);
-        logout.setText("Đăng xuất");
-        logout.setTextSize(12);
-        logout.setAllCaps(false);
-        logout.setOnClickListener(v -> {
-            auth.signOut();
-            Intent intent = new Intent(this, LoginActivity.class);
-            intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
-            startActivity(intent);
-            finish();
-        });
-        header.addView(logout);
-        content.addView(header);
-
-        View gap = spacer(18);
-        content.addView(gap);
-
-        LinearLayout welcome = new LinearLayout(this);
-        welcome.setOrientation(LinearLayout.VERTICAL);
-        welcome.setPadding(dp(18), dp(20), dp(18), dp(20));
-        welcome.setBackground(round(NAVY, 20));
-        TextView eyebrow = text("KHÔNG GIAN ĐỌC CỦA BẠN", 11, Color.rgb(191, 219, 254), true);
-        greeting = text("Xin chào, độc giả!", 25, Color.WHITE, true);
-        TextView intro = text("Khám phá sách hay và kiểm tra tình trạng sách tại thư viện.", 14,
-                Color.rgb(226, 232, 240), false);
-        intro.setPadding(0, dp(7), 0, 0);
-        welcome.addView(eyebrow);
-        welcome.addView(greeting);
-        welcome.addView(intro);
-        content.addView(welcome);
-
-        TextView searchTitle = text("Tìm cuốn sách tiếp theo", 19, INK, true);
-        searchTitle.setPadding(0, dp(22), 0, dp(10));
-        content.addView(searchTitle);
-        searchInput = new EditText(this);
-        searchInput.setSingleLine(true);
-        searchInput.setTextSize(14);
-        searchInput.setHint("Tên sách, tác giả hoặc thể loại...");
-        searchInput.setPadding(dp(14), dp(12), dp(14), dp(12));
-        searchInput.setBackground(round(Color.WHITE, 14, BORDER));
-        content.addView(searchInput, new LinearLayout.LayoutParams(-1, dp(52)));
-
-        TextView categoryTitle = text("Danh mục", 18, INK, true);
-        categoryTitle.setPadding(0, dp(20), 0, dp(10));
-        content.addView(categoryTitle);
-        LinearLayout categories = new LinearLayout(this);
-        categories.setOrientation(LinearLayout.HORIZONTAL);
-        categories.setGravity(Gravity.CENTER_VERTICAL);
-        String[] names = {"Tất cả", "Văn học", "Khoa học", "Lịch sử", "Kinh tế", "Công nghệ"};
-        for (String name : names) {
-            Button chip = new Button(this);
-            chip.setText(name);
-            chip.setTextSize(11);
-            chip.setAllCaps(false);
-            chip.setMinWidth(0);
-            chip.setMinimumWidth(0);
-            chip.setPadding(dp(9), 0, dp(9), 0);
-            chip.setOnClickListener(v -> {
-                selectedCategory = name;
-                for (int i = 0; i < categories.getChildCount(); i++) {
-                    Button item = (Button) categories.getChildAt(i);
-                    boolean selected = item.getText().toString().equals(selectedCategory);
-                    item.setTextColor(selected ? Color.WHITE : NAVY);
-                    item.setBackgroundTintList(android.content.res.ColorStateList.valueOf(selected ? BLUE : PALE));
-                }
-                renderBooks();
-            });
-            boolean selected = name.equals(selectedCategory);
-            chip.setTextColor(selected ? Color.WHITE : NAVY);
-            chip.setBackgroundTintList(android.content.res.ColorStateList.valueOf(selected ? BLUE : PALE));
-            LinearLayout.LayoutParams chipParams = new LinearLayout.LayoutParams(-2, dp(42));
-            chipParams.rightMargin = dp(6);
-            categories.addView(chip, chipParams);
-        }
-        // Horizontal category row uses a horizontal scroll container.
-        android.widget.HorizontalScrollView horizontal = new android.widget.HorizontalScrollView(this);
-        horizontal.setHorizontalScrollBarEnabled(false);
-        horizontal.addView(categories);
-        content.addView(horizontal, new LinearLayout.LayoutParams(-1, dp(48)));
-
-        LinearLayout titleRow = new LinearLayout(this);
-        titleRow.setGravity(Gravity.CENTER_VERTICAL);
-        TextView popular = text("Sách trong thư viện", 19, INK, true);
-        titleRow.addView(popular, new LinearLayout.LayoutParams(0, -2, 1));
-        catalogueStatus = text("Đang tải...", 12, MUTED, false);
-        titleRow.addView(catalogueStatus);
-        titleRow.setPadding(0, dp(22), 0, dp(8));
-        content.addView(titleRow);
-
-        booksContainer = new LinearLayout(this);
-        booksContainer.setOrientation(LinearLayout.VERTICAL);
-        content.addView(booksContainer);
         searchInput.addTextChangedListener(new TextWatcher() {
             @Override public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
             @Override public void onTextChanged(CharSequence s, int start, int before, int count) { renderBooks(); }
             @Override public void afterTextChanged(Editable s) {}
         });
+    }
 
-        TextView tip = text("Mẹo nhỏ: chọn một danh mục hoặc tìm theo tên tác giả để thu hẹp kết quả.", 12, MUTED, false);
-        tip.setPadding(0, dp(14), 0, dp(6));
-        content.addView(tip);
-        root.addView(scroll, new LinearLayout.LayoutParams(-1, 0, 1));
-
-        View divider = new View(this);
-        divider.setBackgroundColor(BORDER);
-        root.addView(divider, new LinearLayout.LayoutParams(-1, dp(1)));
-        LinearLayout nav = new LinearLayout(this);
-        nav.setBackgroundColor(Color.WHITE);
-        nav.setGravity(Gravity.CENTER);
-        addNavItem(nav, "⌂", "Trang chủ", true, () -> scroll.smoothScrollTo(0, 0));
-        addNavItem(nav, "⌕", "Tìm sách", false, () -> {
-            searchInput.requestFocus();
-            searchInput.performClick();
-        });
-        addNavItem(nav, "▤", "Sách của tôi", false, () -> showNotReady("Danh sách mượn sẽ được nối với dữ liệu phiếu mượn ở bước tiếp theo."));
-        addNavItem(nav, "♙", "Tài khoản", false, this::showAccount);
-        root.addView(nav, new LinearLayout.LayoutParams(-1, dp(64)));
-        setContentView(root);
+    private void buildCategories() {
+        String[] names = {"Tất cả", "Văn học", "Khoa học", "Lịch sử", "Tâm lý", "Kinh tế", "Công nghệ"};
+        categoriesContainer.removeAllViews();
+        for (String name : names) {
+            TextView chip = new TextView(this);
+            chip.setText(name);
+            chip.setTextSize(12);
+            chip.setGravity(android.view.Gravity.CENTER);
+            chip.setPadding(dp(15), 0, dp(15), 0);
+            chip.setTextColor(name.equals(selectedCategory) ? Color.WHITE : TEAL);
+            chip.setBackgroundResource(name.equals(selectedCategory)
+                    ? R.drawable.bg_reader_chip_selected : R.drawable.bg_reader_chip);
+            LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(-2, dp(36));
+            params.rightMargin = dp(8);
+            categoriesContainer.addView(chip, params);
+            chip.setOnClickListener(v -> {
+                selectedCategory = name;
+                buildCategories();
+                renderBooks();
+            });
+        }
     }
 
     private void loadReaderProfile() {
@@ -213,32 +130,34 @@ public class ReaderMainActivity extends AppCompatActivity {
         }
         firestore.collection("Users").document(current.getUid()).get()
                 .addOnSuccessListener(doc -> {
-                    if (doc.exists()) {
-                        String name = doc.getString("fullName");
-                        if (name != null && !name.trim().isEmpty()) {
-                            String firstName = name.trim().split("\\s+")[name.trim().split("\\s+").length - 1];
-                            greeting.setText("Xin chào, " + firstName + "!");
-                        }
-                    }
+                    if (!doc.exists()) return;
+                    String name = value(doc, "fullName", "Độc giả");
+                    String firstName = name.trim().isEmpty() ? "Độc giả" :
+                            name.trim().split("\\s+")[name.trim().split("\\s+").length - 1];
+                    greeting.setText(firstName);
+                    String[] parts = name.trim().split("\\s+");
+                    String initials = parts.length > 1
+                            ? (parts[0].substring(0, 1) + parts[parts.length - 1].substring(0, 1))
+                            : (parts.length == 1 && !parts[0].isEmpty() ? parts[0].substring(0, 1) : "TV");
+                    avatar.setText(initials.toUpperCase(Locale.ROOT));
                 })
-                .addOnFailureListener(e -> Toast.makeText(this,
-                        "Không tải được hồ sơ độc giả. Một số thông tin có thể chưa hiển thị.", Toast.LENGTH_SHORT).show());
+                .addOnFailureListener(e -> showMessage("Không tải được thông tin độc giả."));
     }
 
     private void listenForBooks() {
         booksListener = firestore.collection("BookTitles").addSnapshotListener((snapshot, error) -> {
-            if (isFinishing()) return;
+            if (isFinishing() || isDestroyed()) return;
             if (error != null) {
-                catalogueStatus.setText("Chưa tải được");
-                booksContainer.removeAllViews();
-                booksContainer.addView(text("Không thể tải danh mục sách. Hãy kiểm tra kết nối và quyền Firestore.", 14, MUTED, false));
+                popularCount.setText("Chưa tải được");
+                catalogueStatus.setText("Không thể tải danh mục. Kiểm tra kết nối và quyền Firestore.");
+                popularBooksContainer.removeAllViews();
+                latestBooksContainer.removeAllViews();
                 return;
             }
             books.clear();
             if (snapshot != null) {
                 for (DocumentSnapshot doc : snapshot.getDocuments()) {
-                    Boolean hidden = doc.getBoolean("isHidden");
-                    if (!Boolean.TRUE.equals(hidden)) books.add(doc);
+                    if (!Boolean.TRUE.equals(doc.getBoolean("isHidden"))) books.add(doc);
                 }
             }
             renderBooks();
@@ -246,101 +165,154 @@ public class ReaderMainActivity extends AppCompatActivity {
     }
 
     private void renderBooks() {
-        if (booksContainer == null) return;
-        booksContainer.removeAllViews();
+        if (popularBooksContainer == null || latestBooksContainer == null) return;
+        popularBooksContainer.removeAllViews();
+        latestBooksContainer.removeAllViews();
+
         String query = searchInput == null ? "" : searchInput.getText().toString().trim().toLowerCase(Locale.ROOT);
-        int shown = 0;
+        List<DocumentSnapshot> filtered = new ArrayList<>();
         for (DocumentSnapshot doc : books) {
-            String title = field(doc, "title", "Chưa có tên sách");
-            String author = field(doc, "author", "Chưa rõ tác giả");
-            String category = field(doc, "category", "Khác");
-            if (!"Tất cả".equals(selectedCategory) && !category.toLowerCase(Locale.ROOT).contains(selectedCategory.toLowerCase(Locale.ROOT))) continue;
-            String searchable = (title + " " + author + " " + category + " " + field(doc, "isbn", "")).toLowerCase(Locale.ROOT);
-            if (!searchable.contains(query)) continue;
-            booksContainer.addView(createBookCard(doc, title, author, category));
-            shown++;
+            String title = value(doc, "title", "Chưa có tên sách");
+            String author = value(doc, "author", "Chưa rõ tác giả");
+            String category = value(doc, "category", "Khác");
+            if (!"Tất cả".equals(selectedCategory)
+                    && !category.toLowerCase(Locale.ROOT).contains(selectedCategory.toLowerCase(Locale.ROOT))) continue;
+            String searchable = (title + " " + author + " " + category + " " + value(doc, "isbn", ""))
+                    .toLowerCase(Locale.ROOT);
+            if (searchable.contains(query)) filtered.add(doc);
         }
-        catalogueStatus.setText(shown + " đầu sách");
-        if (shown == 0) {
-            TextView empty = text(books.isEmpty()
-                    ? "Chưa có sách trong danh mục. Khi Admin thêm sách, danh sách sẽ xuất hiện tại đây."
-                    : "Không tìm thấy sách phù hợp. Thử từ khóa hoặc danh mục khác.", 14, MUTED, false);
-            empty.setPadding(dp(14), dp(18), dp(14), dp(18));
-            empty.setBackground(round(Color.WHITE, 14, BORDER));
-            booksContainer.addView(empty);
+
+        popularCount.setText(filtered.size() + " đầu sách");
+        catalogueStatus.setText(filtered.size() + " cuốn sách phù hợp");
+        if (filtered.isEmpty()) {
+            TextView empty = new TextView(this);
+            empty.setText(books.isEmpty()
+                    ? "Thư viện chưa có sách được công khai."
+                    : "Không tìm thấy sách phù hợp với từ khóa hoặc danh mục này.");
+            empty.setTextColor(MUTED);
+            empty.setTextSize(13);
+            empty.setPadding(dp(14), dp(16), dp(14), dp(16));
+            latestBooksContainer.addView(empty);
+            return;
         }
+
+        int popularLimit = Math.min(6, filtered.size());
+        for (int i = 0; i < popularLimit; i++) {
+            View card = createBookCard(filtered.get(i));
+            LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(dp(292), -2);
+            params.rightMargin = dp(10);
+            popularBooksContainer.addView(card, params);
+        }
+        for (DocumentSnapshot doc : filtered) latestBooksContainer.addView(createBookCard(doc));
     }
 
-    private View createBookCard(DocumentSnapshot doc, String title, String author, String category) {
-        LinearLayout card = new LinearLayout(this);
-        card.setOrientation(LinearLayout.HORIZONTAL);
-        card.setPadding(dp(14), dp(14), dp(14), dp(14));
-        card.setGravity(Gravity.CENTER_VERTICAL);
-        card.setBackground(round(Color.WHITE, 16, BORDER));
-        LinearLayout.LayoutParams cardParams = new LinearLayout.LayoutParams(-1, -2);
-        cardParams.bottomMargin = dp(10);
-        card.setLayoutParams(cardParams);
+    private View createBookCard(DocumentSnapshot doc) {
+        View card = LayoutInflater.from(this).inflate(R.layout.item_reader_book, latestBooksContainer, false);
+        TextView title = card.findViewById(R.id.textReaderBookTitle);
+        TextView author = card.findViewById(R.id.textReaderBookAuthor);
+        TextView category = card.findViewById(R.id.textReaderBookCategory);
+        TextView availability = card.findViewById(R.id.textReaderBookAvailability);
+        ImageView cover = card.findViewById(R.id.imageReaderBookCover);
+        TextView fallback = card.findViewById(R.id.textReaderCoverFallback);
 
-        TextView cover = text("BOOK", 13, BLUE, true);
-        cover.setGravity(Gravity.CENTER);
-        cover.setBackground(round(PALE, 12));
-        card.addView(cover, new LinearLayout.LayoutParams(dp(66), dp(88)));
+        title.setText(value(doc, "title", "Chưa có tên sách"));
+        author.setText(value(doc, "author", "Chưa rõ tác giả"));
+        category.setText(value(doc, "category", "Khác").toUpperCase(Locale.ROOT));
+        long available = number(doc, "availableCopies");
+        long total = number(doc, "totalCopies");
+        availability.setText(available > 0 ? "Còn " + available + "/" + total + " cuốn" : "Tạm hết sách");
+        availability.setTextColor(available > 0 ? Color.rgb(25, 115, 77) : Color.rgb(179, 69, 57));
 
-        LinearLayout details = new LinearLayout(this);
-        details.setOrientation(LinearLayout.VERTICAL);
-        details.setPadding(dp(12), 0, 0, 0);
-        card.addView(details, new LinearLayout.LayoutParams(0, -2, 1));
-        details.addView(text(title, 16, INK, true));
-        TextView authorText = text(author, 13, MUTED, false);
-        authorText.setPadding(0, dp(4), 0, dp(5));
-        details.addView(authorText);
-        details.addView(text(category, 11, BLUE, true));
-        int available = number(doc, "availableCopies");
-        int total = number(doc, "totalCopies");
-        TextView stock = text(available > 0 ? "Còn " + available + "/" + total + " cuốn" : "Hiện đã hết sách",
-                12, available > 0 ? Color.rgb(21, 128, 61) : Color.rgb(185, 28, 28), true);
-        stock.setPadding(0, dp(6), 0, 0);
-        details.addView(stock);
-        card.setOnClickListener(v -> showBookDetails(doc, title, author, category, available, total));
+        String coverUrl = value(doc, "coverUrl", "");
+        if (!coverUrl.isEmpty()) {
+            fallback.setVisibility(View.GONE);
+            cover.setTag(coverUrl);
+            imageExecutor.execute(() -> {
+                Bitmap bitmap = downloadBitmap(coverUrl);
+                if (bitmap != null && !isFinishing() && !isDestroyed()) {
+                    runOnUiThread(() -> {
+                        if (coverUrl.equals(cover.getTag())) cover.setImageBitmap(bitmap);
+                    });
+                } else if (!isFinishing() && !isDestroyed()) {
+                    runOnUiThread(() -> {
+                        if (coverUrl.equals(cover.getTag())) fallback.setVisibility(View.VISIBLE);
+                    });
+                }
+            });
+        } else {
+            cover.setImageDrawable(null);
+            fallback.setVisibility(View.VISIBLE);
+        }
+
+        card.setOnClickListener(v -> showBookDetails(doc));
         return card;
     }
 
-    private void showBookDetails(DocumentSnapshot doc, String title, String author, String category, int available, int total) {
+    private Bitmap downloadBitmap(String address) {
+        HttpURLConnection connection = null;
+        try {
+            connection = (HttpURLConnection) new URL(address).openConnection();
+            connection.setConnectTimeout(5000);
+            connection.setReadTimeout(5000);
+            connection.setInstanceFollowRedirects(true);
+            connection.connect();
+            try (InputStream stream = connection.getInputStream()) {
+                return BitmapFactory.decodeStream(stream);
+            }
+        } catch (Exception ignored) {
+            return null;
+        } finally {
+            if (connection != null) connection.disconnect();
+        }
+    }
+
+    private void showBookDetails(DocumentSnapshot doc) {
+        String title = value(doc, "title", "Chi tiết sách");
+        String author = value(doc, "author", "Chưa rõ tác giả");
+        long available = number(doc, "availableCopies");
+        long total = number(doc, "totalCopies");
         String message = "Tác giả: " + author
-                + "\nThể loại: " + category
-                + "\nNhà xuất bản: " + field(doc, "publisher", "Chưa cập nhật")
-                + "\nISBN: " + field(doc, "isbn", "Chưa cập nhật")
+                + "\nThể loại: " + value(doc, "category", "Chưa cập nhật")
+                + "\nNhà xuất bản: " + value(doc, "publisher", "Chưa cập nhật")
+                + "\nNăm xuất bản: " + value(doc, "publishYear", "Chưa cập nhật")
+                + "\nISBN: " + value(doc, "isbn", "Chưa cập nhật")
                 + "\nTình trạng: " + available + "/" + total + " cuốn sẵn sàng"
-                + "\n\n" + field(doc, "description", "Chưa có mô tả cho tác phẩm này.");
-        new AlertDialog.Builder(this).setTitle(title).setMessage(message)
-                .setPositiveButton(available > 0 ? "Đã hiểu" : "Đóng", (dialog, which) -> dialog.dismiss())
+                + "\n\n" + value(doc, "description", "Chưa có mô tả cho tác phẩm này.");
+        new AlertDialog.Builder(this)
+                .setTitle(title)
+                .setMessage(message)
+                .setPositiveButton("Đóng", (dialog, which) -> dialog.dismiss())
                 .show();
     }
 
     private void showAccount() {
         FirebaseUser user = auth.getCurrentUser();
-        if (user == null) { goToLogin(); return; }
-        firestore.collection("Users").document(user.getUid()).get().addOnSuccessListener(doc -> {
-            String name = field(doc, "fullName", "Độc giả");
-            String email = field(doc, "email", user.getEmail() == null ? "" : user.getEmail());
-            String barcode = field(doc, "barcode", "Chưa cấp");
-            String status = field(doc, "cardStatus", "Chưa rõ");
-            new AlertDialog.Builder(this).setTitle("Tài khoản độc giả")
-                    .setMessage("Họ tên: " + name + "\nEmail: " + email + "\nMã thẻ: " + barcode + "\nTrạng thái thẻ: " + status)
-                    .setPositiveButton("Đóng", (dialog, which) -> dialog.dismiss()).show();
-        }).addOnFailureListener(e -> showNotReady("Không tải được thông tin tài khoản."));
+        if (user == null) {
+            goToLogin();
+            return;
+        }
+        firestore.collection("Users").document(user.getUid()).get()
+                .addOnSuccessListener(doc -> {
+                    String message = "Họ tên: " + value(doc, "fullName", "Độc giả")
+                            + "\nEmail: " + value(doc, "email", user.getEmail() == null ? "" : user.getEmail())
+                            + "\nMã thẻ: " + value(doc, "barcode", "Chưa cấp")
+                            + "\nTrạng thái thẻ: " + value(doc, "cardStatus", "Chưa rõ");
+                    new AlertDialog.Builder(this)
+                            .setTitle("Tài khoản độc giả")
+                            .setMessage(message)
+                            .setNeutralButton("Đăng xuất", (dialog, which) -> logout())
+                            .setPositiveButton("Đóng", (dialog, which) -> dialog.dismiss())
+                            .show();
+                })
+                .addOnFailureListener(e -> showMessage("Không tải được thông tin tài khoản."));
     }
 
-    private void addNavItem(LinearLayout nav, String icon, String label, boolean active, Runnable action) {
-        LinearLayout item = new LinearLayout(this);
-        item.setOrientation(LinearLayout.VERTICAL);
-        item.setGravity(Gravity.CENTER);
-        TextView iconText = text(icon, 22, active ? BLUE : MUTED, true);
-        TextView labelText = text(label, 10, active ? BLUE : MUTED, active);
-        item.addView(iconText);
-        item.addView(labelText);
-        item.setOnClickListener(v -> action.run());
-        nav.addView(item, new LinearLayout.LayoutParams(0, -1, 1));
+    private void logout() {
+        auth.signOut();
+        Intent intent = new Intent(this, LoginActivity.class);
+        intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
+        startActivity(intent);
+        finish();
     }
 
     private void goToLogin() {
@@ -349,47 +321,21 @@ public class ReaderMainActivity extends AppCompatActivity {
         finish();
     }
 
-    private void showNotReady(String message) {
-        Toast.makeText(this, message, Toast.LENGTH_LONG).show();
-    }
-
-    private String field(DocumentSnapshot doc, String key, String fallback) {
+    private String value(DocumentSnapshot doc, String key, String fallback) {
         if (doc == null) return fallback;
-        String value = doc.getString(key);
-        return value == null || value.trim().isEmpty() ? fallback : value.trim();
+        Object raw = doc.get(key);
+        if (raw == null) return fallback;
+        String value = String.valueOf(raw).trim();
+        return value.isEmpty() ? fallback : value;
     }
 
-    private int number(DocumentSnapshot doc, String key) {
+    private long number(DocumentSnapshot doc, String key) {
         Long value = doc.getLong(key);
-        return value == null ? 0 : value.intValue();
+        return value == null ? 0 : value;
     }
 
-    private TextView text(String value, int size, int color, boolean bold) {
-        TextView view = new TextView(this);
-        view.setText(value);
-        view.setTextSize(size);
-        view.setTextColor(color);
-        if (bold) view.setTypeface(Typeface.DEFAULT, Typeface.BOLD);
-        return view;
-    }
-
-    private View spacer(int heightDp) {
-        View view = new View(this);
-        view.setLayoutParams(new LinearLayout.LayoutParams(1, dp(heightDp)));
-        return view;
-    }
-
-    private GradientDrawable round(int color, int radiusDp) {
-        GradientDrawable bg = new GradientDrawable();
-        bg.setColor(color);
-        bg.setCornerRadius(dp(radiusDp));
-        return bg;
-    }
-
-    private GradientDrawable round(int color, int radiusDp, int strokeColor) {
-        GradientDrawable bg = round(color, radiusDp);
-        bg.setStroke(dp(1), strokeColor);
-        return bg;
+    private void showMessage(String message) {
+        Toast.makeText(this, message, Toast.LENGTH_LONG).show();
     }
 
     private int dp(int value) {
@@ -399,6 +345,7 @@ public class ReaderMainActivity extends AppCompatActivity {
     @Override
     protected void onDestroy() {
         if (booksListener != null) booksListener.remove();
+        imageExecutor.shutdownNow();
         super.onDestroy();
     }
 }
