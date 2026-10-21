@@ -159,10 +159,6 @@ public class ReaderMainActivity extends AppCompatActivity {
             chipParams.rightMargin = dp(6);
             categories.addView(chip, chipParams);
         }
-        ScrollView categoryScroll = new ScrollView(this);
-        categoryScroll.setHorizontalScrollBarEnabled(false);
-        categoryScroll.setFillViewport(false);
-        categoryScroll.addView(categories);
         // Horizontal category row uses a horizontal scroll container.
         android.widget.HorizontalScrollView horizontal = new android.widget.HorizontalScrollView(this);
         horizontal.setHorizontalScrollBarEnabled(false);
