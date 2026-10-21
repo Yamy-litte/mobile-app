@@ -99,58 +99,51 @@ public class LoginActivity extends AppCompatActivity {
                     }
 
                     String uid = auth.getCurrentUser().getUid();
-                    firestore.collection("Users").document(uid).get()
-                            .addOnSuccessListener(userDoc -> {
-                                if (!userDoc.exists()) {
-                                    verifyAdmin(uid);
+                    // Không cho tài khoản có hồ sơ Admin đi vào luồng đăng nhập độc giả.
+                    firestore.collection("Admins").document(uid).get()
+                            .addOnSuccessListener(adminDoc -> {
+                                if (adminDoc.exists()) {
+                                    rejectLogin("Đây là tài khoản quản trị viên. Vui lòng đăng nhập tại trang Admin.");
                                     return;
                                 }
 
-                                String role = userDoc.getString("role");
-                                String cardStatus = userDoc.getString("cardStatus");
-                                if (!"HoatDong".equals(cardStatus)) {
-                                    rejectLogin("Thẻ độc giả chưa hoạt động, đã khóa hoặc hết hạn.");
-                                    return;
-                                }
-                                if (!"Reader".equalsIgnoreCase(role)) {
-                                    rejectLogin("Vai trò tài khoản không hợp lệ.");
-                                    return;
-                                }
-                                if (Boolean.TRUE.equals(userDoc.getBoolean("mustChangePassword"))) {
-                                    setLoading(false);
-                                    startActivity(new Intent(this, ChangePasswordActivity.class));
-                                    finish();
-                                    return;
-                                }
+                                firestore.collection("Users").document(uid).get()
+                                        .addOnSuccessListener(userDoc -> {
+                                            if (!userDoc.exists()) {
+                                                rejectLogin("Tài khoản không có hồ sơ độc giả. Vui lòng dùng đúng trang đăng nhập.");
+                                                return;
+                                            }
 
-                                setLoading(false);
-                                startActivity(new Intent(this, ReaderMainActivity.class));
-                                finish();
+                                            String role = userDoc.getString("role");
+                                            String cardStatus = userDoc.getString("cardStatus");
+                                            if (!"Reader".equalsIgnoreCase(role)) {
+                                                rejectLogin("Tài khoản này không phải độc giả. Vui lòng đăng nhập đúng trang.");
+                                                return;
+                                            }
+                                            if (!"HoatDong".equals(cardStatus)) {
+                                                rejectLogin("Thẻ độc giả chưa hoạt động, đã khóa hoặc hết hạn.");
+                                                return;
+                                            }
+                                            if (Boolean.TRUE.equals(userDoc.getBoolean("mustChangePassword"))) {
+                                                setLoading(false);
+                                                startActivity(new Intent(this, ChangePasswordActivity.class));
+                                                finish();
+                                                return;
+                                            }
+
+                                            setLoading(false);
+                                            startActivity(new Intent(this, ReaderMainActivity.class));
+                                            finish();
+                                        })
+                                        .addOnFailureListener(error -> {
+                                            setLoading(false);
+                                            showMessage("Không thể tải hồ sơ. Kiểm tra kết nối và quyền Firestore.");
+                                        });
                             })
                             .addOnFailureListener(error -> {
                                 setLoading(false);
-                                showMessage("Không thể tải hồ sơ. Kiểm tra kết nối và quyền Firestore.");
+                                showMessage("Không thể xác minh loại tài khoản. Kiểm tra Firestore Rules và kết nối.");
                             });
-                });
-    }
-
-    private void verifyAdmin(String uid) {
-        firestore.collection("Admins").document(uid).get()
-                .addOnSuccessListener(adminDoc -> {
-                    String status = adminDoc.getString("adminStatus");
-                    if (!adminDoc.exists()
-                            || !("Active".equalsIgnoreCase(status)
-                            || "HoatDong".equalsIgnoreCase(status))) {
-                        rejectLogin("Tài khoản chưa có hồ sơ hoặc chưa được cấp quyền.");
-                        return;
-                    }
-                    setLoading(false);
-                    startActivity(new Intent(this, AdminMainActivity.class));
-                    finish();
-                })
-                .addOnFailureListener(error -> {
-                    setLoading(false);
-                    showMessage("Không thể xác minh quyền quản trị viên.");
                 });
     }
 
