@@ -16,7 +16,9 @@ public final class BookRepository {
     public BookRepository(Context context) { helper = new DatabaseHelper(context); }
 
     public long addBookTitle(BookTitle book) {
-        return new BookTitleDao(helper.getWritableDatabase()).insert(book);
+        long rowId = new BookTitleDao(helper.getWritableDatabase()).insert(book);
+        BookCatalogueSyncManager.uploadBookToCloud(book);
+        return rowId;
     }
 
     public BookTitle getBookTitle(String id) {
@@ -28,7 +30,9 @@ public final class BookRepository {
     }
 
     public int updateBookTitle(BookTitle book) {
-        return new BookTitleDao(helper.getWritableDatabase()).update(book);
+        int changed = new BookTitleDao(helper.getWritableDatabase()).update(book);
+        if (changed > 0) BookCatalogueSyncManager.uploadBookToCloud(book);
+        return changed;
     }
 
     public void close() { helper.close(); }
