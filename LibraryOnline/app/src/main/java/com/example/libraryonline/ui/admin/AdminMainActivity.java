@@ -261,22 +261,22 @@ public class AdminMainActivity extends com.example.libraryonline.ui.auth.Session
         params.topMargin = dp(12);
         card.setLayoutParams(params);
 
-        card.addView(makeText(value(doc, "fullName", "Chưa có họ tên"), 18, "#163333", true));
-        card.addView(makeText("CHỜ XÁC MINH", 11, "#B45309", true));
-        card.addView(makeText("Ngày sinh: " + value(doc, "birthDate", "Chưa cung cấp"), 14, "#637D7D", false));
-        card.addView(makeText("Email: " + value(doc, "email", "Chưa cung cấp"), 14, "#637D7D", false));
-        card.addView(makeText("Số điện thoại: " + value(doc, "phone", "Chưa cung cấp"), 14, "#637D7D", false));
+        card.addView(makeText(value(doc, "fullName", "Chưa có họ tên"), 18, R.color.library_text, true));
+        card.addView(makeText("CHỜ XÁC MINH", 11, R.color.library_warning, true));
+        card.addView(makeText("Ngày sinh: " + value(doc, "birthDate", "Chưa cung cấp"), 14, R.color.library_muted, false));
+        card.addView(makeText("Email: " + value(doc, "email", "Chưa cung cấp"), 14, R.color.library_muted, false));
+        card.addView(makeText("Số điện thoại: " + value(doc, "phone", "Chưa cung cấp"), 14, R.color.library_muted, false));
 
         LinearLayout actions = new LinearLayout(this);
         actions.setOrientation(LinearLayout.HORIZONTAL);
         Button reject = new Button(this);
         reject.setText("Từ chối");
-        reject.setTextColor(android.graphics.Color.rgb(185, 28, 28));
+        reject.setTextColor(androidx.core.content.ContextCompat.getColor(this,R.color.library_danger));
         Button approve = new Button(this);
         approve.setText("Duyệt & gửi email");
-        approve.setTextColor(android.graphics.Color.WHITE);
+        approve.setTextColor(androidx.core.content.ContextCompat.getColor(this,R.color.library_surface));
         approve.setBackgroundTintList(android.content.res.ColorStateList.valueOf(
-                android.graphics.Color.rgb(33, 107, 104)));
+                androidx.core.content.ContextCompat.getColor(this,R.color.library_blue)));
         LinearLayout.LayoutParams rejectParams = new LinearLayout.LayoutParams(0,
                 LinearLayout.LayoutParams.WRAP_CONTENT, 1);
         rejectParams.rightMargin = dp(8);
@@ -409,14 +409,14 @@ public class AdminMainActivity extends com.example.libraryonline.ui.auth.Session
         cardParams.topMargin = dp(12);
         card.setLayoutParams(cardParams);
 
-        card.addView(makeText(value(doc, "fullName", "Chưa có họ tên"), 18, "#163333", true));
-        TextView status = makeText("CHỜ DUYỆT", 11, "#B45309", true);
+        card.addView(makeText(value(doc, "fullName", "Chưa có họ tên"), 18, R.color.library_text, true));
+        TextView status = makeText("CHỜ DUYỆT", 11, R.color.library_warning, true);
         status.setPadding(0, dp(4), 0, dp(10));
         card.addView(status);
         card.addView(makeText("Ngày sinh: " + value(doc, "birthDate",
-                value(doc, "dateOfBirth", "Chưa cung cấp")), 14, "#637D7D", false));
-        card.addView(makeText("Email: " + value(doc, "email", "Chưa cung cấp"), 14, "#637D7D", false));
-        card.addView(makeText("Số điện thoại: " + value(doc, "phone", "Chưa cung cấp"), 14, "#637D7D", false));
+                value(doc, "dateOfBirth", "Chưa cung cấp")), 14, R.color.library_muted, false));
+        card.addView(makeText("Email: " + value(doc, "email", "Chưa cung cấp"), 14, R.color.library_muted, false));
+        card.addView(makeText("Số điện thoại: " + value(doc, "phone", "Chưa cung cấp"), 14, R.color.library_muted, false));
 
         Object createdAt = doc.get("createdAt");
         String created = "Thời gian gửi: Chưa rõ";
@@ -425,7 +425,7 @@ public class AdminMainActivity extends com.example.libraryonline.ui.auth.Session
             created = "Thời gian gửi: " + DateFormat.getDateTimeInstance(
                     DateFormat.SHORT, DateFormat.SHORT, new Locale("vi", "VN")).format(date);
         }
-        TextView time = makeText(created, 12, "#94A3B8", false);
+        TextView time = makeText(created, 12, R.color.library_muted, false);
         time.setPadding(0, dp(8), 0, dp(12));
         card.addView(time);
 
@@ -433,12 +433,12 @@ public class AdminMainActivity extends com.example.libraryonline.ui.auth.Session
         actions.setOrientation(LinearLayout.HORIZONTAL);
         Button reject = new Button(this);
         reject.setText("Từ chối");
-        reject.setTextColor(android.graphics.Color.rgb(185, 28, 28));
+        reject.setTextColor(androidx.core.content.ContextCompat.getColor(this,R.color.library_danger));
         Button approve = new Button(this);
         approve.setText("Duyệt hồ sơ");
-        approve.setTextColor(android.graphics.Color.WHITE);
+        approve.setTextColor(androidx.core.content.ContextCompat.getColor(this,R.color.library_surface));
         approve.setBackgroundTintList(android.content.res.ColorStateList.valueOf(
-                android.graphics.Color.rgb(33, 107, 104)));
+                androidx.core.content.ContextCompat.getColor(this,R.color.library_blue)));
         LinearLayout.LayoutParams rejectParams = new LinearLayout.LayoutParams(0,
                 LinearLayout.LayoutParams.WRAP_CONTENT, 1);
         rejectParams.rightMargin = dp(8);
@@ -663,11 +663,11 @@ public class AdminMainActivity extends com.example.libraryonline.ui.auth.Session
         return value == null || value.trim().isEmpty() ? fallback : value;
     }
 
-    private TextView makeText(String text, int sizeSp, String color, boolean bold) {
+    private TextView makeText(String text, int sizeSp, @androidx.annotation.ColorRes int color, boolean bold) {
         TextView view = new TextView(this);
         view.setText(text);
         view.setTextSize(sizeSp);
-        view.setTextColor(android.graphics.Color.parseColor(color));
+        view.setTextColor(androidx.core.content.ContextCompat.getColor(this,color));
         if (bold) view.setTypeface(Typeface.DEFAULT, Typeface.BOLD);
         LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);

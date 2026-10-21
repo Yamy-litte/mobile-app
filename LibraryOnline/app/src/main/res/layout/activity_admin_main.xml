@@ -1,5 +1,5 @@
 <?xml version="1.0" ?>
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android" android:id="@+id/adminRoot" android:layout_width="match_parent" android:layout_height="match_parent" android:orientation="vertical" android:background="@color/admin_background">
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android" android:id="@+id/adminRoot" android:layout_width="match_parent" android:layout_height="match_parent" android:orientation="vertical" android:background="@color/library_background">
     <ScrollView android:id="@+id/adminScroll" android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1" android:fillViewport="true" android:clipToPadding="false">
         <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical" android:padding="20dp">
             <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal" android:gravity="center_vertical">
@@ -7,43 +7,43 @@
                     <TextView android:id="@+id/textAdminBrand" style="@style/AdminBody" android:text="@string/admin_brand" android:textSize="10sp" android:letterSpacing="0.12"/>
                     <TextView android:id="@+id/textAdminSession" style="@style/AdminHeading" android:text="@string/admin_role" android:layout_marginTop="6dp" android:layout_marginBottom="4dp"/>
                 </LinearLayout>
-                <TextView android:id="@+id/buttonAdminAccount" android:layout_width="48dp" android:layout_height="48dp" android:layout_marginStart="8dp" android:background="@drawable/bg_admin_avatar" android:gravity="center" android:text="AD" android:textColor="@color/admin_teal" android:textStyle="bold" android:contentDescription="@string/admin_account" android:clickable="true" android:focusable="true"/>
+                <TextView android:id="@+id/buttonAdminAccount" android:layout_width="48dp" android:layout_height="48dp" android:layout_marginStart="8dp" android:background="@drawable/bg_admin_avatar" android:gravity="center" android:text="AD" android:textColor="@color/library_blue" android:textStyle="bold" android:contentDescription="@string/admin_account" android:clickable="true" android:focusable="true"/>
             </LinearLayout>
             <LinearLayout android:id="@+id/adminOverview" android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical">
                 <TextView android:id="@+id/textAdminOverview" style="@style/AdminHeading" android:text="@string/admin_overview"/>
                 <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal">
                     <LinearLayout android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content" android:minHeight="120dp" android:layout_margin="5dp" android:padding="16dp" android:orientation="vertical" android:background="@drawable/bg_admin_card">
-                        <TextView android:id="@+id/textAdminBookCount" android:layout_width="match_parent" android:layout_height="wrap_content" android:minHeight="42dp" android:gravity="end|center_vertical" android:drawableStart="@drawable/ic_admin_book" android:text="@string/admin_dash" android:textSize="28sp" android:textStyle="bold" android:textColor="@color/admin_teal"/>
+                        <TextView android:id="@+id/textAdminBookCount" android:layout_width="match_parent" android:layout_height="wrap_content" android:minHeight="42dp" android:gravity="end|center_vertical" android:drawableStart="@drawable/ic_admin_book" android:text="@string/admin_dash" android:textSize="28sp" android:textStyle="bold" android:textColor="@color/library_blue"/>
                         <TextView style="@style/AdminBody" android:layout_marginTop="10dp" android:text="@string/admin_books"/>
                     </LinearLayout>
                     <LinearLayout android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content" android:minHeight="120dp" android:layout_margin="5dp" android:padding="16dp" android:orientation="vertical" android:background="@drawable/bg_admin_card">
-                        <TextView android:id="@+id/textAdminReaderCount" android:layout_width="match_parent" android:layout_height="wrap_content" android:minHeight="42dp" android:gravity="end|center_vertical" android:drawableStart="@drawable/ic_admin_people" android:text="@string/admin_dash" android:textSize="28sp" android:textStyle="bold" android:textColor="@color/admin_teal"/>
+                        <TextView android:id="@+id/textAdminReaderCount" android:layout_width="match_parent" android:layout_height="wrap_content" android:minHeight="42dp" android:gravity="end|center_vertical" android:drawableStart="@drawable/ic_admin_people" android:text="@string/admin_dash" android:textSize="28sp" android:textStyle="bold" android:textColor="@color/library_blue"/>
                         <TextView style="@style/AdminBody" android:layout_marginTop="10dp" android:text="@string/admin_readers"/>
                     </LinearLayout>
                 </LinearLayout>
                 <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal">
                     <LinearLayout android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content" android:minHeight="120dp" android:layout_margin="5dp" android:padding="16dp" android:orientation="vertical" android:background="@drawable/bg_admin_card">
-                        <TextView android:id="@+id/textAdminCopyCount" android:layout_width="match_parent" android:layout_height="wrap_content" android:minHeight="42dp" android:gravity="end|center_vertical" android:drawableStart="@drawable/ic_admin_copy" android:text="@string/admin_dash" android:textSize="28sp" android:textStyle="bold" android:textColor="@color/admin_teal"/>
+                        <TextView android:id="@+id/textAdminCopyCount" android:layout_width="match_parent" android:layout_height="wrap_content" android:minHeight="42dp" android:gravity="end|center_vertical" android:drawableStart="@drawable/ic_admin_copy" android:text="@string/admin_dash" android:textSize="28sp" android:textStyle="bold" android:textColor="@color/library_blue"/>
                         <TextView style="@style/AdminBody" android:layout_marginTop="10dp" android:text="@string/admin_copies"/>
                     </LinearLayout>
                     <LinearLayout android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content" android:minHeight="120dp" android:layout_margin="5dp" android:padding="16dp" android:orientation="vertical" android:background="@drawable/bg_admin_card">
-                        <TextView android:id="@+id/textAdminRegistrationCount" android:layout_width="match_parent" android:layout_height="wrap_content" android:minHeight="42dp" android:gravity="end|center_vertical" android:drawableStart="@drawable/ic_admin_check" android:text="@string/admin_dash" android:textSize="28sp" android:textStyle="bold" android:textColor="@color/admin_teal"/>
+                        <TextView android:id="@+id/textAdminRegistrationCount" android:layout_width="match_parent" android:layout_height="wrap_content" android:minHeight="42dp" android:gravity="end|center_vertical" android:drawableStart="@drawable/ic_admin_check" android:text="@string/admin_dash" android:textSize="28sp" android:textStyle="bold" android:textColor="@color/library_blue"/>
                         <TextView style="@style/AdminBody" android:layout_marginTop="10dp" android:text="@string/admin_pending"/>
                     </LinearLayout>
                 </LinearLayout>
                 <TextView android:id="@+id/textAdminDataStatus" style="@style/AdminBody" android:text="@string/admin_loading" android:layout_marginTop="10dp" android:accessibilityLiveRegion="polite"/>
-                <Button android:id="@+id/buttonAdminRefresh" style="?attr/borderlessButtonStyle" android:layout_width="wrap_content" android:layout_height="48dp" android:text="@string/admin_refresh" android:textColor="@color/admin_teal"/>
+                <Button android:id="@+id/buttonAdminRefresh" style="?attr/borderlessButtonStyle" android:layout_width="wrap_content" android:layout_height="48dp" android:text="@string/admin_refresh" android:textColor="@color/library_blue"/>
                 <TextView android:id="@+id/textAdminWork" style="@style/AdminHeading" android:text="@string/admin_work"/>
                 <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical" android:padding="18dp" android:background="@drawable/bg_admin_soft">
-                    <TextView android:id="@+id/textAdminPendingSummary" style="@style/AdminBody" android:text="@string/admin_count_loading" android:textSize="16sp" android:textStyle="bold" android:textColor="@color/admin_ink"/>
+                    <TextView android:id="@+id/textAdminPendingSummary" style="@style/AdminBody" android:text="@string/admin_count_loading" android:textSize="16sp" android:textStyle="bold" android:textColor="@color/library_text"/>
                     <TextView android:id="@+id/textAdminResetSummary" style="@style/AdminBody" android:text="@string/admin_count_loading" android:layout_marginTop="8dp"/>
-                    <Button android:id="@+id/buttonAdminReview" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="12dp" android:text="@string/admin_processing" android:backgroundTint="@color/admin_teal" android:textColor="@android:color/white"/>
+                    <Button android:id="@+id/buttonAdminReview" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="12dp" android:text="@string/admin_processing" android:backgroundTint="@color/library_blue" android:textColor="@color/library_surface"/>
                 </LinearLayout>
                 <TextView android:id="@+id/textAdminShortcuts" style="@style/AdminHeading" android:text="@string/admin_shortcuts"/>
                 <LinearLayout android:id="@+id/actionAdminRegistrations" android:layout_width="match_parent" android:layout_height="wrap_content" android:minHeight="76dp" android:layout_marginBottom="10dp" android:orientation="horizontal" android:gravity="center_vertical" android:padding="16dp" android:background="@drawable/bg_admin_card" android:foreground="?attr/selectableItemBackground" android:clickable="true" android:focusable="true">
                     <ImageView android:layout_width="24dp" android:layout_height="24dp" android:src="@drawable/ic_admin_check" android:importantForAccessibility="no"/>
                     <LinearLayout android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content" android:layout_marginStart="14dp" android:layout_marginEnd="8dp" android:orientation="vertical">
-                        <TextView style="@style/AdminBody" android:text="@string/admin_review" android:textColor="@color/admin_ink" android:textSize="16sp" android:textStyle="bold"/>
+                        <TextView style="@style/AdminBody" android:text="@string/admin_review" android:textColor="@color/library_text" android:textSize="16sp" android:textStyle="bold"/>
                         <TextView style="@style/AdminBody" android:layout_marginTop="4dp" android:text="@string/admin_review_hint" android:textSize="12sp"/>
                     </LinearLayout>
                     <ImageView android:layout_width="20dp" android:layout_height="20dp" android:src="@drawable/ic_admin_arrow" android:importantForAccessibility="no"/>
@@ -51,7 +51,7 @@
                 <LinearLayout android:id="@+id/actionAdminResets" android:layout_width="match_parent" android:layout_height="wrap_content" android:minHeight="76dp" android:layout_marginBottom="10dp" android:orientation="horizontal" android:gravity="center_vertical" android:padding="16dp" android:background="@drawable/bg_admin_card" android:foreground="?attr/selectableItemBackground" android:clickable="true" android:focusable="true">
                     <ImageView android:layout_width="24dp" android:layout_height="24dp" android:src="@drawable/ic_admin_account" android:importantForAccessibility="no"/>
                     <LinearLayout android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content" android:layout_marginStart="14dp" android:layout_marginEnd="8dp" android:orientation="vertical">
-                        <TextView style="@style/AdminBody" android:text="@string/admin_reset" android:textColor="@color/admin_ink" android:textSize="16sp" android:textStyle="bold"/>
+                        <TextView style="@style/AdminBody" android:text="@string/admin_reset" android:textColor="@color/library_text" android:textSize="16sp" android:textStyle="bold"/>
                         <TextView style="@style/AdminBody" android:layout_marginTop="4dp" android:text="@string/admin_reset_hint" android:textSize="12sp"/>
                     </LinearLayout>
                     <ImageView android:layout_width="20dp" android:layout_height="20dp" android:src="@drawable/ic_admin_arrow" android:importantForAccessibility="no"/>
@@ -59,7 +59,7 @@
                 <LinearLayout android:id="@+id/actionAdminSync" android:layout_width="match_parent" android:layout_height="wrap_content" android:minHeight="76dp" android:layout_marginBottom="10dp" android:orientation="horizontal" android:gravity="center_vertical" android:padding="16dp" android:background="@drawable/bg_admin_card" android:foreground="?attr/selectableItemBackground" android:clickable="true" android:focusable="true">
                     <ImageView android:layout_width="24dp" android:layout_height="24dp" android:src="@drawable/ic_admin_refresh" android:importantForAccessibility="no"/>
                     <LinearLayout android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content" android:layout_marginStart="14dp" android:layout_marginEnd="8dp" android:orientation="vertical">
-                        <TextView style="@style/AdminBody" android:text="@string/admin_sync" android:textColor="@color/admin_ink" android:textSize="16sp" android:textStyle="bold"/>
+                        <TextView style="@style/AdminBody" android:text="@string/admin_sync" android:textColor="@color/library_text" android:textSize="16sp" android:textStyle="bold"/>
                         <TextView style="@style/AdminBody" android:layout_marginTop="4dp" android:text="@string/admin_sync_hint" android:textSize="12sp"/>
                     </LinearLayout>
                     <ImageView android:layout_width="20dp" android:layout_height="20dp" android:src="@drawable/ic_admin_arrow" android:importantForAccessibility="no"/>
@@ -68,9 +68,9 @@
             <LinearLayout android:id="@+id/adminRequests" android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical" android:visibility="gone">
                 <TextView android:id="@+id/textAdminRequestsHeading" style="@style/AdminHeading" android:text="@string/admin_processing"/>
                 <TextView android:id="@+id/textAdminRequestsStatus" style="@style/AdminBody" android:text="@string/admin_count_loading" android:accessibilityLiveRegion="polite"/>
-                <Button android:id="@+id/buttonAdminRefreshRequests" style="?attr/borderlessButtonStyle" android:layout_width="wrap_content" android:layout_height="48dp" android:text="@string/admin_refresh_requests" android:textColor="@color/admin_teal"/>
+                <Button android:id="@+id/buttonAdminRefreshRequests" style="?attr/borderlessButtonStyle" android:layout_width="wrap_content" android:layout_height="48dp" android:text="@string/admin_refresh_requests" android:textColor="@color/library_blue"/>
                 <TextView android:id="@+id/textPendingCount" style="@style/AdminHeading" android:text="@string/admin_registration_section"/>
-                <ProgressBar android:id="@+id/progressRequests" android:layout_width="32dp" android:layout_height="32dp" android:layout_gravity="center" android:indeterminateTint="@color/admin_teal"/>
+                <ProgressBar android:id="@+id/progressRequests" android:layout_width="32dp" android:layout_height="32dp" android:layout_gravity="center" android:indeterminateTint="@color/library_blue"/>
                 <TextView android:id="@+id/textEmptyRequests" style="@style/AdminBody" android:text="@string/admin_count_loading" android:padding="20dp" android:gravity="center"/>
                 <LinearLayout android:id="@+id/containerRegistrationRequests" android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical"/>
                 <TextView android:id="@+id/textPasswordResetPendingCount" style="@style/AdminHeading" android:text="@string/admin_reset_section"/>
@@ -80,18 +80,18 @@
             <LinearLayout android:id="@+id/adminAccount" android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical" android:visibility="gone">
                 <TextView android:id="@+id/textAdminAccountHeading" style="@style/AdminHeading" android:text="@string/admin_account"/>
                 <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical" android:padding="20dp" android:background="@drawable/bg_admin_card">
-                    <TextView android:id="@+id/textAdminProfileName" style="@style/AdminBody" android:text="@string/admin_role" android:textSize="20sp" android:textStyle="bold" android:textColor="@color/admin_ink"/>
+                    <TextView android:id="@+id/textAdminProfileName" style="@style/AdminBody" android:text="@string/admin_role" android:textSize="20sp" android:textStyle="bold" android:textColor="@color/library_text"/>
                     <TextView android:id="@+id/textAdminProfileEmail" style="@style/AdminBody" android:text="@string/admin_profile_email" android:layout_marginTop="12dp"/>
                     <TextView android:id="@+id/textAdminProfileRole" style="@style/AdminBody" android:text="@string/admin_account_hint" android:layout_marginTop="18dp"/>
                 </LinearLayout>
                 <TextView android:id="@+id/textAdminSessionNote" style="@style/AdminBody" android:text="@string/admin_session_note" android:layout_marginTop="16dp"/>
-                <Button android:id="@+id/buttonAdminSync" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="24dp" android:text="@string/admin_sync" android:backgroundTint="@color/admin_teal" android:textColor="@android:color/white"/>
-                <Button android:id="@+id/buttonAdminLogout" style="?attr/borderlessButtonStyle" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="8dp" android:text="@string/admin_logout" android:textColor="@color/admin_orange"/>
+                <Button android:id="@+id/buttonAdminSync" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="24dp" android:text="@string/admin_sync" android:backgroundTint="@color/library_blue" android:textColor="@color/library_surface"/>
+                <Button android:id="@+id/buttonAdminLogout" style="?attr/borderlessButtonStyle" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="8dp" android:text="@string/admin_logout" android:textColor="@color/library_logout"/>
             </LinearLayout>
         </LinearLayout>
     </ScrollView>
-    <View android:layout_width="match_parent" android:layout_height="1dp" android:background="@color/admin_line"/>
-    <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal" android:background="@android:color/white" android:padding="8dp">
+    <View android:layout_width="match_parent" android:layout_height="1dp" android:background="@color/library_border"/>
+    <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal" android:background="@color/library_surface" android:padding="8dp">
         <TextView android:id="@+id/navAdminHome" style="@style/AdminNav" android:text="@string/admin_home" android:drawableTop="@drawable/ic_admin_home"/>
         <TextView android:id="@+id/navAdminRequests" style="@style/AdminNav" android:text="@string/admin_approvals" android:drawableTop="@drawable/ic_admin_check"/>
         <TextView android:id="@+id/navAdminAccount" style="@style/AdminNav" android:text="@string/admin_account" android:drawableTop="@drawable/ic_admin_account"/>

@@ -3,6 +3,14 @@
         <item name="colorPrimary">@color/library_blue</item>
         <item name="colorOnPrimary">@color/white</item>
         <item name="colorSecondary">@color/library_navy</item>
+        <item name="colorSurface">@color/library_surface</item>
+        <item name="colorOnSurface">@color/library_text</item>
+        <item name="colorOnSurfaceVariant">@color/library_muted</item>
+        <item name="colorOutline">@color/library_border</item>
+        <item name="android:colorBackground">@color/library_background</item>
+        <item name="android:colorBackgroundFloating">@color/library_surface</item>
+        <item name="android:textColorPrimary">@color/library_text</item>
+        <item name="android:textColorSecondary">@color/library_muted</item>
         <item name="android:colorAccent">@color/library_blue</item>
         <item name="android:fontFamily">sans-serif</item>
         <item name="android:statusBarColor">@color/library_background</item>

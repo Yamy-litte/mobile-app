@@ -16,6 +16,11 @@
     <color name="reader_text">@color/library_text</color>
     <color name="reader_muted">@color/library_muted</color>
     <color name="reader_border">@color/library_border</color>
-    <color name="reader_cover_placeholder">#E8EEF9</color>
+    <!-- Existing accent/status colors shared by all screens. -->
+    <color name="library_accent_background">#E8EEF9</color>
+    <color name="library_warning">#B45309</color>
+    <color name="library_danger">#B91C1C</color>
+    <color name="library_logout">#B95031</color>
+    <color name="reader_cover_placeholder">@color/library_accent_background</color>
     <color name="reader_success">@color/library_success</color>
 </resources>

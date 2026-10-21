@@ -6,7 +6,7 @@
         <item name="android:textSize">22sp</item>
         <item name="android:textStyle">bold</item>
         <item name="android:fontFamily">serif</item>
-        <item name="android:textColor">@color/admin_ink</item>
+        <item name="android:textColor">@color/library_text</item>
         <item name="android:layout_marginTop">24dp</item>
         <item name="android:layout_marginBottom">14dp</item>
     </style>
@@ -14,7 +14,7 @@
         <item name="android:layout_width">match_parent</item>
         <item name="android:layout_height">wrap_content</item>
         <item name="android:textSize">14sp</item>
-        <item name="android:textColor">@color/admin_muted</item>
+        <item name="android:textColor">@color/library_muted</item>
     </style>
     <style name="AdminNav">
         <item name="android:layout_width">0dp</item>
@@ -25,7 +25,7 @@
         <item name="android:padding">8dp</item>
         <item name="android:drawablePadding">4dp</item>
         <item name="android:textSize">12sp</item>
-        <item name="android:textColor">@color/admin_teal</item>
+        <item name="android:textColor">@color/library_blue</item>
         <item name="android:background">@drawable/bg_admin_nav</item>
         <item name="android:clickable">true</item>
         <item name="android:focusable">true</item>

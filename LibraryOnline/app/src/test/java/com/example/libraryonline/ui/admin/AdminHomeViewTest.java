@@ -39,10 +39,27 @@ public class AdminHomeViewTest {
         String output=System.getenv("ADMIN_HOME_PREVIEW");
         if(output!=null) {
             ((TextView)screen.findViewById(R.id.textAdminSession)).setText("Admin Lan");
-            android.graphics.Bitmap bitmap=android.graphics.Bitmap.createBitmap(320,800,android.graphics.Bitmap.Config.ARGB_8888);
-            root.draw(new android.graphics.Canvas(bitmap));
-            try(java.io.FileOutputStream stream=new java.io.FileOutputStream(output)){bitmap.compress(android.graphics.Bitmap.CompressFormat.PNG,100,stream);}
+            writePreview(root,output);
+            // Optional visual review: existing screens under the same app theme, day and night.
+            for(boolean night:new boolean[]{false,true}) {
+                RuntimeEnvironment.setQualifiers("w320dp-h800dp"+(night?"-night":"-notnight")+"-mdpi");
+                screen.getTheme().applyStyle(R.style.Theme_LibraryOnline,true);
+                int[] layouts={R.layout.activity_admin_main,R.layout.activity_login,R.layout.home_reader_activity};
+                String[] names={"admin","login","reader"};
+                for(int i=0;i<layouts.length;i++) {
+                    screen.setContentView(layouts[i]);
+                    View content=((android.view.ViewGroup)screen.findViewById(android.R.id.content)).getChildAt(0);
+                    writePreview(content,output.replace(".png","-"+names[i]+(night?"-night":"-day")+".png"));
+                }
+            }
         }
+    }
+    private void writePreview(View root,String path) throws Exception {
+        root.measure(View.MeasureSpec.makeMeasureSpec(320,View.MeasureSpec.EXACTLY),View.MeasureSpec.makeMeasureSpec(800,View.MeasureSpec.EXACTLY));
+        root.layout(0,0,320,800);
+        android.graphics.Bitmap bitmap=android.graphics.Bitmap.createBitmap(320,800,android.graphics.Bitmap.Config.ARGB_8888);
+        root.draw(new android.graphics.Canvas(bitmap));
+        try(java.io.FileOutputStream stream=new java.io.FileOutputStream(path)){bitmap.compress(android.graphics.Bitmap.CompressFormat.PNG,100,stream);}
     }
     @Test public void shortcutsAndTabsOpenRealPanelsAndKeepSelectionConsistent() {
         AdminHomeView home=new AdminHomeView(screen,AdminHomeView.HOME);
