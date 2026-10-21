@@ -216,7 +216,9 @@ public final class BookCatalogueSyncManager implements AutoCloseable {
             for (BookTitle book : localBooks) {
                 if (book != null && book.category != null && !book.category.trim().isEmpty()) {
                     String category = book.category.trim();
-                    categories.put(categoryKey(category), category);
+                    String categoryId = book.categoryId == null || book.categoryId.trim().isEmpty()
+                            ? categoryKey(category) : book.categoryId.trim();
+                    categories.put(categoryId, category);
                 }
             }
             if (categories.isEmpty()) {
