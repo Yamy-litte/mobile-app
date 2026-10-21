@@ -62,7 +62,7 @@ public class ReaderMainActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         auth = FirebaseAuth.getInstance();
         firestore = FirebaseFirestore.getInstance();
-        setContentView(R.layout.activity_reader_main);
+        setContentView(R.layout.home_reader_activity);
 
         bindViews();
         bindActions();
