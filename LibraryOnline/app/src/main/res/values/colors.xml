@@ -11,4 +11,11 @@
     <color name="library_muted">#68758A</color>
     <color name="library_border">#DCE3EF</color>
     <color name="library_success">#16845B</color>
+    <color name="reader_background">@color/library_background</color>
+    <color name="reader_surface">@color/library_surface</color>
+    <color name="reader_text">@color/library_text</color>
+    <color name="reader_muted">@color/library_muted</color>
+    <color name="reader_border">@color/library_border</color>
+    <color name="reader_cover_placeholder">#E8EEF9</color>
+    <color name="reader_success">@color/library_success</color>
 </resources>
