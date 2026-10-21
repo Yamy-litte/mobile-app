@@ -14,13 +14,17 @@ public final class BookTitleDao {
     private final SQLiteDatabase db;
     public BookTitleDao(SQLiteDatabase db) { this.db = db; }
 
-    public long insert(BookTitle b) { return db.insertOrThrow("BookTitles", null, toValues(b)); }
+    public long insert(BookTitle b) {
+        ensureCategory(b);
+        return db.insertOrThrow("BookTitles", null, toValues(b));
+    }
 
     /** Insert or replace a catalogue row received from Firestore. */
     public long upsertFromCloud(BookTitle book) {
         if (book == null || book.bookTitleId == null || book.bookTitleId.trim().isEmpty()) {
             throw new IllegalArgumentException("bookTitleId is required");
         }
+        ensureCategory(book);
         ContentValues values = toValues(book);
         int updated = db.update("BookTitles", values, "bookTitleId = ?",
                 new String[]{book.bookTitleId});
@@ -37,7 +41,20 @@ public final class BookTitleDao {
 
     public int update(BookTitle b) {
         if (b.bookTitleId == null || b.bookTitleId.trim().isEmpty()) throw new IllegalArgumentException("bookTitleId is required");
+        ensureCategory(b);
         return db.update("BookTitles", toValues(b), "bookTitleId = ?", new String[]{b.bookTitleId});
+    }
+
+    /** Keep the normalized parent row valid before inserting/updating a book. */
+    private void ensureCategory(BookTitle book) {
+        if (book == null) throw new IllegalArgumentException("BookTitle is required");
+        String name = book.category == null || book.category.trim().isEmpty()
+                ? "Khác" : book.category.trim();
+        String id = book.categoryId == null || book.categoryId.trim().isEmpty()
+                ? CategoryDao.idForName(name) : book.categoryId.trim();
+        new CategoryDao(db).upsert(id, name, true);
+        book.categoryId = id;
+        book.category = name;
     }
 
     public List<BookTitle> getAll() {
