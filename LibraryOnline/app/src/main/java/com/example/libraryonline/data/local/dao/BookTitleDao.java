@@ -21,7 +21,11 @@ public final class BookTitleDao {
         if (book == null || book.bookTitleId == null || book.bookTitleId.trim().isEmpty()) {
             throw new IllegalArgumentException("bookTitleId is required");
         }
-        return db.insertWithOnConflict("BookTitles", null, toValues(book), SQLiteDatabase.CONFLICT_REPLACE);
+        ContentValues values = toValues(book);
+        int updated = db.update("BookTitles", values, "bookTitleId = ?",
+                new String[]{book.bookTitleId});
+        if (updated > 0) return updated;
+        return db.insertOrThrow("BookTitles", null, values);
     }
 
     public int deleteById(String id) {
