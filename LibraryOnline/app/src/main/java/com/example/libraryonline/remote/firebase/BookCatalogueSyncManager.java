@@ -325,6 +325,8 @@ public final class BookCatalogueSyncManager implements AutoCloseable {
         book.category = string(doc, "category");
         book.categoryId = string(doc, "categoryId");
         if (book.categoryId.isEmpty()) book.categoryId = CategoryDao.idForName(book.category);
+        book.categoryId = string(doc, "categoryId");
+        if (book.categoryId.isEmpty()) book.categoryId = CategoryDao.idForName(book.category);
         book.publisher = string(doc, "publisher");
         book.description = string(doc, "description");
         book.coverUrl = string(doc, "coverUrl");
