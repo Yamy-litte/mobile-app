@@ -1,8 +1,6 @@
 package com.example.libraryonline.ui.reader;
 
 import android.content.Intent;
-import android.graphics.Bitmap;
-import android.graphics.BitmapFactory;
 import android.graphics.Color;
 import android.os.Bundle;
 import android.text.Editable;
@@ -29,9 +27,6 @@ import com.google.firebase.auth.FirebaseUser;
 import com.google.firebase.firestore.DocumentSnapshot;
 import com.google.firebase.firestore.FirebaseFirestore;
 
-import java.io.InputStream;
-import java.net.HttpURLConnection;
-import java.net.URL;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.LinkedHashSet;
@@ -59,7 +54,6 @@ public class ReaderMainActivity extends AppCompatActivity {
     private EditText searchInput;
     private TextView greeting, avatar, popularCount, catalogueStatus;
     private final List<BookTitle> books = new ArrayList<>();
-    private final ExecutorService imageExecutor = Executors.newFixedThreadPool(2);
     private final ExecutorService catalogueExecutor = Executors.newSingleThreadExecutor();
     private final CatalogueLoadStatus catalogueLoadStatus = new CatalogueLoadStatus();
     private String selectedCategory = "Tất cả";
@@ -303,47 +297,10 @@ public class ReaderMainActivity extends AppCompatActivity {
         availability.setText(available > 0 ? "Còn " + available + "/" + total + " cuốn" : "Tạm hết sách");
         availability.setTextColor(available > 0 ? Color.rgb(25, 115, 77) : Color.rgb(179, 69, 57));
 
-        String coverUrl = safe(doc.coverUrl, "");
-        if (!coverUrl.isEmpty()) {
-            fallback.setVisibility(View.GONE);
-            cover.setTag(coverUrl);
-            imageExecutor.execute(() -> {
-                Bitmap bitmap = downloadBitmap(coverUrl);
-                if (bitmap != null && !isFinishing() && !isDestroyed()) {
-                    runOnUiThread(() -> {
-                        if (coverUrl.equals(cover.getTag())) cover.setImageBitmap(bitmap);
-                    });
-                } else if (!isFinishing() && !isDestroyed()) {
-                    runOnUiThread(() -> {
-                        if (coverUrl.equals(cover.getTag())) fallback.setVisibility(View.VISIBLE);
-                    });
-                }
-            });
-        } else {
-            cover.setImageDrawable(null);
-            fallback.setVisibility(View.VISIBLE);
-        }
+        BookCoverLoader.load(doc.coverUrl, cover, fallback);
 
         card.setOnClickListener(v -> showBookDetails(doc));
         return card;
-    }
-
-    private Bitmap downloadBitmap(String address) {
-        HttpURLConnection connection = null;
-        try {
-            connection = (HttpURLConnection) new URL(address).openConnection();
-            connection.setConnectTimeout(5000);
-            connection.setReadTimeout(5000);
-            connection.setInstanceFollowRedirects(true);
-            connection.connect();
-            try (InputStream stream = connection.getInputStream()) {
-                return BitmapFactory.decodeStream(stream);
-            }
-        } catch (Exception ignored) {
-            return null;
-        } finally {
-            if (connection != null) connection.disconnect();
-        }
     }
 
     private void showBookDetails(BookTitle doc) {
@@ -426,7 +383,6 @@ public class ReaderMainActivity extends AppCompatActivity {
         if (catalogueSyncManager != null) catalogueSyncManager.close();
         if (databaseHelper != null) databaseHelper.close();
         catalogueExecutor.shutdownNow();
-        imageExecutor.shutdownNow();
         super.onDestroy();
     }
 }

@@ -59,3 +59,15 @@ Muốn công khai đầu sách này, Admin chủ động đổi `BookTitles/{id}
 Home giờ báo rõ số đầu sách đang ẩn; trường hợp Firebase trả N document nhưng SQLite đọc 0 dòng có thông báo riêng, thay vì báo đã nhận danh mục chung chung. Số dòng cache được thống kê trước khi lọc sách ẩn, số kết quả tìm kiếm sau khi lọc được giữ riêng.
 
 Kiểm tra thực tế sau cập nhật: 15 test JVM chạy, 14 đạt; 1 lỗi Android stub của InputValidator đã có. CatalogueCacheTest đạt 4/4, CatalogueLoadStatusTest đạt 6/6. Các test mới xác nhận sách ẩn vẫn ẩn sau đồng bộ lặp và vẫn giữ availableCopies=4; trường hợp tìm kiếm không khớp không được báo nhầm là toàn bộ sách bị ẩn. APK debug đã biên dịch trong lần chạy này; build độc lập được chạy trước khi commit/push.
+
+## Sửa tải ảnh bìa trên Home Reader
+
+Người dùng xác nhận đầu sách đã hiển thị nhưng ảnh chưa tải; URL coverUrl mở được trên trình duyệt. Phần tải ảnh cũ dùng HttpURLConnection với timeout 5 giây, decode trực tiếp không cache, tải lại URL trong từng thẻ mỗi lần render, bỏ qua exception và ẩn ảnh thay thế ngay khi bắt đầu. Đây là những điểm có thể gây ảnh trắng/tải chậm và không có thông tin lỗi.
+
+Thay bằng BookCoverLoader dùng Glide 4.16.0: timeout 20 giây; cache bộ nhớ/đĩa và gộp request cùng tài nguyên do Glide quản lý; request theo Activity/view; giữ ảnh thay thế trong lúc tải và khi lỗi; xóa request/ảnh cũ khi bind lại URL. Thêm ACCESS_NETWORK_STATE (quyền normal) để loader theo dõi việc mạng kết nối lại. Không nới TLS, không cho phép cleartext trong app, không đổi coverUrl, auth/OTP hay dữ liệu Firebase. Glide là dependency runtime mới nhằm thay cơ chế tải/cache/vòng đời tự viết; version ghim cố định, không sửa dependency/lockfile Functions.
+
+Các tệp sửa: app/build.gradle.kts, app/src/main/AndroidManifest.xml, ReaderMainActivity.java, BookCoverLoader.java mới, BookCoverLoaderTest.java mới và tài liệu này. Xóa downloader/imageExecutor cũ khỏi Activity.
+
+Đã thực thi 4/4 BookCoverLoaderTest qua Robolectric: ảnh thật được decode/hiển thị; file ảnh lỗi giữ placeholder; URL rỗng không giữ ảnh sách cũ; HTTP server loopback trả PNG thật và bind lại URL không tạo request mạng thứ hai. Không mock kết quả bitmap hay đánh dấu test thành công khi chưa chạy. Toàn suite hiện 19 test, 18 đạt; lỗi duy nhất vẫn là Android stub InputValidator đã ghi nhận. APK debug được build lại.
+
+Máy cloud bị proxy policy chặn covers.openlibrary.org (CONNECT 403), nên không coi đó là HTTP lỗi của máy chủ ảnh và không tuyên bố đã kiểm thử URL ngoài Internet trên điện thoại người dùng. Xác nhận URL truy cập được đến từ người dùng; test HTTP/cache/UI trong máy cloud dùng server loopback. Nếu thiết bị vẫn gặp lỗi, Logcat tag BookCoverLoader ghi loại lỗi/HTTP status mà không ghi query token của URL. Không deploy Firebase.

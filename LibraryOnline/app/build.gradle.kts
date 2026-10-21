@@ -55,6 +55,7 @@ dependencies {
     implementation(libs.appcompat)
     implementation(libs.constraintlayout)
     implementation(libs.fragment)
+    implementation("com.github.bumptech.glide:glide:4.16.0")
     implementation(libs.material)
 
     implementation(platform(libs.firebase.bom))
