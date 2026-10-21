@@ -290,8 +290,8 @@ public class ReaderMainActivity extends AppCompatActivity {
     private void showBookDetails(BookTitle doc) {
         String title = safe(doc.title, "Chi tiết sách");
         String author = safe(doc.author, "Chưa rõ tác giả");
-        long available = number(doc, "availableCopies");
-        long total = number(doc, "totalCopies");
+        long available = doc.availableCopies;
+        long total = doc.totalCopies;
         String message = "Tác giả: " + author
                 + "\nThể loại: " + safe(doc.category, "Chưa cập nhật")
                 + "\nNhà xuất bản: " + safe(doc.publisher, "Chưa cập nhật")
