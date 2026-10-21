@@ -16,6 +16,18 @@ public final class BookTitleDao {
 
     public long insert(BookTitle b) { return db.insertOrThrow("BookTitles", null, toValues(b)); }
 
+    /** Insert or replace a catalogue row received from Firestore. */
+    public long upsertFromCloud(BookTitle book) {
+        if (book == null || book.bookTitleId == null || book.bookTitleId.trim().isEmpty()) {
+            throw new IllegalArgumentException("bookTitleId is required");
+        }
+        return db.insertWithOnConflict("BookTitles", null, toValues(book), SQLiteDatabase.CONFLICT_REPLACE);
+    }
+
+    public int deleteById(String id) {
+        return db.delete("BookTitles", "bookTitleId = ?", new String[]{id});
+    }
+
     public int update(BookTitle b) {
         if (b.bookTitleId == null || b.bookTitleId.trim().isEmpty()) throw new IllegalArgumentException("bookTitleId is required");
         return db.update("BookTitles", toValues(b), "bookTitleId = ?", new String[]{b.bookTitleId});
