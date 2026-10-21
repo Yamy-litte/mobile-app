@@ -8,6 +8,8 @@ import java.text.Normalizer;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
+import java.text.SimpleDateFormat;
+import java.util.Date;
 
 /** SQLite data access for the normalized Categories table. */
 public final class CategoryDao {
@@ -43,10 +45,11 @@ public final class CategoryDao {
         values.put("categoryId", id);
         values.put("name", name.trim());
         values.put("isActive", active ? 1 : 0);
-        values.put("updatedAt", "datetime('now')");
+        String now = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.ROOT).format(new Date());
+        values.put("updatedAt", now);
         int changed = db.update("Categories", values, "categoryId = ?", new String[]{id});
         if (changed > 0) return changed;
-        values.put("createdAt", "datetime('now')");
+        values.put("createdAt", now);
         return db.insertOrThrow("Categories", null, values);
     }
 
