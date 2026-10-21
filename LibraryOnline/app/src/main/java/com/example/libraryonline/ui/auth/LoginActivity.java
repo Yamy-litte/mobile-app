@@ -13,19 +13,17 @@ import androidx.appcompat.app.AppCompatActivity;
 
 import com.example.libraryonline.R;
 import com.example.libraryonline.utils.PasswordVisibilityToggle;
-import com.example.libraryonline.ui.admin.AdminMainActivity;
-import com.example.libraryonline.ui.reader.ReaderMainActivity;
-import com.example.libraryonline.ui.auth.ChangePasswordActivity;
 import com.example.libraryonline.utils.InputValidator;
 import com.google.firebase.auth.FirebaseAuth;
-import com.google.firebase.firestore.FirebaseFirestore;
 
 public class LoginActivity extends AppCompatActivity {
     private static final String PREFS_NAME = "mylibrary_login";
     private static final String KEY_REMEMBER_EMAIL = "remember_email";
 
     private FirebaseAuth auth;
-    private FirebaseFirestore firestore;
+    private com.example.libraryonline.data.session.SessionGateway sessions;
+    private boolean busy, foreground;
+    private long generation;
     private EditText emailInput;
     private EditText passwordInput;
     private Button loginButton;
@@ -40,7 +38,7 @@ public class LoginActivity extends AppCompatActivity {
         setContentView(R.layout.activity_login);
 
         auth = FirebaseAuth.getInstance();
-        firestore = FirebaseFirestore.getInstance();
+        sessions = createSessionGateway();
         emailInput = findViewById(R.id.editEmail);
         passwordInput = findViewById(R.id.editPassword);
         PasswordVisibilityToggle.attach(passwordInput);
@@ -67,6 +65,8 @@ public class LoginActivity extends AppCompatActivity {
     }
 
     private void login() {
+        if (busy) return;
+        if(sessions.currentUid()!=null) {setLoading(true);resolveProfile();return;}
         String email = InputValidator.normalizeEmail(emailInput.getText().toString());
         String password = passwordInput.getText().toString();
 
@@ -90,72 +90,55 @@ public class LoginActivity extends AppCompatActivity {
         preferences.apply();
 
         setLoading(true);
+        final long attempt=++generation;
         auth.signInWithEmailAndPassword(email, password)
-                .addOnCompleteListener(this, task -> {
+                .addOnCompleteListener(task -> {
+                    if(!foreground || attempt!=generation)return;
                     if (!task.isSuccessful() || auth.getCurrentUser() == null) {
                         setLoading(false);
-                        showMessage("Email hoặc mật khẩu không chính xác.");
+                        showMessage(AuthErrors.message(task.getException()));
                         return;
                     }
 
-                    String uid = auth.getCurrentUser().getUid();
-                    // Không cho tài khoản có hồ sơ Admin đi vào luồng đăng nhập độc giả.
-                    firestore.collection("Admins").document(uid).get()
-                            .addOnSuccessListener(adminDoc -> {
-                                if (adminDoc.exists()) {
-                                    rejectLogin("Đây là tài khoản quản trị viên. Vui lòng đăng nhập tại trang Admin.");
-                                    return;
-                                }
-
-                                firestore.collection("Users").document(uid).get()
-                                        .addOnSuccessListener(userDoc -> {
-                                            if (!userDoc.exists()) {
-                                                rejectLogin("Tài khoản không có hồ sơ độc giả. Vui lòng dùng đúng trang đăng nhập.");
-                                                return;
-                                            }
-
-                                            String role = userDoc.getString("role");
-                                            String cardStatus = userDoc.getString("cardStatus");
-                                            if (!"Reader".equalsIgnoreCase(role)) {
-                                                rejectLogin("Tài khoản này không phải độc giả. Vui lòng đăng nhập đúng trang.");
-                                                return;
-                                            }
-                                            if (!"HoatDong".equals(cardStatus)) {
-                                                rejectLogin("Thẻ độc giả chưa hoạt động, đã khóa hoặc hết hạn.");
-                                                return;
-                                            }
-                                            if (Boolean.TRUE.equals(userDoc.getBoolean("mustChangePassword"))) {
-                                                setLoading(false);
-                                                startActivity(new Intent(this, ChangePasswordActivity.class));
-                                                finish();
-                                                return;
-                                            }
-
-                                            setLoading(false);
-                                            startActivity(new Intent(this, ReaderMainActivity.class));
-                                            finish();
-                                        })
-                                        .addOnFailureListener(error -> {
-                                            setLoading(false);
-                                            showMessage("Không thể tải hồ sơ. Kiểm tra kết nối và quyền Firestore.");
-                                        });
-                            })
-                            .addOnFailureListener(error -> {
-                                setLoading(false);
-                                showMessage("Không thể xác minh loại tài khoản. Kiểm tra Firestore Rules và kết nối.");
-                            });
+                    resolveProfile();
                 });
     }
 
-    private void rejectLogin(String message) {
-        auth.signOut();
-        setLoading(false);
-        showMessage(message);
+    protected com.example.libraryonline.data.session.SessionGateway createSessionGateway() {
+        return new com.example.libraryonline.data.session.FirebaseSessionGateway(this);
+    }
+    @Override protected void onStart() {
+        super.onStart();foreground=true;
+        if (sessions.currentUid()!=null && !busy) { setLoading(true); resolveProfile(); }
+    }
+    private void resolveProfile() {
+        final long attempt=++generation;
+        sessions.resolve().addOnCompleteListener(task -> {
+            if(!foreground || attempt!=generation || isFinishing() || isDestroyed())return;
+            if(task.isSuccessful()) SessionNavigation.open(this,task.getResult());
+            else {
+                if(AuthErrors.rejectsSession(task.getException())) sessions.signOut();
+                setLoading(false);
+                showMessage(AuthErrors.message(task.getException()));
+            }
+        });
+    }
+
+    @Override protected void onStop() {
+        foreground=false;generation++;setLoading(false);super.onStop();
     }
 
     private void setLoading(boolean loading) {
+        busy=loading;
+        registerLink.setEnabled(!loading);
+        forgotPasswordLink.setEnabled(!loading);
+        adminLoginLink.setEnabled(!loading);
+        rememberLogin.setEnabled(!loading);
+
+        emailInput.setEnabled(!loading);
+        passwordInput.setEnabled(!loading);
         loginButton.setEnabled(!loading);
-        loginButton.setText(loading ? "Đang đăng nhập..." : "Đăng nhập");
+        loginButton.setText(loading ? "Đang đăng nhập..." : (sessions.currentUid()!=null ? "Thử lại phiên đăng nhập" : "Đăng nhập"));
     }
 
     private void showMessage(String message) {

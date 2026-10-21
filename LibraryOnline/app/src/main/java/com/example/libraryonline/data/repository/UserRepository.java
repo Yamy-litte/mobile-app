@@ -20,6 +20,10 @@ public final class UserRepository {
         return new UserDao(db).insert(user);
     }
 
+    public long upsertProfile(User user) {
+        return new UserDao(helper.getWritableDatabase()).upsertFromCloud(user);
+    }
+
     public User getById(String userId) {
         return new UserDao(helper.getReadableDatabase()).findById(userId);
     }

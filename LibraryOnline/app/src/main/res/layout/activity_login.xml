@@ -99,7 +99,7 @@
             android:drawableEnd="@drawable/ic_visibility_off"
             android:drawablePadding="8dp"
                 android:hint="Mật khẩu"
-                android:inputType="textPassword"
+                android:inputType="textPassword" android:saveEnabled="false"
                 android:autofillHints="password"
                 android:singleLine="true"
                 android:textColor="@color/library_text"

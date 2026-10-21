@@ -107,3 +107,20 @@ test("rejection needs active admin and bounded reason; replay cannot review twic
   await assertSucceeds(updateDoc(doc(db("admin"), "RegistrationRequests/r1"), changes));
   await assertFails(updateDoc(doc(db("admin"), "RegistrationRequests/r1"), changes));
 });
+
+test("session checks can read own missing admin marker but cannot grant admin rights", async () => {
+  const own = await assertSucceeds(getDoc(doc(db("reader"), "Admins/reader")));
+  if (own.exists()) throw new Error("Fixture must not grant Reader an Admin record");
+  await assertFails(getDoc(doc(db("reader"), "Admins/admin")));
+  await assertFails(setDoc(doc(db("reader"), "Users/forged"), { userId:"forged", role:"Admin", cardStatus:"HoatDong", email:"forged@example.com", phone:"0912345678" }));
+  await assertFails(updateDoc(doc(db("reader"), "Users/reader"), { cardStatus:"HoatDong", mustChangePassword:false, role:"Admin" }));
+  await assertFails(setDoc(doc(db(), "Users/public"), { userId:"public", role:"Reader", cardStatus:"HoatDong" }));
+});
+test("registration cannot smuggle role, uid or a pre-approved profile", async () => {
+  const d=db();
+  for (const extra of [{role:"Admin"},{userId:"admin"},{status:"Approved"}]) {
+    const batch=registration(d,"forged");
+    batch.update(doc(d,"RegistrationRequests/forged"),extra);
+    await assertFails(batch.commit());
+  }
+});

@@ -40,7 +40,7 @@ import java.util.concurrent.Executors;
  * Reader home screen. Layout is defined in home_reader_activity.xml and item_reader_book.xml.
  * This Activity handles profile/catalogue data and user interactions only.
  */
-public class ReaderMainActivity extends AppCompatActivity {
+public class ReaderMainActivity extends com.example.libraryonline.ui.auth.SessionActivity {
     private static final int TEAL = Color.rgb(23, 102, 91);
     private static final int MUTED = Color.rgb(124, 141, 134);
 
@@ -66,21 +66,23 @@ public class ReaderMainActivity extends AppCompatActivity {
         setContentView(R.layout.home_reader_activity);
 
         bindViews();
-        if (auth.getCurrentUser() == null) {
-            goToLogin();
-            return;
-        }
         bindActions();
         buildCategories();
+    }
+
+    @Override protected com.example.libraryonline.data.session.SessionProfile.Role expectedRole() {
+        return com.example.libraryonline.data.session.SessionProfile.Role.READER;
+    }
+    @Override protected void onSessionAuthorized(com.example.libraryonline.data.session.SessionProfile profile) {
         loadReaderProfile();
-        databaseHelper = new DatabaseHelper(getApplicationContext());
+        if(databaseHelper==null) databaseHelper = new DatabaseHelper(getApplicationContext());
         loadBooksFromSqlite();
         catalogueSyncManager = new BookCatalogueSyncManager(getApplicationContext());
         catalogueSyncManager.start(new BookCatalogueSyncManager.SyncListener() {
             @Override
             public void onSyncCompleted(int changedRows) {
                 runOnUiThread(() -> {
-                    if (!isFinishing() && !isDestroyed()) {
+                    if (isSessionReady() && !isFinishing() && !isDestroyed()) {
                         loadBooksFromSqlite();
 
                     }
@@ -90,7 +92,7 @@ public class ReaderMainActivity extends AppCompatActivity {
             @Override
             public void onCatalogueSnapshot(boolean fromCache, int documentCount) {
                 runOnUiThread(() -> {
-                    if (!isFinishing() && !isDestroyed()) {
+                    if (isSessionReady() && !isFinishing() && !isDestroyed()) {
                         catalogueLoadStatus.remoteSnapshot(fromCache, documentCount);
                         refreshCatalogueStatus();
                     }
@@ -100,7 +102,7 @@ public class ReaderMainActivity extends AppCompatActivity {
             @Override
             public void onSyncFailed(String message) {
                 runOnUiThread(() -> {
-                    if (!isFinishing() && !isDestroyed()) {
+                    if (isSessionReady() && !isFinishing() && !isDestroyed()) {
                         catalogueLoadStatus.remoteFailed(safe(message, "Không rõ nguyên nhân"));
                         refreshCatalogueStatus();
                     }
@@ -180,7 +182,7 @@ public class ReaderMainActivity extends AppCompatActivity {
         }
         firestore.collection("Users").document(current.getUid()).get()
                 .addOnSuccessListener(doc -> {
-                    if (!doc.exists()) return;
+                    if (!isSessionReady() || !doc.exists()) return;
                     String name = value(doc, "fullName", "Độc giả");
                     String firstName = name.trim().isEmpty() ? "Độc giả" :
                             name.trim().split("\\s+")[name.trim().split("\\s+").length - 1];
@@ -203,7 +205,7 @@ public class ReaderMainActivity extends AppCompatActivity {
                 local = new BookTitleDao(databaseHelper.getReadableDatabase()).getAll();
             } catch (Exception failure) {
                 runOnUiThread(() -> {
-                    if (!isFinishing() && !isDestroyed()) {
+                    if (isSessionReady() && !isFinishing() && !isDestroyed()) {
                         catalogueLoadStatus.localFailed(safe(failure.getLocalizedMessage(),
                                 failure.getClass().getSimpleName()));
                         refreshCatalogueStatus();
@@ -212,7 +214,7 @@ public class ReaderMainActivity extends AppCompatActivity {
                 return;
             }
             runOnUiThread(() -> {
-                if (isFinishing() || isDestroyed()) return;
+                if (!isSessionReady() || isFinishing() || isDestroyed()) return;
                 books.clear();
                 for (BookTitle book : local) {
                     if (book != null && !book.isHidden) books.add(book);
@@ -315,7 +317,7 @@ public class ReaderMainActivity extends AppCompatActivity {
                 + "\nISBN: " + safe(doc.isbn, "Chưa cập nhật")
                 + "\nTình trạng: " + doc.availableCopies + "/" + doc.totalCopies + " cuốn sẵn sàng"
                 + "\n\n" + safe(doc.description, "Chưa có mô tả cho tác phẩm này.");
-        new AlertDialog.Builder(this)
+        privateSupportDialog()
                 .setTitle(title)
                 .setMessage(message)
                 .setPositiveButton("Đóng", (dialog, which) -> dialog.dismiss())
@@ -330,11 +332,12 @@ public class ReaderMainActivity extends AppCompatActivity {
         }
         firestore.collection("Users").document(user.getUid()).get()
                 .addOnSuccessListener(doc -> {
+                    if(!isSessionReady())return;
                     String message = "Họ tên: " + value(doc, "fullName", "Độc giả")
                             + "\nEmail: " + value(doc, "email", user.getEmail() == null ? "" : user.getEmail())
                             + "\nMã thẻ: " + value(doc, "barcode", "Chưa cấp")
                             + "\nTrạng thái thẻ: " + value(doc, "cardStatus", "Chưa rõ");
-                    new AlertDialog.Builder(this)
+                    privateSupportDialog()
                             .setTitle("Tài khoản độc giả")
                             .setMessage(message)
                             .setNeutralButton("Đăng xuất", (dialog, which) -> logout())
@@ -344,18 +347,11 @@ public class ReaderMainActivity extends AppCompatActivity {
                 .addOnFailureListener(e -> showMessage("Không tải được thông tin tài khoản."));
     }
 
-    private void logout() {
-        auth.signOut();
-        Intent intent = new Intent(this, LoginActivity.class);
-        intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
-        startActivity(intent);
-        finish();
-    }
-
-    private void goToLogin() {
-        auth.signOut();
-        startActivity(new Intent(this, LoginActivity.class));
-        finish();
+    private void logout() { logoutSession(); }
+    private void goToLogin() { logoutSession(); }
+    @Override protected void onSessionStopped() {
+        if(catalogueSyncManager!=null) {catalogueSyncManager.close();catalogueSyncManager=null;}
+        books.clear();
     }
 
     private String value(DocumentSnapshot doc, String key, String fallback) {

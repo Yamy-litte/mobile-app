@@ -61,7 +61,7 @@ public final class BookCatalogueSyncManager implements AutoCloseable {
                 if (listener != null) listener.onSyncFailed("Không thể tải thể loại: " + error.getLocalizedMessage());
                 return;
             }
-            if (snapshot != null) executor.execute(() -> {
+            if (snapshot != null) executeIfOpen(() -> {
                 if (closed) return;
                 try {
                     com.example.libraryonline.data.local.dao.CategoryDao dao =
@@ -80,7 +80,7 @@ public final class BookCatalogueSyncManager implements AutoCloseable {
                 // Re-resolve display labels if the titles snapshot arrived before its parents.
                 firestore.collection("BookTitles").get()
                         .addOnSuccessListener(books -> {
-                            if (!closed) executor.execute(() -> applySnapshot(books, listener));
+                            if (!closed) executeIfOpen(() -> applySnapshot(books, listener));
                         }).addOnFailureListener(failure -> {
                             if (listener != null) listener.onSyncFailed(failure.getLocalizedMessage());
                         });
@@ -94,7 +94,7 @@ public final class BookCatalogueSyncManager implements AutoCloseable {
                         ? "Không thể đồng bộ danh mục sách." : error.getLocalizedMessage());
                 return;
             }
-            if (snapshot != null) executor.execute(() -> applySnapshot(snapshot, listener));
+            if (snapshot != null) executeIfOpen(() -> applySnapshot(snapshot, listener));
         });
         copiesRegistration = firestore.collection("BookCopies").addSnapshotListener((snapshot, error) -> {
             if (closed) return;
@@ -104,7 +104,7 @@ public final class BookCatalogueSyncManager implements AutoCloseable {
                         : error.getLocalizedMessage());
                 return;
             }
-            if (snapshot != null) executor.execute(() -> applyCopiesSnapshot(snapshot, listener));
+            if (snapshot != null) executeIfOpen(() -> applyCopiesSnapshot(snapshot, listener));
         });
     }
 
@@ -116,11 +116,11 @@ public final class BookCatalogueSyncManager implements AutoCloseable {
             return;
         }
         firestore.collection("BookTitles").get()
-                .addOnSuccessListener(cloudSnapshot -> executor.execute(() -> {
+                .addOnSuccessListener(cloudSnapshot -> executeIfOpen(() -> {
                     if (closed) return;
                     syncCategoriesToCloud(cloudSnapshot, listener, () ->
                             migrateLegacyBookTitles(cloudSnapshot.getDocuments(), 0, listener, () ->
-                                    executor.execute(() -> uploadMissingLocalBooks(cloudSnapshot, listener))));
+                                    executeIfOpen(() -> uploadMissingLocalBooks(cloudSnapshot, listener))));
                 }))
                 .addOnFailureListener(error -> {
                     if (listener != null) listener.onSyncFailed(error.getLocalizedMessage() == null
@@ -201,7 +201,7 @@ public final class BookCatalogueSyncManager implements AutoCloseable {
     }
     private void syncCopiesLocalToCloud(SyncListener listener) {
         firestore.collection("BookCopies").get()
-                .addOnSuccessListener(cloudSnapshot -> executor.execute(() -> {
+                .addOnSuccessListener(cloudSnapshot -> executeIfOpen(() -> {
                     if (closed) return;
                     List<BookCopy> localCopies = new BookCopyDao(
                             databaseHelper.getReadableDatabase()).getAll();
@@ -308,7 +308,7 @@ public final class BookCatalogueSyncManager implements AutoCloseable {
           }
           return null;
         }).addOnSuccessListener(unused -> {
-            executor.execute(onComplete);
+            executeIfOpen(onComplete);
         }).addOnFailureListener(error -> {
             if (listener != null) listener.onSyncFailed("Sách đã đồng bộ nhưng tải thể loại lên Categories thất bại: "
                     + (error.getLocalizedMessage() == null ? "Không rõ nguyên nhân" : error.getLocalizedMessage()));
@@ -365,7 +365,7 @@ public final class BookCatalogueSyncManager implements AutoCloseable {
         }
         // Ensure parent BookTitles are persisted before enforcing the BookCopies foreign key.
         firestore.collection("BookCopies").get()
-                .addOnSuccessListener(copies -> executor.execute(() -> applyCopiesSnapshot(copies, listener)));
+                .addOnSuccessListener(copies -> executeIfOpen(() -> applyCopiesSnapshot(copies, listener)));
     }
 
     private void applyCopiesSnapshot(QuerySnapshot snapshot, SyncListener listener) {
@@ -445,8 +445,15 @@ public final class BookCatalogueSyncManager implements AutoCloseable {
         return value == null ? "" : String.valueOf(value);
     }
 
+    /** Firebase callbacks may arrive after their Activity has stopped. */
+    private synchronized void executeIfOpen(Runnable work) {
+        if(closed)return;
+        executor.execute(() -> {if(!closed)work.run();});
+    }
+
     @Override
     public synchronized void close() {
+        if(closed)return;
         closed = true;
         if (registration != null) {
             registration.remove();
@@ -460,7 +467,8 @@ public final class BookCatalogueSyncManager implements AutoCloseable {
             categoriesRegistration.remove();
             categoriesRegistration = null;
         }
-        executor.shutdownNow();
-        databaseHelper.close();
+        // Serialize resource closure after running SQLite work; do not close its DB underneath it.
+        executor.execute(databaseHelper::close);
+        executor.shutdown();
     }
 }

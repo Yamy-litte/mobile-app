@@ -18,6 +18,15 @@ public final class UserDao {
         return db.insertOrThrow("Users", null, toValues(user));
     }
 
+    /** Update by Auth UID; never REPLACE a parent record referenced by loan history. */
+    public long upsertFromCloud(User user) {
+        if (user==null || user.userId==null || user.userId.trim().isEmpty()) {
+            throw new IllegalArgumentException("userId is required");
+        }
+        int changed=update(user);
+        return changed>0?changed:insert(user);
+    }
+
     public int update(User user) {
         if (user.userId == null || user.userId.trim().isEmpty()) throw new IllegalArgumentException("userId is required");
         return db.update("Users", toValues(user), "userId = ?", new String[]{user.userId});

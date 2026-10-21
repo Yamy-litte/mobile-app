@@ -34,6 +34,10 @@ android {
             }
         }
     }
+    testOptions {
+        unitTests.isIncludeAndroidResources = true
+    }
+
     buildFeatures {
         buildConfig = true
     }

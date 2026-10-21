@@ -21,7 +21,7 @@ import com.google.firebase.firestore.FirebaseFirestore;
 import java.util.HashMap;
 import java.util.Map;
 
-public class ChangePasswordActivity extends AppCompatActivity {
+public class ChangePasswordActivity extends SessionActivity {
     private EditText newPasswordInput;
     private EditText confirmPasswordInput;
     private Button changePasswordButton;
@@ -40,9 +40,16 @@ public class ChangePasswordActivity extends AppCompatActivity {
         PasswordVisibilityToggle.attach(confirmPasswordInput);
         changePasswordButton = findViewById(R.id.buttonChangePassword);
         changePasswordButton.setOnClickListener(v -> changePassword());
+        getOnBackPressedDispatcher().addCallback(this,new androidx.activity.OnBackPressedCallback(true) {
+            @Override public void handleOnBackPressed() { logoutSession(); }
+        });
     }
 
+    @Override protected com.example.libraryonline.data.session.SessionProfile.Role expectedRole() { return com.example.libraryonline.data.session.SessionProfile.Role.READER; }
+    @Override protected boolean allowPasswordChange() { return true; }
+    @Override protected void onSessionAuthorized(com.example.libraryonline.data.session.SessionProfile profile) {}
     private void changePassword() {
+        if(!isSessionReady() || !changePasswordButton.isEnabled())return;
         String password = newPasswordInput.getText().toString();
         String confirmation = confirmPasswordInput.getText().toString();
         if (password.length() < 8) {
@@ -79,14 +86,14 @@ public class ChangePasswordActivity extends AppCompatActivity {
                         Toast.LENGTH_LONG).show();
                 return;
             }
+            if(auth.getCurrentUser()==null || !user.getUid().equals(auth.getCurrentUser().getUid()))return;
             Map<String, Object> updates = new HashMap<>();
             updates.put("mustChangePassword", false);
             updates.put("updatedAt", FieldValue.serverTimestamp());
             firestore.collection("Users").document(user.getUid()).update(updates)
                     .addOnSuccessListener(unused -> {
                         Toast.makeText(this, "Đổi mật khẩu thành công.", Toast.LENGTH_SHORT).show();
-                        startActivity(new Intent(this, ReaderMainActivity.class));
-                        finish();
+                        recheckSession();
                     })
                     .addOnFailureListener(error -> {
                         changePasswordButton.setEnabled(true);
@@ -98,11 +105,4 @@ public class ChangePasswordActivity extends AppCompatActivity {
         });
     }
 
-    @Override
-    public void onBackPressed() {
-        // The first-login password change is mandatory.
-        auth.signOut();
-        startActivity(new Intent(this, LoginActivity.class));
-        finish();
-    }
 }

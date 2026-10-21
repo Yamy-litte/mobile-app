@@ -42,6 +42,7 @@ public class RegisterActivity extends AppCompatActivity {
     private String otpEmail = "";
     private long otpExpiresAt = 0L;
     private boolean emailVerified = false;
+    private boolean submitting, sendingOtp;
     private CountDownTimer resendTimer;
 
     @Override
@@ -94,6 +95,7 @@ public class RegisterActivity extends AppCompatActivity {
     }
 
     private void sendRegistrationOtp() {
+        if(submitting || sendingOtp)return;
         String email = InputValidator.normalizeEmail(emailInput.getText().toString());
         if (!InputValidator.isValidEmail(email)) {
             emailInput.setError("Vui lòng nhập địa chỉ email/Gmail hợp lệ");
@@ -107,6 +109,7 @@ public class RegisterActivity extends AppCompatActivity {
 
         sendOtpButton.setEnabled(false);
         sendOtpButton.setText("Đang gửi...");
+        sendingOtp=true;
         String fullName = nameInput.getText().toString().trim();
         String otp = String.format(Locale.ROOT, "%06d", new SecureRandom().nextInt(1_000_000));
         EmailSender.send(email,
@@ -116,6 +119,7 @@ public class RegisterActivity extends AppCompatActivity {
                         + "Mã có hiệu lực trong 60 giây và chỉ dùng một lần.\n\n"
                         + "Nếu bạn không thực hiện đăng ký, hãy bỏ qua email này.",
                 (success, message) -> {
+                    sendingOtp=false;
                     if (isFinishing() || isDestroyed()) return;
                     if (!success) {
                         sendOtpButton.setEnabled(true);
@@ -151,7 +155,7 @@ public class RegisterActivity extends AppCompatActivity {
             }
             @Override public void onFinish() {
                 resendTimer = null;
-                sendOtpButton.setEnabled(true);
+                sendOtpButton.setEnabled(!submitting && !sendingOtp);
                 sendOtpButton.setText("Gửi OTP");
                 sendOtpButton.setBackgroundTintList(android.content.res.ColorStateList.valueOf(
                         androidx.core.content.ContextCompat.getColor(RegisterActivity.this, R.color.library_blue)));
@@ -164,16 +168,17 @@ public class RegisterActivity extends AppCompatActivity {
     }
 
     private void submitRequest() {
+        if(submitting || sendingOtp)return;
         String fullName = nameInput.getText().toString().trim();
         String email = InputValidator.normalizeEmail(emailInput.getText().toString());
         String phone = InputValidator.normalizeVietnamPhone(phoneInput.getText().toString());
 
-        if (!InputValidator.isNonEmpty(fullName)) {
-            nameInput.setError("Vui lòng nhập họ và tên");
+        if (!InputValidator.isValidFullName(fullName)) {
+            nameInput.setError("Họ và tên phải có từ 2 đến 120 ký tự");
             nameInput.requestFocus();
             return;
         }
-        if (birthDateIso.isEmpty()) {
+        if (!InputValidator.isValidBirthDate(birthDateIso)) {
             birthDateInput.setError("Vui lòng chọn ngày sinh");
             birthDateInput.requestFocus();
             return;
@@ -283,6 +288,11 @@ public class RegisterActivity extends AppCompatActivity {
     }
 
     private void setSubmitting(boolean submitting) {
+        this.submitting=submitting;
+        nameInput.setEnabled(!submitting);birthDateInput.setEnabled(!submitting);
+        emailInput.setEnabled(!submitting);phoneInput.setEnabled(!submitting);
+        otpInput.setEnabled(!submitting);acceptTerms.setEnabled(!submitting);
+        sendOtpButton.setEnabled(!submitting && !sendingOtp && resendTimer==null);
         submitButton.setEnabled(!submitting);
         submitButton.setText(submitting ? "Đang gửi..." : "Gửi yêu cầu đăng ký");
     }

@@ -33,7 +33,7 @@ import java.util.Locale;
 import java.security.SecureRandom;
 import java.util.Map;
 
-public class AdminMainActivity extends AppCompatActivity {
+public class AdminMainActivity extends com.example.libraryonline.ui.auth.SessionActivity {
     private static final String SECONDARY_APP_NAME = "LibraryOnlineSecondaryAuth";
 
     private FirebaseFirestore firestore;
@@ -47,6 +47,7 @@ public class AdminMainActivity extends AppCompatActivity {
     private TextView resetPendingCount, resetEmptyMessage;
     private ListenerRegistration resetRequestsListener;
     private BookCatalogueSyncManager catalogueSyncManager;
+    private Button syncButton;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -70,10 +71,24 @@ public class AdminMainActivity extends AppCompatActivity {
         resetPendingCount = findViewById(R.id.textPasswordResetPendingCount);
         resetEmptyMessage = findViewById(R.id.textEmptyPasswordResetRequests);
         addCatalogueSyncButton();
-        listenForRequests();
-        listenForPasswordResetRequests();
+        findViewById(R.id.buttonAdminLogout).setOnClickListener(v -> logoutSession());
+
     }
 
+    @Override protected com.example.libraryonline.data.session.SessionProfile.Role expectedRole() {
+        return com.example.libraryonline.data.session.SessionProfile.Role.ADMIN;
+    }
+    @Override protected void onSessionAuthorized(com.example.libraryonline.data.session.SessionProfile profile) {
+        ((TextView)findViewById(R.id.textAdminSession)).setText(profile.displayName+" · Admin");
+        listenForRequests();listenForPasswordResetRequests();
+    }
+    @Override protected void onSessionStopped() {
+        if(requestsListener!=null) {requestsListener.remove();requestsListener=null;}
+        if(resetRequestsListener!=null) {resetRequestsListener.remove();resetRequestsListener=null;}
+        if(catalogueSyncManager!=null) {catalogueSyncManager.close();catalogueSyncManager=null;}
+        requestsContainer.removeAllViews();resetRequestsContainer.removeAllViews();
+        if(syncButton!=null){syncButton.setEnabled(true);syncButton.setText("Đồng bộ SQLite ↔ Firestore");}
+    }
     private void addCatalogueSyncButton() {
         android.view.ViewGroup decorContent =
                 (android.view.ViewGroup) findViewById(android.R.id.content);
@@ -86,7 +101,7 @@ public class AdminMainActivity extends AppCompatActivity {
         if (!(content instanceof LinearLayout)) return;
 
         LinearLayout container = (LinearLayout) content;
-        Button syncButton = new Button(this);
+        syncButton = new Button(this);
         syncButton.setText("Đồng bộ SQLite ↔ Firestore");
         syncButton.setTextColor(android.graphics.Color.WHITE);
         syncButton.setBackgroundTintList(android.content.res.ColorStateList.valueOf(
@@ -97,11 +112,12 @@ public class AdminMainActivity extends AppCompatActivity {
         params.bottomMargin = dp(8);
         container.addView(syncButton, Math.min(4, container.getChildCount()), params);
 
-        syncButton.setOnClickListener(v -> new AlertDialog.Builder(this)
+        syncButton.setOnClickListener(v -> privateDialog()
                 .setTitle("Đồng bộ SQLite và Cloud Firestore")
                 .setMessage("Tải thay đổi từ Firestore xuống SQLite và đẩy các đầu sách chỉ có ở SQLite lên Firestore. Nếu mã sách đã tồn tại trên cloud, dữ liệu cloud được ưu tiên để tránh ghi đè dữ liệu mới hơn.")
                 .setNegativeButton("Hủy", (dialog, which) -> dialog.dismiss())
                 .setPositiveButton("Đồng bộ", (dialog, which) -> {
+                    if(!isSessionReady())return;
                     syncButton.setEnabled(false);
                     syncButton.setText("Đang đồng bộ...");
                     if (catalogueSyncManager != null) catalogueSyncManager.close();
@@ -110,7 +126,7 @@ public class AdminMainActivity extends AppCompatActivity {
                             new BookCatalogueSyncManager.SyncListener() {
                         @Override public void onSyncCompleted(int changedRows) {
                             runOnUiThread(() -> {
-                                if (isFinishing() || isDestroyed()) return;
+                                if (!isSessionReady() || isFinishing() || isDestroyed()) return;
                                 syncButton.setEnabled(true);
                                 syncButton.setText("Đồng bộ SQLite ↔ Firestore");
                                 Toast.makeText(AdminMainActivity.this,
@@ -121,7 +137,7 @@ public class AdminMainActivity extends AppCompatActivity {
 
                         @Override public void onSyncFailed(String message) {
                             runOnUiThread(() -> {
-                                if (isFinishing() || isDestroyed()) return;
+                                if (!isSessionReady() || isFinishing() || isDestroyed()) return;
                                 syncButton.setEnabled(true);
                                 syncButton.setText("Đồng bộ SQLite ↔ Firestore");
                                 Toast.makeText(AdminMainActivity.this,
@@ -231,11 +247,12 @@ public class AdminMainActivity extends AppCompatActivity {
             return;
         }
 
-        new AlertDialog.Builder(this)
+        privateDialog()
                 .setTitle("Duyệt yêu cầu quên mật khẩu")
                 .setMessage("Chỉ duyệt nếu họ tên, ngày sinh và số điện thoại khớp hoàn toàn với hồ sơ độc giả. Firebase sẽ gửi email đặt lại mật khẩu đến " + email + ".")
                 .setNegativeButton("Hủy", (dialog, which) -> dialog.dismiss())
                 .setPositiveButton("Xác minh và gửi", (dialog, which) -> {
+                    if(!isSessionReady())return;
                     setResetActionsEnabled(reject, approve, false);
                     firestore.collection("Users").whereEqualTo("email", email).limit(1).get()
                             .addOnSuccessListener(matches -> {
@@ -288,11 +305,12 @@ public class AdminMainActivity extends AppCompatActivity {
         reasonInput.setInputType(InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_FLAG_CAP_SENTENCES);
         int pad = dp(20);
         reasonInput.setPadding(pad, dp(12), pad, dp(12));
-        new AlertDialog.Builder(this)
+        privateDialog()
                 .setTitle("Từ chối yêu cầu quên mật khẩu")
                 .setView(reasonInput)
                 .setNegativeButton("Hủy", (dialog, which) -> dialog.dismiss())
                 .setPositiveButton("Xác nhận từ chối", (dialog, which) -> {
+                    if(!isSessionReady())return;
                     String reason = reasonInput.getText().toString().trim();
                     if (reason.length() < 3 || reason.length() > 500) {
                         Toast.makeText(this, "Lý do từ chối phải từ 3 đến 500 ký tự.", Toast.LENGTH_LONG).show();
@@ -387,12 +405,13 @@ public class AdminMainActivity extends AppCompatActivity {
         reasonInput.setInputType(InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_FLAG_CAP_SENTENCES);
         int pad = dp(20);
         reasonInput.setPadding(pad, dp(12), pad, dp(12));
-        new AlertDialog.Builder(this)
+        privateDialog()
                 .setTitle("Từ chối hồ sơ")
                 .setMessage("Lý do sẽ được lưu cùng yêu cầu đăng ký và gửi email thông báo.")
                 .setView(reasonInput)
                 .setNegativeButton("Hủy", (dialog, which) -> dialog.dismiss())
                 .setPositiveButton("Xác nhận từ chối", (dialog, which) -> {
+                    if(!isSessionReady())return;
                     String reason = reasonInput.getText().toString().trim();
                     if (reason.length() < 3 || reason.length() > 500) {
                         Toast.makeText(this, "Lý do từ chối phải từ 3 đến 500 ký tự.", Toast.LENGTH_LONG).show();
@@ -439,19 +458,20 @@ public class AdminMainActivity extends AppCompatActivity {
             return;
         }
 
-        new AlertDialog.Builder(this)
+        privateDialog()
                 .setTitle("Duyệt hồ sơ thành viên")
                 .setMessage("Duyệt hồ sơ cho " + email
                         + ". Tài khoản dùng mật khẩu tạm ban đầu và bắt buộc đổi ở lần đăng nhập đầu tiên. Tiếp tục?")
                 .setNegativeButton("Hủy", (dialog, which) -> dialog.dismiss())
                 .setPositiveButton("Duyệt", (dialog, which) -> {
+                    if(!isSessionReady())return;
                     setCardActionsEnabled(reject, approve, false);
                     checkDuplicatesThenCreate(doc, fullName, email, phone, reject, approve);
                 }).show();
     }
 
     private void checkDuplicatesThenCreate(DocumentSnapshot doc, String fullName, String email,
-                                           String phone, Button reject, Button approve) {
+                                            String phone, Button reject, Button approve) {
         firestore.collection("Users").whereEqualTo("email", email).limit(1).get()
                 .addOnSuccessListener(emailMatches -> {
                     if (!emailMatches.isEmpty()) {
@@ -474,7 +494,7 @@ public class AdminMainActivity extends AppCompatActivity {
     }
 
     private void createApprovedAccount(DocumentSnapshot request, String fullName, String email,
-                                       String phone, Button reject, Button approve) {
+                                        String phone, Button reject, Button approve) {
         String requestEmail = value(request, "email", "").trim();
         if (!email.equalsIgnoreCase(requestEmail)) {
             failAction(reject, approve, "Email hồ sơ không khớp.");
