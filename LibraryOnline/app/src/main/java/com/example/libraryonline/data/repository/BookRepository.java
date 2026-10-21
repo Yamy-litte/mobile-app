@@ -6,6 +6,7 @@ import android.database.sqlite.SQLiteDatabase;
 import com.example.libraryonline.data.local.dao.BookTitleDao;
 import com.example.libraryonline.data.local.db.DatabaseHelper;
 import com.example.libraryonline.data.model.BookTitle;
+import com.example.libraryonline.remote.firebase.BookCatalogueSyncManager;
 
 import java.util.List;
 
