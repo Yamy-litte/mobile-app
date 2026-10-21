@@ -11,7 +11,7 @@
     <FrameLayout
         android:layout_width="76dp"
         android:layout_height="104dp"
-        android:background="#E6EFE8">
+        android:background="@color/reader_cover_placeholder">
         <ImageView
             android:id="@+id/imageReaderBookCover"
             android:layout_width="match_parent"
@@ -25,7 +25,7 @@
             android:gravity="center"
             android:padding="6dp"
             android:text="MY LIBRARY"
-            android:textColor="#17665B"
+            android:textColor="@color/library_blue"
             android:textSize="10sp"
             android:textStyle="bold" />
     </FrameLayout>
@@ -42,7 +42,7 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="VĂN HỌC"
-            android:textColor="#24776B"
+            android:textColor="@color/library_blue"
             android:textSize="10sp"
             android:textStyle="bold" />
         <TextView
@@ -53,7 +53,7 @@
             android:maxLines="2"
             android:ellipsize="end"
             android:text="Tên sách"
-            android:textColor="#183D38"
+            android:textColor="@color/library_text"
             android:textSize="15sp"
             android:textStyle="bold" />
         <TextView
@@ -64,7 +64,7 @@
             android:maxLines="1"
             android:ellipsize="end"
             android:text="Tác giả"
-            android:textColor="#7C8D86"
+            android:textColor="@color/library_muted"
             android:textSize="12sp" />
         <TextView
             android:id="@+id/textReaderBookAvailability"
@@ -72,7 +72,7 @@
             android:layout_height="wrap_content"
             android:layout_marginTop="8dp"
             android:text="Còn sách"
-            android:textColor="#19734D"
+            android:textColor="@color/library_success"
             android:textSize="11sp"
             android:textStyle="bold" />
     </LinearLayout>
