@@ -13,6 +13,23 @@ public class BookCopyDao {
 
     public long insert(BookCopy x) { return db.insertOrThrow("BookCopies", null, values(x)); }
     public int update(BookCopy x) { return db.update("BookCopies", values(x), "copyId=?", new String[]{x.copyId}); }
+
+    public long upsertFromCloud(BookCopy x) {
+        if (x == null || x.copyId == null || x.copyId.trim().isEmpty()) {
+            throw new IllegalArgumentException("copyId is required");
+        }
+        ContentValues content = values(x);
+        int updated = db.update("BookCopies", content, "copyId=?", new String[]{x.copyId});
+        return updated > 0 ? updated : db.insertOrThrow("BookCopies", null, content);
+    }
+
+    public List<BookCopy> getAll() {
+        List<BookCopy> out = new ArrayList<>();
+        try (Cursor c = db.query("BookCopies", null, null, null, null, null, "copyId ASC")) {
+            while (c.moveToNext()) out.add(read(c));
+        }
+        return out;
+    }
     public BookCopy findById(String id) {
         try (Cursor c = db.query("BookCopies", null, "copyId=?", new String[]{id}, null, null, null)) {
             return c.moveToFirst() ? read(c) : null;
