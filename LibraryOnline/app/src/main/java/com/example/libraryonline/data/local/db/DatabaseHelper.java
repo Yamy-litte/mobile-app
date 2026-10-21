@@ -34,7 +34,6 @@ public final class DatabaseHelper extends SQLiteOpenHelper {
             createBookTitles(db);
             createBookCopies(db);
             seedSampleBooks(db);
-            seedSampleBooks(db);
             createLoanReceipts(db);
             createLoanDetails(db);
             createReservations(db);
