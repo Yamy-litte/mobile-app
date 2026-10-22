@@ -12,10 +12,7 @@ import com.example.libraryonline.data.model.BookTitle;
 import com.example.libraryonline.data.remote.firebase.BookCatalogueSyncManager;
 import com.example.libraryonline.data.remote.firebase.OnlineLoanRequestRepository;
 import com.google.firebase.auth.FirebaseAuth;
-import android.widget.EditText;
 import android.widget.TextView;
-import android.widget.Toast;
-import android.text.InputType;
 import com.example.libraryonline.data.session.*;
 import com.example.libraryonline.ui.auth.SessionActivity;
 import com.google.firebase.firestore.*;
@@ -68,7 +65,10 @@ public class BookDetailActivity extends SessionActivity {
         findViewById(R.id.detailRetry)
                 .setOnClickListener(
                         v -> {
-                            if (isSessionReady()) startCatalogue();
+                            if (isSessionReady()) {
+                                startCatalogue();
+                                listenOnlineRequest(FirebaseAuth.getInstance().getUid());
+                            }
                         });
     }
 
@@ -241,52 +241,8 @@ public class BookDetailActivity extends SessionActivity {
 
     private void openOnlineRequestForm() {
         if (!isSessionReady() || !findViewById(R.id.detailRequestOnline).isEnabled()) return;
-        EditText days = new EditText(this);
-        days.setInputType(InputType.TYPE_CLASS_NUMBER);
-        days.setSingleLine(true);
-        days.setText("14");
-        days.setHint(R.string.online_borrow_choose_days);
-        int padding = (int) (20 * getResources().getDisplayMetrics().density);
-        days.setPadding(padding, padding / 2, padding, padding / 2);
-        privateDialog()
-                .setTitle("Gửi yêu cầu mượn Online")
-                .setMessage("Chọn số ngày muốn mượn. Khi Admin duyệt, bạn có 24 giờ đến nhận sách.")
-                .setView(days)
-                .setNegativeButton("Hủy", null)
-                .setPositiveButton("Gửi yêu cầu", (dialog, which) -> {
-                    int count;
-                    try {
-                        count = Integer.parseInt(days.getText().toString().trim());
-                    } catch (NumberFormatException error) {
-                        Toast.makeText(this, "Hãy nhập số ngày mượn hợp lệ.", Toast.LENGTH_LONG).show();
-                        return;
-                    }
-                    if (count < 1 || count > 60) {
-                        Toast.makeText(this, "Số ngày mượn từ 1 đến 60, theo hạn mức cấu hình.",
-                                Toast.LENGTH_LONG).show();
-                        return;
-                    }
-                    String uid = FirebaseAuth.getInstance().getUid();
-                    if (uid == null || !isSessionReady()) return;
-                    requestSubmitting = true;
-                    updateOnlineButton();
-                    onlineRequests.submit(uid, bookId, count).addOnCompleteListener(this, result -> {
-                        if (!isSessionReady() || isFinishing() || isDestroyed()) return;
-                        requestSubmitting = false;
-                        updateOnlineButton();
-                        if (result.isSuccessful()) {
-                            ((TextView) findViewById(R.id.detailOnlineStatus)).setText(
-                                    "Đã gửi yêu cầu. Chờ Admin kiểm tra và duyệt.");
-                            Toast.makeText(this, "Đã gửi yêu cầu mượn Online.", Toast.LENGTH_LONG).show();
-                        } else {
-                            Exception error = result.getException();
-                            Toast.makeText(this, "Không gửi được: "
-                                    + (error == null ? "Hãy thử lại." : error.getMessage()),
-                                    Toast.LENGTH_LONG).show();
-                        }
-                    });
-                })
-                .show();
+        startActivity(new android.content.Intent(this, ReaderOnlineBorrowActivity.class)
+                .putExtra(EXTRA_BOOK_ID, bookId));
     }
 
     @Override

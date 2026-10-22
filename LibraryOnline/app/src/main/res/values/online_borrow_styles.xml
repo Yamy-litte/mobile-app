@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="online_forest">#195D55</color>
+    <color name="online_tint">#EAF4F0</color>
+    <color name="online_canvas">#FFF9F3</color>
+    <style name="OnlineBorrowChoice">
+        <item name="android:layout_height">48dp</item>
+        <item name="android:textAllCaps">false</item>
+        <item name="android:textSize">14sp</item>
+        <item name="android:minWidth">0dp</item>
+        <item name="android:backgroundTint">@color/online_tint</item>
+        <item name="android:textColor">@color/online_forest</item>
+    </style>
+</resources>

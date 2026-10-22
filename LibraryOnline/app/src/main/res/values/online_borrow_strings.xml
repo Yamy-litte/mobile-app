@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="online_borrow_send_request">Yêu cầu mượn Online</string>
+    <string name="online_borrow_send_request">Mượn Online</string>
     <string name="online_borrow_request_hint">Yêu cầu cần Admin duyệt; sách chưa được giữ trước khi duyệt.</string>
     <string name="online_borrow_choose_days">Số ngày muốn mượn</string>
     <string name="online_borrow_reader_heading">Yêu cầu mượn Online</string>

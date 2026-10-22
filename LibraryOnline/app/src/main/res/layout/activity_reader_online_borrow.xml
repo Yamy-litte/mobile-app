@@ -1,0 +1,121 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/onlineBorrowRoot"
+    android:layout_width="match_parent" android:layout_height="match_parent"
+    android:orientation="vertical" android:background="@color/online_canvas">
+    <LinearLayout android:layout_width="match_parent" android:layout_height="56dp"
+        android:orientation="horizontal" android:gravity="center_vertical"
+        android:paddingHorizontal="16dp">
+        <Button android:id="@+id/onlineBorrowBack"
+            android:layout_width="56dp" android:layout_height="48dp"
+            android:text="←" android:textSize="24sp" android:textAllCaps="false"
+            android:contentDescription="Quay lại chi tiết sách"
+            android:backgroundTint="@color/online_canvas"
+            android:textColor="@color/online_forest"/>
+        <TextView android:layout_width="0dp" android:layout_height="wrap_content"
+            android:layout_weight="1" android:gravity="center_vertical"
+            android:text="Mượn Online" android:textColor="@color/library_text"
+            android:textSize="22sp" android:textStyle="bold"/>
+    </LinearLayout>
+    <ScrollView android:layout_width="match_parent" android:layout_height="0dp"
+        android:layout_weight="1" android:fillViewport="true">
+        <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
+            android:orientation="vertical" android:paddingHorizontal="18dp"
+            android:paddingTop="8dp" android:paddingBottom="24dp">
+            <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
+                android:orientation="horizontal" android:gravity="center_vertical"
+                android:padding="14dp" android:background="@drawable/bg_reader_book_card">
+                <FrameLayout android:layout_width="78dp" android:layout_height="108dp"
+                    android:background="@color/library_accent_background">
+                    <ImageView android:id="@+id/onlineBorrowCover"
+                        android:layout_width="match_parent" android:layout_height="match_parent"
+                        android:contentDescription="@string/book_cover"
+                        android:scaleType="centerCrop"/>
+                    <TextView android:id="@+id/onlineBorrowCoverFallback"
+                        style="@style/CatalogueCaption"
+                        android:layout_height="match_parent" android:gravity="center"
+                        android:text="@string/book_cover_missing" android:padding="4dp"/>
+                </FrameLayout>
+                <LinearLayout android:layout_width="0dp" android:layout_height="wrap_content"
+                    android:layout_weight="1" android:layout_marginStart="14dp"
+                    android:orientation="vertical">
+                    <TextView android:id="@+id/onlineBorrowTitle" style="@style/CatalogueBody"
+                        android:text="Đang tải đầu sách…" android:textStyle="bold"
+                        android:textSize="18sp"/>
+                    <TextView android:id="@+id/onlineBorrowAuthor" style="@style/CatalogueCaption"
+                        android:layout_marginTop="5dp" android:text="Đang tải tác giả…"/>
+                    <TextView android:id="@+id/onlineBorrowIsbn" style="@style/CatalogueCaption"
+                        android:layout_marginTop="5dp" android:text="ISBN —"/>
+                    <TextView android:id="@+id/onlineBorrowAvailability" style="@style/CatalogueCaption"
+                        android:layout_marginTop="9dp" android:textColor="@color/online_forest"
+                        android:text="Đang kiểm tra tồn kho…"/>
+                </LinearLayout>
+            </LinearLayout>
+            <TextView style="@style/CatalogueHeading"
+                android:textSize="19sp" android:text="Bạn muốn mượn bao lâu?"/>
+            <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
+                android:orientation="horizontal" android:padding="4dp"
+                android:background="@color/online_tint">
+                <Button android:id="@+id/onlineBorrowDay3" style="@style/OnlineBorrowChoice"
+                    android:layout_width="0dp" android:layout_weight="1" android:text="3 ngày"/>
+                <Button android:id="@+id/onlineBorrowDay7" style="@style/OnlineBorrowChoice"
+                    android:layout_width="0dp" android:layout_weight="1" android:text="7 ngày"/>
+                <Button android:id="@+id/onlineBorrowDay14" style="@style/OnlineBorrowChoice"
+                    android:layout_width="0dp" android:layout_weight="1" android:text="14 ngày"/>
+            </LinearLayout>
+            <EditText android:id="@+id/onlineBorrowCustomDays"
+                android:layout_width="match_parent" android:layout_height="wrap_content"
+                android:layout_marginTop="8dp" android:padding="8dp" android:minHeight="48dp"
+                android:inputType="number" android:singleLine="true"
+                android:hint="Hoặc nhập số ngày khác theo cấu hình"
+                android:textSize="14sp" android:importantForAutofill="no"/>
+            <TextView android:id="@+id/onlineBorrowSelection"
+                style="@style/CatalogueCaption" android:layout_marginTop="6dp"
+                android:text="Đang kiểm tra thời hạn mượn…"/>
+            <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
+                android:layout_marginTop="18dp" android:padding="16dp"
+                android:orientation="vertical" android:background="@drawable/bg_reader_book_card">
+                <TextView style="@style/CatalogueBody" android:textSize="18sp"
+                    android:textStyle="bold" android:text="Hạn mức của bạn"/>
+                <TextView android:id="@+id/onlineBorrowReader" style="@style/CatalogueCaption"
+                    android:layout_marginTop="10dp" android:text="Đang xác minh thẻ độc giả…"/>
+                <TextView android:id="@+id/onlineBorrowHoldInfo" style="@style/CatalogueCaption"
+                    android:layout_marginTop="10dp" android:lineSpacingExtra="4dp"
+                    android:text="Đang kiểm tra các yêu cầu đã gửi…"/>
+                <TextView android:id="@+id/onlineBorrowLimit" style="@style/CatalogueBody"
+                    android:layout_marginTop="10dp" android:textStyle="bold"
+                    android:textColor="@color/online_forest"
+                    android:text="Đang tải hạn mức…"/>
+            </LinearLayout>
+            <TextView style="@style/CatalogueCaption"
+                android:layout_marginTop="16dp" android:padding="15dp"
+                android:background="@color/online_tint"
+                android:textColor="@color/online_forest"
+                android:text="Đây là yêu cầu mượn, chưa phải đã nhận sách. Khi Admin duyệt, thư viện mới giữ một cuốn Sẵn sàng thành Chờ lấy; bạn có 24 giờ đến quầy nhận. Hạn trả chỉ tính từ khi giao sách thực tế."/>
+            <TextView style="@style/CatalogueCaption"
+                android:layout_marginTop="12dp" android:padding="15dp"
+                android:background="@color/online_tint"
+                android:textColor="@color/online_forest"
+                android:text="Mỗi đầu sách chỉ mượn một cuốn cùng lúc. Thư viện sẽ kiểm tra thẻ, hạn mức, sách quá hạn và lượt mượn hiện có trước khi giao."/>
+            <TextView android:id="@+id/onlineBorrowStatus"
+                style="@style/CatalogueCaption" android:layout_marginTop="14dp"
+                android:accessibilityLiveRegion="polite"
+                android:text="Đang kiểm tra điều kiện gửi yêu cầu…"/>
+            <Button android:id="@+id/onlineBorrowConfirm"
+                android:layout_width="match_parent" android:layout_height="54dp"
+                android:layout_marginTop="16dp" android:backgroundTint="@color/online_forest"
+                android:textColor="@color/white" android:textAllCaps="false"
+                android:textStyle="bold" android:text="Xác nhận mượn Online"/>
+            <TextView style="@style/CatalogueCaption"
+                android:layout_marginTop="8dp" android:textAlignment="center"
+                android:text="Quá 24 giờ sau khi duyệt: yêu cầu hết hạn và giải phóng cuốn sách."/>
+            <Button android:id="@+id/onlineBorrowMyLoans"
+                android:layout_width="match_parent" android:layout_height="48dp"
+                android:layout_marginTop="10dp" android:textAllCaps="false"
+                android:text="Xem yêu cầu đã gửi"
+                android:backgroundTint="@color/online_tint"
+                android:textColor="@color/online_forest"/>
+        </LinearLayout>
+    </ScrollView>
+    <include layout="@layout/view_reader_bottom_navigation" />
+</LinearLayout>
