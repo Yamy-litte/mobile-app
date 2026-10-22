@@ -98,6 +98,7 @@ public final class OnlineLoanRequestRepository {
                 changes.put("reviewedBy", FieldValue.delete());
                 changes.put("reviewedAt", FieldValue.delete());
                 changes.put("rejectionReason", FieldValue.delete());
+                changes.put("notificationId", FieldValue.delete());
                 tx.update(requestRef, changes);
             } else {
                 throw new IllegalArgumentException(
@@ -162,6 +163,8 @@ public final class OnlineLoanRequestRepository {
                             accepted.put("copyId", copyRef.getId());
                             accepted.put("holdUntil", holdUntil);
                             accepted.put("reviewedBy", adminUid);
+                            accepted.put("notificationId",
+                                    notification(requestRef.getId(), attempt, APPROVED).getId());
                             accepted.put("reviewedAt", FieldValue.serverTimestamp());
                             accepted.put("updatedAt", FieldValue.serverTimestamp());
                             tx.update(requestRef, accepted);
@@ -195,6 +198,8 @@ public final class OnlineLoanRequestRepository {
             update.put("status", REJECTED);
             update.put("rejectionReason", reason.trim());
             update.put("reviewedBy", adminUid);
+            update.put("notificationId",
+                    notification(requestId, attempt, REJECTED).getId());
             update.put("reviewedAt", FieldValue.serverTimestamp());
             update.put("updatedAt", FieldValue.serverTimestamp());
             tx.update(requestRef, update);
@@ -231,12 +236,13 @@ public final class OnlineLoanRequestRepository {
                     || title.getLong("totalCopies") == null
                     || title.getLong("availableCopies") >= title.getLong("totalCopies"))
                 throw new IllegalArgumentException("Tồn kho không khớp; không tự động chỉnh sửa.");
-            tx.update(requestRef, "status", EXPIRED, "updatedAt", FieldValue.serverTimestamp());
+            long attempt = request.getLong("attempt") == null ? 1 : request.getLong("attempt");
+            tx.update(requestRef, "status", EXPIRED, "updatedAt", FieldValue.serverTimestamp(),
+                    "notificationId", notification(requestId, attempt, EXPIRED).getId());
             tx.update(copyRef, "copyStatus", "SanSang", "priorityUserId", null,
                     "updatedAt", FieldValue.serverTimestamp());
             tx.update(titleRef, "availableCopies", title.getLong("availableCopies") + 1,
                     "updatedAt", FieldValue.serverTimestamp());
-            long attempt = request.getLong("attempt") == null ? 1 : request.getLong("attempt");
             tx.set(notification(requestId, attempt, EXPIRED),
                     notice(requestId, request.getString("userId"), EXPIRED, attempt,
                             "Yêu cầu mượn Online đã hết hạn",
