@@ -50,6 +50,7 @@ public class AdminManagementActivity extends SessionActivity {
     private EditText searchInput;
     private TextView readersSummary;
     private String readerFilter = "all";
+    private int reportGeneration;
     private LinearLayout resultsContainer;
 
     @Override protected void onCreate(Bundle state) {
@@ -102,6 +103,7 @@ public class AdminManagementActivity extends SessionActivity {
     }
 
     @Override protected void onDestroy() {
+        reportGeneration++;
         if (usersListener != null) { usersListener.remove(); usersListener = null; }
         io.shutdownNow();
         super.onDestroy();
@@ -357,7 +359,10 @@ public class AdminManagementActivity extends SessionActivity {
                     Map<String,Object> updates = new HashMap<>();
                     updates.put("cardStatus", status);
                     updates.put("updatedAt", FieldValue.serverTimestamp());
-                    doc.getReference().update(updates).addOnSuccessListener(x -> toast("Đã cập nhật trạng thái thẻ."))
+                    doc.getReference().update(updates).addOnSuccessListener(x -> {
+                        toast("Đã cập nhật trạng thái thẻ.");
+                        reloadReaderDetails(doc);
+                    })
                             .addOnFailureListener(e -> toast("Không cập nhật được: " + safe(e.getMessage())));
                 }).show();
     }
@@ -381,9 +386,20 @@ public class AdminManagementActivity extends SessionActivity {
                     updates.put("cardExpiryDate", newExpiry);
                     updates.put("cardStatus", "HoatDong");
                     updates.put("updatedAt", FieldValue.serverTimestamp());
-                    doc.getReference().update(updates).addOnSuccessListener(x -> toast("Đã gia hạn thẻ đến " + newExpiry))
+                    doc.getReference().update(updates).addOnSuccessListener(x -> {
+                        toast("Đã gia hạn thẻ đến " + newExpiry);
+                        reloadReaderDetails(doc);
+                    })
                             .addOnFailureListener(e -> toast("Không gia hạn được: " + safe(e.getMessage())));
                 }).show();
+    }
+
+    private void reloadReaderDetails(DocumentSnapshot previous) {
+        if (!isSessionReady()) return;
+        previous.getReference().get().addOnSuccessListener(fresh -> {
+            if (isSessionReady() && fresh.exists() && searchInput == null
+                    && "readers".equals(managementSection())) showReaderDetails(fresh);
+        });
     }
 
     private void showReaderHistory(DocumentSnapshot doc) {
@@ -626,8 +642,10 @@ public class AdminManagementActivity extends SessionActivity {
 
         final int[] period = {0};
         Runnable fetch = () -> {
+            final int requestedPeriod = period[0];
+            final int request = ++reportGeneration;
             for (int i = 0; i < choices.length; i++) {
-                boolean selected = i == period[0];
+                boolean selected = i == requestedPeriod;
                 choices[i].setBackgroundTintList(
                         android.content.res.ColorStateList.valueOf(
                                 getColor(selected ? R.color.admin_screen_primary
@@ -638,10 +656,10 @@ public class AdminManagementActivity extends SessionActivity {
             io.execute(() -> {
                 final ReportSnapshot data;
                 try (DatabaseHelper helper = new DatabaseHelper(getApplicationContext())) {
-                    data = queryPenaltyReport(helper.getReadableDatabase(), period[0]);
+                    data = queryPenaltyReport(helper.getReadableDatabase(), requestedPeriod);
                 } catch (RuntimeException error) {
                     runOnUiThread(() -> {
-                        if (isSessionReady() && !isFinishing()) {
+                        if (isSessionReady() && !isFinishing() && request == reportGeneration) {
                             status.setText("Không đọc được báo cáo SQLite: " + safe(error.getMessage()));
                             collected.setText("—");
                             transactionCount.setText("Không có dữ liệu xác thực");
@@ -654,7 +672,8 @@ public class AdminManagementActivity extends SessionActivity {
                     return;
                 }
                 runOnUiThread(() -> {
-                    if (!isSessionReady() || isFinishing() || isDestroyed()) return;
+                    if (!isSessionReady() || isFinishing() || isDestroyed()
+                            || request != reportGeneration) return;
                     status.setText("Dữ liệu tại thiết bị · " + data.periodLabel);
                     NumberFormat currency = NumberFormat.getIntegerInstance(new Locale("vi", "VN"));
                     collected.setText(currency.format(data.collected) + " đ");
