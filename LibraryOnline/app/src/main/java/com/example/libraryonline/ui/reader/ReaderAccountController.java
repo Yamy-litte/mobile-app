@@ -2,6 +2,13 @@ package com.example.libraryonline.ui.reader;
 
 import android.app.Activity;
 import android.app.AlertDialog;
+import android.graphics.Bitmap;
+import android.view.Window;
+import android.view.WindowManager;
+import android.view.View;
+import android.widget.ImageView;
+import android.widget.LinearLayout;
+import android.widget.TextView;
 import android.content.Intent;
 import android.text.TextUtils;
 import android.util.Patterns;
@@ -10,6 +17,10 @@ import android.widget.Toast;
 
 import com.example.libraryonline.R;
 import com.example.libraryonline.ui.auth.ChangePasswordActivity;
+import com.google.zxing.BarcodeFormat;
+import com.google.zxing.WriterException;
+import com.google.zxing.common.BitMatrix;
+import com.google.zxing.oned.Code128Writer;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
 import com.google.firebase.firestore.FieldValue;
@@ -126,20 +137,93 @@ public final class ReaderAccountController {
             toast("Phiên đăng nhập đã hết. Hãy đăng nhập lại.");
             return;
         }
-        String cardNumber = barcode.isEmpty() ? "Mã thẻ chưa được cấp" : barcode;
-        String message = "HỌ VÀ TÊN\n" + fullName
-                + "\n\nNGÀY SINH\n" + display(dateOfBirth)
-                + "\n\nEMAIL\n" + display(email)
-                + "\n\nSỐ ĐIỆN THOẠI\n" + display(phone)
-                + "\n\nMÃ THẺ ĐỘC GIẢ\n" + cardNumber
-                + "\n\nTRẠNG THÁI\n" + display(cardStatus)
-                + "\n\nHẠN DÙNG\n" + display(cardExpiryDate)
-                + "\n\nĐưa mã thẻ cho thủ thư đối chiếu tại quầy.";
-        new AlertDialog.Builder(activity)
+        if (barcode.trim().isEmpty()) {
+            toast("Thẻ chưa có mã barcode. Vui lòng liên hệ thủ thư.");
+            return;
+        }
+
+        LinearLayout card = new LinearLayout(activity);
+        card.setOrientation(LinearLayout.VERTICAL);
+        int pad = dp(22);
+        card.setPadding(pad, pad, pad, pad);
+        card.setBackgroundColor(android.graphics.Color.WHITE);
+
+        TextView name = cardText(fullName, 22, true);
+        name.setGravity(android.view.Gravity.CENTER);
+        card.addView(name);
+        TextView subtitle = cardText("THẺ THƯ VIỆN MYLIBRARY", 12, true);
+        subtitle.setGravity(android.view.Gravity.CENTER);
+        card.addView(subtitle);
+
+        ImageView barcodeImage = new ImageView(activity);
+        barcodeImage.setContentDescription("Mã barcode thẻ độc giả");
+        barcodeImage.setAdjustViewBounds(true);
+        barcodeImage.setScaleType(ImageView.ScaleType.FIT_CENTER);
+        try {
+            BitMatrix matrix = new Code128Writer().encode(barcode, BarcodeFormat.CODE_128, 900, 220);
+            Bitmap bitmap = Bitmap.createBitmap(matrix.getWidth(), matrix.getHeight(), Bitmap.Config.ARGB_8888);
+            for (int x = 0; x < matrix.getWidth(); x++) {
+                for (int y = 0; y < matrix.getHeight(); y++) {
+                    bitmap.setPixel(x, y, matrix.get(x, y)
+                            ? android.graphics.Color.BLACK : android.graphics.Color.WHITE);
+                }
+            }
+            barcodeImage.setImageBitmap(bitmap);
+            LinearLayout.LayoutParams barcodeParams = new LinearLayout.LayoutParams(
+                    LinearLayout.LayoutParams.MATCH_PARENT, dp(92));
+            barcodeParams.topMargin = dp(12);
+            card.addView(barcodeImage, barcodeParams);
+        } catch (WriterException | IllegalArgumentException error) {
+            toast("Không tạo được barcode thẻ độc giả.");
+            return;
+        }
+
+        TextView number = cardText(barcode, 17, true);
+        number.setGravity(android.view.Gravity.CENTER);
+        card.addView(number);
+        card.addView(cardText("Ngày sinh: " + display(dateOfBirth), 14, false));
+        card.addView(cardText("Điện thoại: " + display(phone), 14, false));
+        card.addView(cardText("Hạn dùng: " + display(cardExpiryDate), 14, false));
+        card.addView(cardText("Trạng thái: " + display(cardStatus), 14, true));
+
+        AlertDialog dialog = new AlertDialog.Builder(activity)
                 .setTitle("Thẻ thư viện số")
-                .setMessage(message)
+                .setView(card)
                 .setPositiveButton("Đóng", null)
-                .show();
+                .create();
+        dialog.setOnShowListener(ignored -> {
+            Window window = dialog.getWindow();
+            if (window != null) {
+                WindowManager.LayoutParams params = window.getAttributes();
+                params.screenBrightness = 1.0f;
+                window.setAttributes(params);
+                window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
+            }
+        });
+        dialog.setOnDismissListener(ignored -> {
+            Window window = dialog.getWindow();
+            if (window != null) {
+                WindowManager.LayoutParams params = window.getAttributes();
+                params.screenBrightness = WindowManager.LayoutParams.BRIGHTNESS_OVERRIDE_NONE;
+                window.setAttributes(params);
+                window.clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
+            }
+        });
+        dialog.show();
+    }
+
+    private TextView cardText(String value, int sizeSp, boolean strong) {
+        TextView text = new TextView(activity);
+        text.setText(value);
+        text.setTextColor(android.graphics.Color.BLACK);
+        text.setTextSize(sizeSp);
+        if (strong) text.setTypeface(null, android.graphics.Typeface.BOLD);
+        text.setPadding(0, dp(7), 0, dp(7));
+        return text;
+    }
+
+    private int dp(int value) {
+        return Math.round(value * activity.getResources().getDisplayMetrics().density);
     }
 
     private boolean isActive() {
