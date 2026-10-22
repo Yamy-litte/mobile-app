@@ -229,6 +229,19 @@ public class CirculationRepositoryTest {
                     "SELECT reservationStatus FROM Reservations WHERE reservationId='reservation-queue-1'", "Ready");
             assertDatabaseValue(context,
                     "SELECT userId FROM Notifications WHERE relatedEntityId='reservation-queue-1'", "reader-2");
+
+            try {
+                repository.borrow("CARD-1", "BOOK-1", 7, "admin-auth-1");
+                throw new AssertionError("A different reader must not borrow a reserved copy");
+            } catch (IllegalArgumentException expected) {
+                assertEquals("Cuốn sách được ưu tiên cho độc giả đặt trước khác.", expected.getMessage());
+            }
+
+            CirculationRepository.OperationResult priorityBorrow =
+                    repository.borrow("CARD-2", "BOOK-1", 7, "admin-auth-1");
+            assertNotNull(priorityBorrow);
+            assertDatabaseValue(context,
+                    "SELECT reservationStatus FROM Reservations WHERE reservationId='reservation-queue-1'", "Completed");
         } finally {
             repository.close();
             context.deleteDatabase(DatabaseHelper.DATABASE_NAME);
