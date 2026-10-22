@@ -83,7 +83,7 @@ public class AdminHomeViewTest {
         screen.findViewById(R.id.actionAdminRegistrations).performClick();
         assertEquals(AdminHomeView.APPROVALS,home.selectedTab());assertTrue(screen.findViewById(R.id.navAdminRequests).isSelected());
         assertEquals(View.VISIBLE,screen.findViewById(R.id.adminRequests).getVisibility());
-        screen.findViewById(R.id.buttonAdminAccount).performClick();
+        screen.findViewById(R.id.navAdminAccount).performClick();
         assertEquals(AdminHomeView.ACCOUNT,home.selectedTab());assertEquals(View.VISIBLE,screen.findViewById(R.id.buttonAdminLogout).getVisibility());
         assertNotNull(screen.findViewById(R.id.textAdminProfileDob));
         assertNotNull(screen.findViewById(R.id.textAdminProfilePhone));
@@ -112,6 +112,14 @@ public class AdminHomeViewTest {
         assertTrue(screen.findViewById(R.id.textAdminProfilePhone) instanceof android.widget.EditText);
         assertTrue(screen.findViewById(R.id.textAdminProfileEmail) instanceof TextView);
         assertFalse(screen.findViewById(R.id.textAdminProfileEmail) instanceof android.widget.EditText);
+    }
+
+    @Test public void subScreensAreSeparateActivityClasses() {
+        assertNotEquals(AdminReadersActivity.class, AdminConfigActivity.class);
+        assertNotEquals(AdminConfigActivity.class, AdminReportsActivity.class);
+        assertTrue(AdminManagementActivity.class.isAssignableFrom(AdminReadersActivity.class));
+        assertTrue(AdminManagementActivity.class.isAssignableFrom(AdminConfigActivity.class));
+        assertTrue(AdminManagementActivity.class.isAssignableFrom(AdminReportsActivity.class));
     }
 
     @Test public void selectedPanelCanBeRestoredAndInvalidStateFallsBackToHome() {
