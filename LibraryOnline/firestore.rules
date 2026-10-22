@@ -58,8 +58,12 @@ service cloud.firestore {
         && request.resource.data.fullName.size() <= 120
         && request.resource.data.email is string
         && request.resource.data.email.size() <= 254
-        && request.resource.data.email.matches('^[^\\\\s@]+@[^\\\\s@]+\\\\.[^\\\\s@]+
-            || request.resource.data.phone.matches('^0(3|5|7|8|9)[0-9]{8}
+        && request.resource.data.email.matches('^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$')
+        && request.resource.data.phone is string
+        && (request.resource.data.phone == ''
+            || request.resource.data.phone.matches('^0(3|5|7|8|9)[0-9]{8}$'))
+        && request.resource.data.updatedAt == request.time;
+    }
 
     match /Users/{userId} {
       allow read: if (signedIn() && request.auth.uid == userId) || isAdmin();
