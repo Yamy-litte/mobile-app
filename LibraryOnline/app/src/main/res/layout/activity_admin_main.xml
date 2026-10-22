@@ -226,6 +226,66 @@
                         style="@style/AdminHeading"
                         android:text="@string/admin_shortcuts" />
                     <LinearLayout
+                        android:id="@+id/actionAdminReaders"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:minHeight="76dp"
+                        android:layout_marginBottom="10dp"
+                        android:orientation="horizontal"
+                        android:gravity="center_vertical"
+                        android:padding="16dp"
+                        android:background="@drawable/bg_admin_card"
+                        android:foreground="?attr/selectableItemBackground"
+                        android:clickable="true"
+                        android:focusable="true">
+                        <ImageView android:layout_width="24dp" android:layout_height="24dp" android:src="@drawable/ic_admin_people" android:importantForAccessibility="no" />
+                        <LinearLayout android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content" android:layout_marginStart="14dp" android:orientation="vertical">
+                            <TextView style="@style/AdminBody" android:text="@string/admin_manage_readers" android:textColor="@color/library_text" android:textSize="16sp" android:textStyle="bold" />
+                            <TextView style="@style/AdminBody" android:layout_marginTop="4dp" android:text="@string/admin_manage_readers_hint" android:textSize="12sp" />
+                        </LinearLayout>
+                        <ImageView android:layout_width="20dp" android:layout_height="20dp" android:src="@drawable/ic_admin_arrow" android:importantForAccessibility="no" />
+                    </LinearLayout>
+                    <LinearLayout
+                        android:id="@+id/actionAdminConfig"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:minHeight="76dp"
+                        android:layout_marginBottom="10dp"
+                        android:orientation="horizontal"
+                        android:gravity="center_vertical"
+                        android:padding="16dp"
+                        android:background="@drawable/bg_admin_card"
+                        android:foreground="?attr/selectableItemBackground"
+                        android:clickable="true"
+                        android:focusable="true">
+                        <ImageView android:layout_width="24dp" android:layout_height="24dp" android:src="@drawable/ic_admin_refresh" android:importantForAccessibility="no" />
+                        <LinearLayout android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content" android:layout_marginStart="14dp" android:orientation="vertical">
+                            <TextView style="@style/AdminBody" android:text="@string/admin_system_config" android:textColor="@color/library_text" android:textSize="16sp" android:textStyle="bold" />
+                            <TextView style="@style/AdminBody" android:layout_marginTop="4dp" android:text="@string/admin_system_config_hint" android:textSize="12sp" />
+                        </LinearLayout>
+                        <ImageView android:layout_width="20dp" android:layout_height="20dp" android:src="@drawable/ic_admin_arrow" android:importantForAccessibility="no" />
+                    </LinearLayout>
+                    <LinearLayout
+                        android:id="@+id/actionAdminReports"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:minHeight="76dp"
+                        android:layout_marginBottom="10dp"
+                        android:orientation="horizontal"
+                        android:gravity="center_vertical"
+                        android:padding="16dp"
+                        android:background="@drawable/bg_admin_card"
+                        android:foreground="?attr/selectableItemBackground"
+                        android:clickable="true"
+                        android:focusable="true">
+                        <ImageView android:layout_width="24dp" android:layout_height="24dp" android:src="@drawable/ic_admin_book" android:importantForAccessibility="no" />
+                        <LinearLayout android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content" android:layout_marginStart="14dp" android:orientation="vertical">
+                            <TextView style="@style/AdminBody" android:text="@string/admin_reports" android:textColor="@color/library_text" android:textSize="16sp" android:textStyle="bold" />
+                            <TextView style="@style/AdminBody" android:layout_marginTop="4dp" android:text="@string/admin_reports_hint" android:textSize="12sp" />
+                        </LinearLayout>
+                        <ImageView android:layout_width="20dp" android:layout_height="20dp" android:src="@drawable/ic_admin_arrow" android:importantForAccessibility="no" />
+                    </LinearLayout>
+                    <LinearLayout
                         android:id="@+id/actionAdminRegistrations"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
@@ -554,19 +614,12 @@
                     </LinearLayout>
                     <TextView
                         style="@style/AdminHeading"
-                        android:text="@string/admin_tools_heading" />
+                        android:text="@string/admin_session_heading" />
                     <Button
                         android:id="@+id/buttonAdminSync"
                         android:layout_width="match_parent"
                         android:layout_height="52dp"
                         android:text="@string/admin_sync"
-                        android:textAllCaps="false" />
-                    <Button
-                        android:id="@+id/buttonAdminManagement"
-                        android:layout_width="match_parent"
-                        android:layout_height="52dp"
-                        android:layout_marginTop="8dp"
-                        android:text="@string/admin_management_shortcut"
                         android:textAllCaps="false" />
                     <TextView
                         android:id="@+id/textAdminSessionNote"
