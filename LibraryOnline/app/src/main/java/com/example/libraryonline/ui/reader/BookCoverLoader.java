@@ -1,6 +1,7 @@
 package com.example.libraryonline.ui.reader;
 
 import android.graphics.drawable.Drawable;
+import android.net.Uri;
 import android.util.Log;
 import android.view.View;
 import android.widget.ImageView;
@@ -12,6 +13,7 @@ import com.bumptech.glide.load.HttpException;
 import com.bumptech.glide.load.engine.GlideException;
 import com.bumptech.glide.request.RequestListener;
 import com.bumptech.glide.request.target.Target;
+import java.io.File;
 
 /** Cached image requests bound to the target view and its Activity lifecycle. */
 public final class BookCoverLoader {
@@ -25,8 +27,21 @@ public final class BookCoverLoader {
         fallback.setVisibility(View.VISIBLE);
         if (address == null || address.trim().isEmpty()) return;
 
+        String source = address.trim();
+        Uri uri = Uri.parse(source);
+        Object model = source;
+        if ("file".equalsIgnoreCase(uri.getScheme())) {
+            String path = uri.getPath();
+            // Robolectric on Windows may represent file:///C:/... with a leading slash.
+            // Java then treats /C:/... as a root-relative path rather than drive C.
+            if (path != null && path.matches("^/[A-Za-z]:/.*")) {
+                path = path.substring(1);
+            }
+            model = path == null ? source : new File(path);
+        }
+
         Glide.with(image)
-                .load(address.trim())
+                .load(model)
                 .timeout(20_000)
                 .centerCrop()
                 .listener(

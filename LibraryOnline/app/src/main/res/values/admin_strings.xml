@@ -38,4 +38,23 @@
     <string name="admin_refresh_requests">Làm mới yêu cầu</string>
     <string name="admin_rejection_reason_hint">Nhập lý do từ chối</string>
     <string name="admin_request_reject">Từ chối</string>
+
+    <string name="circulation_heading">Mượn và trả sách tại quầy</string>
+    <string name="circulation_manual_notice">Nhập mã vạch thẻ độc giả và mã vạch cuốn sách. Màn hình này dùng nhập mã thủ công, chưa tích hợp camera quét. Giao dịch được ghi vào SQLite trên thiết bị; chưa xác nhận đồng bộ Firebase.</string>
+    <string name="circulation_reader_barcode_label">Mã vạch thẻ độc giả</string>
+    <string name="circulation_reader_barcode_hint">Nhập mã thẻ độc giả</string>
+    <string name="circulation_copy_barcode_label">Mã vạch cuốn sách</string>
+    <string name="circulation_copy_barcode_hint">Nhập mã cuốn sách</string>
+    <string name="circulation_loan_days_label">Số ngày mượn</string>
+    <string name="circulation_loan_days_hint">Không vượt cấu hình hệ thống</string>
+    <string name="circulation_default_days">7</string>
+    <string name="circulation_borrow">Ghi nhận mượn</string>
+    <string name="circulation_return">Nhận trả</string>
+    <string name="circulation_idle">Kết quả giao dịch sẽ hiển thị tại đây.</string>
+
+
+    <string name="circulation_penalty_id_label">Mã khoản phạt</string>
+    <string name="circulation_penalty_id_hint">Tự điền sau khi nhận trả trễ hoặc nhập mã khoản phạt</string>
+    <string name="circulation_collect_fine">Đã thu tiền mặt</string>
+
 </resources>

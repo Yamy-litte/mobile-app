@@ -63,6 +63,7 @@ dependencies {
     // Code 128 labels only; no camera/scanner or network dependency.
     implementation("com.google.zxing:core:3.5.3")
     implementation(libs.material)
+    implementation(libs.work.runtime)
 
     implementation(platform(libs.firebase.bom))
     implementation(libs.firebase.auth)

@@ -46,6 +46,7 @@ public class AdminMainActivity extends com.example.libraryonline.ui.auth.Session
     private BookCatalogueSyncManager catalogueSyncManager;
     private Button syncButton;
     private AdminHomeView homeView;
+    private CirculationPanelController circulationController;
     private long dashboardGeneration, requestsGeneration;
     private Integer registrationCount, resetCount;
     private boolean registrationCached, resetCached, registrationError, resetError;
@@ -81,6 +82,7 @@ public class AdminMainActivity extends com.example.libraryonline.ui.auth.Session
                                         .getIntExtra(AdminNavigation.EXTRA_TAB, AdminHomeView.HOME)
                                 : savedInstanceState.getInt("adminTab", AdminHomeView.HOME),
                         this::openInventory);
+        circulationController = new CirculationPanelController(this);
         getIntent().removeExtra(AdminNavigation.EXTRA_TAB);
         androidx.core.view.ViewCompat.setOnApplyWindowInsetsListener(
                 findViewById(R.id.adminRoot),
@@ -1115,6 +1117,10 @@ public class AdminMainActivity extends com.example.libraryonline.ui.auth.Session
 
     @Override
     protected void onDestroy() {
+        if (circulationController != null) {
+            circulationController.close();
+            circulationController = null;
+        }
         if (requestsListener != null) requestsListener.remove();
         if (resetRequestsListener != null) resetRequestsListener.remove();
         if (catalogueSyncManager != null) catalogueSyncManager.close();
