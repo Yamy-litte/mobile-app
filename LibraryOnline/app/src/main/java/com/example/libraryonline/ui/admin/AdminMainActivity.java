@@ -175,6 +175,8 @@ public class AdminMainActivity extends com.example.libraryonline.ui.auth.Session
         else if ("config".equals(section)) screen = AdminConfigActivity.class;
         else if ("reports".equals(section)) screen = AdminReportsActivity.class;
         else return;
+        // Returning from each dedicated detail screen goes to the Management hub.
+        homeView.show(AdminHomeView.REQUESTS);
         startActivity(new android.content.Intent(this, screen));
     }
 
@@ -199,7 +201,7 @@ public class AdminMainActivity extends com.example.libraryonline.ui.auth.Session
                                     ? "Quản trị viên" : profile.displayName.trim())
                             : name.trim();
                     adminPhone = phone == null ? "" : phone.trim();
-                    adminBirthDate = dob == null ? "" : dob.trim();
+                    adminBirthDate = normalizeAdminBirthDate(dob);
                     ((TextView) findViewById(R.id.textAdminProfileName)).setText(adminDisplayName);
                     ((TextView) findViewById(R.id.textAdminProfileImmutableName)).setText(adminDisplayName);
                     ((TextView) findViewById(R.id.textAdminSession)).setText("Admin " + adminDisplayName);
@@ -210,7 +212,8 @@ public class AdminMainActivity extends com.example.libraryonline.ui.auth.Session
                     ((TextView) findViewById(R.id.textAdminProfilePhone)).setText(adminPhone);
                     ((TextView) findViewById(R.id.textAdminProfileDob)).setText(adminBirthDate);
                     String authEmail = auth.getCurrentUser() == null ? profile.email : auth.getCurrentUser().getEmail();
-                    String shownEmail = email == null || email.trim().isEmpty() ? authEmail : email.trim();
+                    String shownEmail = authEmail == null || authEmail.trim().isEmpty()
+                            ? (email == null ? "" : email.trim()) : authEmail.trim();
                     ((TextView) findViewById(R.id.textAdminProfileEmail)).setText(
                             shownEmail == null || shownEmail.isEmpty()
                                     ? getString(R.string.admin_profile_unavailable) : shownEmail);
@@ -219,6 +222,16 @@ public class AdminMainActivity extends com.example.libraryonline.ui.auth.Session
                     if (!isSessionReady()) return;
                     showAdminProfileStatus("Không tải được hồ sơ quản trị. Kiểm tra mạng rồi thử lại.", true);
                 });
+    }
+
+    /** Normalize older DD/MM/YYYY Admin profiles without changing their stored field. */
+    private static String normalizeAdminBirthDate(String raw) {
+        if (raw == null) return "";
+        String value = raw.trim();
+        if (value.matches("[0-9]{2}/[0-9]{2}/[0-9]{4}"))
+            return value.substring(6, 10) + "-" + value.substring(3, 5) + "-"
+                    + value.substring(0, 2);
+        return value;
     }
 
     /** Select date from a picker; Firestore stores YYYY-MM-DD. */
@@ -317,7 +330,7 @@ public class AdminMainActivity extends com.example.libraryonline.ui.auth.Session
                         oldBirth = doc.getString("birthDate");
                     if (oldBirth == null || oldBirth.trim().isEmpty())
                         oldBirth = doc.getString("dob");
-                    oldBirth = oldBirth == null ? "" : oldBirth.trim();
+                    oldBirth = normalizeAdminBirthDate(oldBirth);
 
                     Map<String, Object> updates = new HashMap<>();
                     updates.put("fullName", name);
