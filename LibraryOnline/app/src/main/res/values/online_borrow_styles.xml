@@ -5,7 +5,7 @@
         <item name="android:textAllCaps">false</item>
         <item name="android:textSize">14sp</item>
         <item name="android:minWidth">0dp</item>
-        <item name="android:backgroundTint">@color/online_tint</item>
-        <item name="android:textColor">@color/online_forest</item>
+        <item name="android:backgroundTint">@color/library_accent_background</item>
+        <item name="android:textColor">@color/library_blue</item>
     </style>
 </resources>
