@@ -113,38 +113,19 @@ public class AdminManagementActivity extends SessionActivity {
         if (!isSessionReady()) return;
         clearContent("Tìm độc giả", "Tìm theo họ tên hoặc số điện thoại. Thẻ được quản lý trên Firestore.");
         readerFilter = "all";
-        searchInput = new EditText(this);
-        searchInput.setSingleLine(true);
-        searchInput.setHint("Tìm theo tên / SĐT");
+        View screen = getLayoutInflater().inflate(R.layout.view_admin_reader_list, content, false);
+        content.addView(screen);
+        searchInput = screen.findViewById(R.id.adminReaderSearch);
         searchInput.setText(searchText);
-        searchInput.setTextColor(getColor(R.color.admin_screen_ink));
-        searchInput.setTextSize(14);
-        searchInput.setBackgroundResource(R.drawable.bg_admin_screen_field);
-        searchInput.setCompoundDrawablesWithIntrinsicBounds(R.drawable.ic_inventory_search, 0, 0, 0);
-        searchInput.setCompoundDrawablePadding(dp(10));
-        searchInput.setPadding(dp(16), 0, dp(16), 0);
-        content.addView(searchInput, new LinearLayout.LayoutParams(-1, dp(52)));
-
-        readersSummary = text("Đang tải danh sách độc giả...", 13, false);
-        readersSummary.setBackgroundResource(R.drawable.bg_admin_screen_readonly);
-        readersSummary.setPadding(dp(12), dp(10), dp(12), dp(10));
-        content.addView(readersSummary, matchWrap());
-
-        android.widget.HorizontalScrollView filterScroll = new android.widget.HorizontalScrollView(this);
-        filterScroll.setHorizontalScrollBarEnabled(false);
-        LinearLayout chips = new LinearLayout(this);
-        chips.setOrientation(LinearLayout.HORIZONTAL);
+        readersSummary = screen.findViewById(R.id.adminReaderSummary);
+        resultsContainer = screen.findViewById(R.id.adminReaderResults);
         String[] keys = {"all", "active", "expired", "locked"};
-        String[] labels = {"Tất cả", "Hoạt động", "Hết hạn", "Bị khóa"};
+        int[] ids = {R.id.adminReaderFilter0, R.id.adminReaderFilter1,
+                R.id.adminReaderFilter2, R.id.adminReaderFilter3};
         java.util.List<Button> choices = new java.util.ArrayList<>();
         for (int i = 0; i < keys.length; i++) {
             final String key = keys[i];
-            Button chip = button(labels[i]);
-            chip.setTextSize(12);
-            chip.setMinHeight(dp(42));
-            LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(-2, dp(42));
-            lp.setMargins(0, dp(7), dp(8), dp(8));
-            chips.addView(chip, lp);
+            Button chip = screen.findViewById(ids[i]);
             choices.add(chip);
             chip.setOnClickListener(v -> {
                 readerFilter = key;
@@ -153,13 +134,6 @@ public class AdminManagementActivity extends SessionActivity {
             });
         }
         styleReaderFilterChips(choices, keys);
-        filterScroll.addView(chips);
-        content.addView(filterScroll, matchWrap());
-
-        resultsContainer = new LinearLayout(this);
-        resultsContainer.setOrientation(LinearLayout.VERTICAL);
-        content.addView(resultsContainer, matchWrap());
-
         searchInput.addTextChangedListener(new android.text.TextWatcher() {
             @Override public void beforeTextChanged(CharSequence text, int start, int count, int after) {}
             @Override public void onTextChanged(CharSequence text, int start, int before, int count) {
@@ -264,83 +238,73 @@ public class AdminManagementActivity extends SessionActivity {
             if ("expired".equals(readerFilter) && (!isExpired || isLocked)) continue;
             if ("locked".equals(readerFilter) && !isLocked) continue;
             visible++;
-            LinearLayout card = panel();
-            LinearLayout.LayoutParams margins = matchWrap();
-            margins.bottomMargin = dp(10);
-            resultsContainer.addView(card, margins);
-            TextView heading = text(name.isEmpty() ? "Độc giả" : name, 17, true);
-            card.addView(heading, matchWrap());
-            TextView status = text("Mã thẻ: " + value(doc, "barcode") + " · "
-                            + (isLocked ? "Bị khóa" : isExpired ? "Hết hạn" : "Hoạt động"),
-                    13, true);
+            View card = getLayoutInflater().inflate(
+                    R.layout.item_admin_reader_profile, resultsContainer, false);
+            resultsContainer.addView(card);
+            ((TextView) card.findViewById(R.id.adminReaderCardName))
+                    .setText(name.isEmpty() ? "Độc giả" : name);
+            TextView status = card.findViewById(R.id.adminReaderCardStatus);
+            status.setText("Mã thẻ: " + value(doc, "barcode") + " · "
+                    + (isLocked ? "Bị khóa" : isExpired ? "Hết hạn" : "Hoạt động"));
             status.setTextColor(getColor(isLocked ? R.color.admin_screen_red
                     : isExpired ? R.color.admin_screen_orange : R.color.admin_screen_green));
-            card.addView(status, matchWrap());
-            card.addView(text("Email: " + value(doc, "email"), 13, false), matchWrap());
-            card.addView(text("SĐT: " + (phone.isEmpty() ? "Chưa cập nhật" : phone), 13, false), matchWrap());
-            card.addView(text("Hạn thẻ: " + (expiry.isEmpty() ? "Chưa cập nhật" : expiry), 12, false), matchWrap());
-            Button open = button("Xem hồ sơ");
-            open.setOnClickListener(v -> showReaderDetails(doc));
-            card.addView(open, matchWrap());
+            ((TextView) card.findViewById(R.id.adminReaderCardEmail))
+                    .setText("Email: " + value(doc, "email"));
+            ((TextView) card.findViewById(R.id.adminReaderCardPhone))
+                    .setText("SĐT: " + (phone.isEmpty() ? "Chưa cập nhật" : phone));
+            ((TextView) card.findViewById(R.id.adminReaderCardExpiry))
+                    .setText("Hạn thẻ: " + (expiry.isEmpty() ? "Chưa cập nhật" : expiry));
+            card.findViewById(R.id.adminReaderCardOpen)
+                    .setOnClickListener(v -> showReaderDetails(doc));
         }
         readersSummary.setText("Tổng: " + users.size()
                 + "  |  Hoạt động: " + active
                 + "  |  Hết hạn: " + expired
                 + "  |  Bị khóa: " + locked);
-        if (visible == 0)
-            resultsContainer.addView(text("Không tìm thấy độc giả phù hợp.", 14, false), matchWrap());
+        if (visible == 0) {
+            TextView empty = (TextView) getLayoutInflater().inflate(
+                    R.layout.view_ui_text_secondary, resultsContainer, false);
+            empty.setText("Không tìm thấy độc giả phù hợp.");
+            resultsContainer.addView(empty);
+        }
     }
 
     /** Detail sub-screen from Figma; only card status/expiry are mutable for readers. */
     private void showReaderDetails(DocumentSnapshot doc) {
         if (!isSessionReady()) return;
         clearContent("Hồ sơ độc giả", "Chi tiết thẻ và lịch sử được ghi trên thiết bị.");
-        Button back = button("← Trở về danh sách độc giả");
-        back.setOnClickListener(v -> showReaders());
-        content.addView(back, matchWrap());
-
-        LinearLayout card = panel();
-        content.addView(card, matchWrap());
-        card.addView(text(value(doc, "fullName"), 21, true), matchWrap());
-        card.addView(text("Mã thẻ: " + value(doc, "barcode"), 14, true), matchWrap());
+        View screen = getLayoutInflater().inflate(R.layout.view_admin_reader_detail, content, false);
+        content.addView(screen);
+        screen.findViewById(R.id.adminReaderDetailBack).setOnClickListener(v -> showReaders());
+        ((TextView) screen.findViewById(R.id.adminReaderDetailName))
+                .setText(value(doc, "fullName"));
+        ((TextView) screen.findViewById(R.id.adminReaderDetailBarcode))
+                .setText("Mã thẻ: " + value(doc, "barcode"));
         String status = value(doc, "cardStatus");
-        TextView state = text("Trạng thái: " + ("BiKhoa".equals(status) ? "Bị khóa" : "HoatDong".equals(status) ? "Hoạt động" : status),
-                14, true);
+        TextView state = screen.findViewById(R.id.adminReaderDetailStatus);
+        state.setText("Trạng thái: " + ("BiKhoa".equals(status) ? "Bị khóa"
+                : "HoatDong".equals(status) ? "Hoạt động" : status));
         state.setTextColor(getColor("BiKhoa".equals(status)
                 ? R.color.admin_screen_red : R.color.admin_screen_green));
-        card.addView(state, matchWrap());
-        card.addView(text("Hiệu lực đến: " + value(doc, "cardExpiryDate"), 13, false), matchWrap());
-
-        LinearLayout identity = panel();
-        content.addView(identity, matchWrap());
-        identity.addView(text("Thông tin độc giả", 17, true), matchWrap());
-        identity.addView(text("Email: " + value(doc, "email"), 14, false), matchWrap());
-        identity.addView(text("Số điện thoại: " + value(doc, "phone"), 14, false), matchWrap());
-        identity.addView(text("Ngày sinh: " + value(doc, "dateOfBirth"), 14, false), matchWrap());
-
-        Button history = button("Xem lịch sử mượn và các khoản phạt");
-        history.setOnClickListener(v -> showReaderHistory(doc));
-        content.addView(history, matchWrap());
-
-        Button lock = button("BiKhoa".equals(status) ? "Mở khóa thẻ" : "Khóa thẻ thủ công");
-        lock.setOnClickListener(v -> updateCardStatus(doc, "BiKhoa".equals(status) ? "HoatDong" : "BiKhoa"));
-        content.addView(lock, matchWrap());
-        Button renew = button("Gia hạn thẻ thêm 1 năm");
-        renew.setOnClickListener(v -> renewCard(doc));
-        content.addView(renew, matchWrap());
-
-        TextView note = text("Hồ sơ cloud và lịch sử SQLite có phạm vi dữ liệu khác nhau. "
-                + "Việc khóa thẻ và gia hạn cần xác nhận trước khi cập nhật Firestore.", 12, false);
-        content.addView(note, matchWrap());
+        ((TextView) screen.findViewById(R.id.adminReaderDetailExpiry))
+                .setText("Hiệu lực đến: " + value(doc, "cardExpiryDate"));
+        ((TextView) screen.findViewById(R.id.adminReaderDetailEmail))
+                .setText("Email: " + value(doc, "email"));
+        ((TextView) screen.findViewById(R.id.adminReaderDetailPhone))
+                .setText("Số điện thoại: " + value(doc, "phone"));
+        ((TextView) screen.findViewById(R.id.adminReaderDetailBirth))
+                .setText("Ngày sinh: " + value(doc, "dateOfBirth"));
+        screen.findViewById(R.id.adminReaderDetailHistory)
+                .setOnClickListener(v -> showReaderHistory(doc));
+        Button lock = screen.findViewById(R.id.adminReaderDetailLock);
+        lock.setText("BiKhoa".equals(status) ? "Mở khóa thẻ" : "Khóa thẻ thủ công");
+        lock.setOnClickListener(v -> updateCardStatus(doc,
+                "BiKhoa".equals(status) ? "HoatDong" : "BiKhoa"));
+        screen.findViewById(R.id.adminReaderDetailRenew)
+                .setOnClickListener(v -> renewCard(doc));
     }
 
-    private LinearLayout panel() {
-        LinearLayout box = new LinearLayout(this);
-        box.setOrientation(LinearLayout.VERTICAL);
-        box.setPadding(dp(15), dp(15), dp(15), dp(15));
-        box.setBackgroundResource(R.drawable.bg_admin_screen_card);
-        return box;
-    }
+
 
     private void updateCardStatus(DocumentSnapshot doc, String status) {
         if (!isSessionReady()) return;
