@@ -391,35 +391,23 @@ public class AdminManagementActivity extends SessionActivity {
 
     private void showConfig() {
         clearContent("Cấu hình thư viện", "Thay đổi hạn mức mượn; các quy tắc khác chỉ đọc như bản thiết kế.");
-        TextView source = text("Đang kiểm tra cấu hình Firestore...", 13, false);
-        source.setBackgroundResource(R.drawable.bg_admin_screen_readonly);
-        source.setPadding(dp(12), dp(11), dp(12), dp(11));
-        content.addView(source, matchWrap());
+        View screen = getLayoutInflater().inflate(R.layout.view_admin_config_panel, content, false);
+        content.addView(screen);
+        TextView source = screen.findViewById(R.id.adminConfigSource);
+        EditText maxBooks = screen.findViewById(R.id.adminConfigBooksInput);
+        EditText maxDays = screen.findViewById(R.id.adminConfigDaysInput);
+        bindNumberStepper(screen, R.id.adminConfigBooksMinus, R.id.adminConfigBooksPlus,
+                maxBooks, 1, 20);
+        bindNumberStepper(screen, R.id.adminConfigDaysMinus, R.id.adminConfigDaysPlus,
+                maxDays, 1, 60);
+        TextView holdOnline = screen.findViewById(R.id.adminConfigOnlineHold);
+        TextView holdReservation = screen.findViewById(R.id.adminConfigReserve);
+        TextView lateFee = screen.findViewById(R.id.adminConfigLateFee);
+        TextView multiplier = screen.findViewById(R.id.adminConfigMultiplier);
+        Button save = screen.findViewById(R.id.adminConfigSave);
+        save.setEnabled(false);
 
-        LinearLayout form = panel();
-        form.addView(text("Hạn mức mượn", 19, true), matchWrap());
-        EditText maxBooks = numericInput("Số cuốn tối đa / độc giả");
-        EditText maxDays = numericInput("Số ngày mượn tối đa");
-        addNumberStepper(form, "Số cuốn tối đa / độc giả", maxBooks, 1, 20);
-        addNumberStepper(form, "Số ngày mượn tối đa", maxDays, 1, 60);
-        TextView help = text(
-                "Tính cả sách đang mượn và yêu cầu Online chờ lấy. Tổng không được vượt hạn mức.",
-                12, false);
-        form.addView(help, matchWrap());
-        content.addView(form, matchWrap());
 
-        LinearLayout fixed = panel();
-        fixed.addView(text("Quy tắc cố định · Chỉ đọc", 18, true), matchWrap());
-        TextView holdOnline = text("", 14, false);
-        TextView holdReservation = text("", 14, false);
-        TextView lateFee = text("", 14, false);
-        TextView multiplier = text("", 14, false);
-        // Reservation priority and the old automatic lost-book multiplier are
-        // intentionally not exposed in the revised UI. Keep the corresponding
-        // legacy config fields intact so existing Firestore/SQLite data survives.
-        for (TextView v : new TextView[]{holdOnline, lateFee})
-            fixed.addView(v, matchWrap());
-        content.addView(fixed, matchWrap());
 
         SystemConfig local;
         try (com.example.libraryonline.data.repository.SystemConfigRepository repository =
@@ -449,12 +437,7 @@ public class AdminManagementActivity extends SessionActivity {
         // Never overwrite legacy/hidden fields with stale local defaults.
         // The Admin must first verify server configuration before saving.
         final boolean[] existingCloudConfig = {false};
-        Button save = button("Lưu cấu hình");
-        save.setEnabled(false);
-        content.addView(save, matchWrap());
-        TextView notice = text("Giới hạn mới chỉ có hiệu lực sau khi Firestore xác nhận lưu.",
-                12, false);
-        content.addView(notice, matchWrap());
+
 
         firestore.collection("SystemConfigs").document("default")
                 .get(com.google.firebase.firestore.Source.SERVER)
@@ -547,25 +530,14 @@ public class AdminManagementActivity extends SessionActivity {
         });
     }
 
-    private void addNumberStepper(LinearLayout parent, String title,
-                                  EditText field, int min, int max) {
-        parent.addView(text(title, 14, true), matchWrap());
-        LinearLayout controls = new LinearLayout(this);
-        controls.setOrientation(LinearLayout.HORIZONTAL);
-        controls.setGravity(android.view.Gravity.CENTER_VERTICAL);
-        Button less = button("−");
-        Button more = button("+");
-        less.setContentDescription("Giảm " + title);
-        more.setContentDescription("Tăng " + title);
-        controls.addView(less, new LinearLayout.LayoutParams(dp(46), dp(48)));
-        field.setGravity(android.view.Gravity.CENTER);
-        field.setBackgroundResource(R.drawable.bg_admin_screen_field);
-        controls.addView(field, new LinearLayout.LayoutParams(0, dp(48), 1));
-        controls.addView(more, new LinearLayout.LayoutParams(dp(46), dp(48)));
-        less.setOnClickListener(v -> field.setText(String.valueOf(Math.max(min, parse(field) - 1))));
-        more.setOnClickListener(v -> field.setText(String.valueOf(Math.min(max,
-                Math.max(min - 1, parse(field)) + 1))));
-        parent.addView(controls, matchWrap());
+    private void bindNumberStepper(View screen, int minusId, int plusId,
+                                   EditText field, int min, int max) {
+        Button less = screen.findViewById(minusId);
+        Button more = screen.findViewById(plusId);
+        less.setOnClickListener(v -> field.setText(
+                String.valueOf(Math.max(min, parse(field) - 1))));
+        more.setOnClickListener(v -> field.setText(
+                String.valueOf(Math.min(max, Math.max(min - 1, parse(field)) + 1))));
     }
 
     private void updateFixedConfigLabels(TextView online, TextView reservation,
@@ -579,54 +551,22 @@ public class AdminManagementActivity extends SessionActivity {
 
     private void showReports() {
         clearContent("Báo cáo thu phạt", "Dữ liệu SQLite trên thiết bị · Không phải tổng hợp toàn hệ thống");
-        TextView status = text("Đang tải các khoản thu trên thiết bị...", 13, false);
-        status.setBackgroundResource(R.drawable.bg_admin_screen_readonly);
-        status.setPadding(dp(11), dp(10), dp(11), dp(10));
-        content.addView(status, matchWrap());
+        View screen = getLayoutInflater().inflate(R.layout.view_admin_reports_panel, content, false);
+        content.addView(screen);
+        TextView status = screen.findViewById(R.id.adminReportStatus);
+        TextView collected = screen.findViewById(R.id.adminReportCollected);
+        TextView transactionCount = screen.findViewById(R.id.adminReportTransactions);
+        TextView outstanding = screen.findViewById(R.id.adminReportDebtTotal);
+        LinearLayout bars = screen.findViewById(R.id.adminReportBars);
+        TextView recent = screen.findViewById(R.id.adminReportRecent);
+        TextView debts = screen.findViewById(R.id.adminReportUnpaid);
+        Button refresh = screen.findViewById(R.id.adminReportRefresh);
+        final Button[] choices = {
+                screen.findViewById(R.id.adminReportPeriod0),
+                screen.findViewById(R.id.adminReportPeriod1),
+                screen.findViewById(R.id.adminReportPeriod2)
+        };
 
-        LinearLayout tabs = new LinearLayout(this);
-        tabs.setOrientation(LinearLayout.HORIZONTAL);
-        tabs.setBackgroundResource(R.drawable.bg_admin_screen_readonly);
-        final Button[] choices = new Button[3];
-        final String[] labels = {"Ngày", "Tuần", "Tháng"};
-        content.addView(tabs, matchWrap());
-
-        LinearLayout totals = panel();
-        TextView heading = text("Tiền phạt đã thu", 16, true);
-        TextView collected = text("—", 29, true);
-        collected.setTextColor(getColor(R.color.admin_screen_primary));
-        TextView transactionCount = text("Đang tải số giao dịch...", 13, false);
-        TextView outstanding = text("Nợ chờ thu: —", 14, true);
-        totals.addView(heading, matchWrap());
-        totals.addView(collected, matchWrap());
-        totals.addView(transactionCount, matchWrap());
-        totals.addView(outstanding, matchWrap());
-        content.addView(totals, matchWrap());
-
-        LinearLayout trend = panel();
-        trend.addView(text("Đã thu trong 7 ngày gần nhất", 17, true), matchWrap());
-        LinearLayout bars = new LinearLayout(this);
-        bars.setOrientation(LinearLayout.HORIZONTAL);
-        bars.setGravity(android.view.Gravity.BOTTOM);
-        trend.addView(bars, matchWrap());
-        content.addView(trend, matchWrap());
-
-        LinearLayout recentCard = panel();
-        recentCard.addView(text("Khoản đã thu", 17, true), matchWrap());
-        TextView recent = text("Đang tải...", 13, false);
-        recent.setLineSpacing(dp(5), 1);
-        recentCard.addView(recent, matchWrap());
-        content.addView(recentCard, matchWrap());
-
-        LinearLayout debtCard = panel();
-        debtCard.addView(text("Nợ trễ hạn chờ thu", 17, true), matchWrap());
-        TextView debts = text("Đang tải...", 13, false);
-        debts.setLineSpacing(dp(5), 1);
-        debtCard.addView(debts, matchWrap());
-        content.addView(debtCard, matchWrap());
-
-        Button refresh = button("Làm mới báo cáo");
-        content.addView(refresh, matchWrap());
 
         final int[] period = {0};
         Runnable fetch = () -> {
@@ -680,9 +620,6 @@ public class AdminManagementActivity extends SessionActivity {
         };
         for (int i = 0; i < choices.length; i++) {
             final int index = i;
-            choices[i] = button(labels[i]);
-            choices[i].setTextSize(12);
-            tabs.addView(choices[i], new LinearLayout.LayoutParams(0, dp(44), 1));
             choices[i].setOnClickListener(v -> {
                 period[0] = index;
                 fetch.run();
@@ -788,21 +725,17 @@ public class AdminManagementActivity extends SessionActivity {
         day.add(Calendar.DAY_OF_MONTH, -6);
         SimpleDateFormat formatter = new SimpleDateFormat("dd/MM", Locale.ROOT);
         for (int i = 0; i < 7; i++) {
-            LinearLayout column = new LinearLayout(this);
-            column.setOrientation(LinearLayout.VERTICAL);
-            column.setGravity(android.view.Gravity.BOTTOM | android.view.Gravity.CENTER_HORIZONTAL);
+            View column = getLayoutInflater().inflate(
+                    R.layout.item_admin_report_bar, container, false);
+            View bar = column.findViewById(R.id.adminReportBarFill);
             int height = amounts[i] <= 0 ? 0 : Math.max(dp(4),
                     (int) Math.round(dp(90) * amounts[i] / (double) max));
-            View bar = new View(this);
-            bar.setBackgroundColor(getColor(R.color.admin_screen_primary));
-            LinearLayout.LayoutParams barParams = new LinearLayout.LayoutParams(dp(22), height);
-            barParams.bottomMargin = dp(6);
-            column.addView(bar, barParams);
-            TextView label = text(formatter.format(day.getTime()), 10, false);
-            label.setGravity(android.view.Gravity.CENTER);
-            column.addView(label, new LinearLayout.LayoutParams(-1, dp(28)));
-            LinearLayout.LayoutParams columnParams = new LinearLayout.LayoutParams(0, dp(130), 1);
-            container.addView(column, columnParams);
+            android.view.ViewGroup.LayoutParams barParams = bar.getLayoutParams();
+            barParams.height = height;
+            bar.setLayoutParams(barParams);
+            ((TextView) column.findViewById(R.id.adminReportBarDay))
+                    .setText(formatter.format(day.getTime()));
+            container.addView(column);
             day.add(Calendar.DAY_OF_MONTH, 1);
         }
     }
@@ -815,10 +748,8 @@ public class AdminManagementActivity extends SessionActivity {
         ((TextView) findViewById(R.id.adminManagementSubtitle)).setText(subtitle);
     }
 
-    private EditText numericInput(String hint) {
-        EditText input = new EditText(this); input.setHint(hint); input.setSingleLine(true);
-        input.setInputType(InputType.TYPE_CLASS_NUMBER); return input;
-    }
+
+
     private void setNumeric(EditText view, int value) { view.setText(String.valueOf(value)); }
     private int parse(EditText view) { try { return Integer.parseInt(view.getText().toString().trim()); } catch (Exception e) { return -1; } }
     private int number(DocumentSnapshot doc, String field, int fallback) { Long n = doc.getLong(field); return n == null ? fallback : n.intValue(); }
