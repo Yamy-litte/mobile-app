@@ -34,6 +34,7 @@ public final class CirculationRepository implements AutoCloseable {
         SQLiteDatabase db = helper.getWritableDatabase();
         db.beginTransaction();
         try {
+            expireTimedOutReservations(db, timestamp());
             User reader = findReaderByBarcode(db, readerBarcode);
             if (reader == null) throw new IllegalArgumentException("Không tìm thấy thẻ độc giả.");
             if (reader.cardExpiryDate != null && !reader.cardExpiryDate.trim().isEmpty()
@@ -337,6 +338,64 @@ public final class CirculationRepository implements AutoCloseable {
             while (c.moveToNext()) ids.add(c.getString(0));
         }
         return ids;
+    }
+
+    /**
+     * Expire reservation holds whose 48-hour priority window has elapsed, then offer the
+     * same physical copy to the next waiting reader. Runs only inside a caller transaction.
+     */
+    private static void expireTimedOutReservations(SQLiteDatabase db, String now) {
+        ArrayList<String> expiredReservationIds = new ArrayList<>();
+        ArrayList<String> expiredCopyIds = new ArrayList<>();
+        try (Cursor c = db.rawQuery(
+                "SELECT reservationId,copyId FROM Reservations " +
+                "WHERE reservationStatus='Ready' AND priorityUntil IS NOT NULL AND priorityUntil<=? " +
+                "AND copyId IS NOT NULL ORDER BY priorityUntil ASC",
+                new String[]{now})) {
+            while (c.moveToNext()) {
+                expiredReservationIds.add(c.getString(0));
+                expiredCopyIds.add(c.getString(1));
+            }
+        }
+        for (int i = 0; i < expiredReservationIds.size(); i++) {
+            String reservationId = expiredReservationIds.get(i);
+            String copyId = expiredCopyIds.get(i);
+            ContentValues expired = new ContentValues();
+            expired.put("reservationStatus", "Expired");
+            expired.put("cancelledAt", now);
+            db.update("Reservations", expired,
+                    "reservationId=? AND reservationStatus='Ready'", new String[]{reservationId});
+
+            BookCopy copy = findCopyById(db, copyId);
+            if (copy == null || copy.isHidden || copy.parentTitleHidden) continue;
+            String reassignment = assignNextWaitingReservation(db, copy, now);
+            if (reassignment == null) {
+                ContentValues available = new ContentValues();
+                available.put("copyStatus", "SanSang");
+                available.putNull("priorityUserId");
+                available.put("updatedAt", now);
+                db.update("BookCopies", available, "copyId=?", new String[]{copyId});
+            }
+            refreshAvailableCopies(db, copy.bookTitleId, now);
+        }
+    }
+
+    private static BookCopy findCopyById(SQLiteDatabase db, String copyId) {
+        try (Cursor c = db.rawQuery(
+                "SELECT c.copyId,c.bookTitleId,c.barcode,c.copyStatus,c.priorityUserId,c.isHidden,t.isHidden " +
+                "FROM BookCopies c JOIN BookTitles t ON t.bookTitleId=c.bookTitleId WHERE c.copyId=? LIMIT 1",
+                new String[]{copyId})) {
+            if (!c.moveToFirst()) return null;
+            BookCopy copy = new BookCopy();
+            copy.copyId = c.getString(0);
+            copy.bookTitleId = c.getString(1);
+            copy.barcode = c.getString(2);
+            copy.copyStatus = c.getString(3);
+            copy.priorityUserId = c.getString(4);
+            copy.isHidden = c.getInt(5) == 1;
+            copy.parentTitleHidden = c.getInt(6) == 1;
+            return copy;
+        }
     }
 
     /**
