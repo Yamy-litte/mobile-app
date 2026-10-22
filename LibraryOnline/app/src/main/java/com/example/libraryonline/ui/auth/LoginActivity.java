@@ -10,11 +10,17 @@ import android.widget.TextView;
 import android.widget.Toast;
 
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.work.ExistingPeriodicWorkPolicy;
+import androidx.work.PeriodicWorkRequest;
+import androidx.work.WorkManager;
 
 import com.example.libraryonline.R;
 import com.example.libraryonline.utils.InputValidator;
+import com.example.libraryonline.work.ReservationExpiryWorker;
 import com.example.libraryonline.utils.PasswordVisibilityToggle;
 import com.google.firebase.auth.FirebaseAuth;
+
+import java.util.concurrent.TimeUnit;
 
 public class LoginActivity extends AppCompatActivity {
     private static final String PREFS_NAME = "mylibrary_login";
@@ -35,6 +41,7 @@ public class LoginActivity extends AppCompatActivity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        scheduleReservationExpiryWork();
         setContentView(R.layout.activity_auth_login);
 
         auth = FirebaseAuth.getInstance();
@@ -62,6 +69,14 @@ public class LoginActivity extends AppCompatActivity {
                 v -> startActivity(new Intent(this, ForgotPasswordActivity.class)));
         adminLoginLink.setOnClickListener(
                 v -> startActivity(new Intent(this, AdminLoginActivity.class)));
+    }
+
+
+    private void scheduleReservationExpiryWork() {
+        PeriodicWorkRequest request = new PeriodicWorkRequest.Builder(
+                ReservationExpiryWorker.class, 15, TimeUnit.MINUTES).build();
+        WorkManager.getInstance(getApplicationContext()).enqueueUniquePeriodicWork(
+                "reservation-expiry-periodic", ExistingPeriodicWorkPolicy.KEEP, request);
     }
 
     private void login() {
