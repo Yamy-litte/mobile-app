@@ -130,6 +130,11 @@ public class AdminMainActivity extends com.example.libraryonline.ui.auth.Session
                             stopRequestListeners();
                             startRequests();
                         });
+        findViewById(R.id.buttonAdminManagement)
+                .setOnClickListener(v -> {
+                    if (isSessionReady())
+                        startActivity(new android.content.Intent(this, AdminManagementActivity.class));
+                });
         findViewById(R.id.buttonAdminLogout).setOnClickListener(v -> logoutSession());
     }
 
