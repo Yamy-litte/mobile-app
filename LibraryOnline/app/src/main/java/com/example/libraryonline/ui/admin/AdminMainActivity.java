@@ -46,6 +46,7 @@ public class AdminMainActivity extends com.example.libraryonline.ui.auth.Session
     private BookCatalogueSyncManager catalogueSyncManager;
     private Button syncButton;
     private AdminHomeView homeView;
+    private CirculationPanelController circulationController;
     private long dashboardGeneration, requestsGeneration;
     private Integer registrationCount, resetCount;
     private boolean registrationCached, resetCached, registrationError, resetError;
@@ -170,6 +171,8 @@ public class AdminMainActivity extends com.example.libraryonline.ui.auth.Session
         ((TextView) findViewById(R.id.textAdminProfileName)).setText(profile.displayName);
         ((TextView) findViewById(R.id.textAdminProfileEmail))
                 .setText(profile.email == null ? "" : profile.email);
+        if (circulationController != null) circulationController.close();
+        circulationController = new CirculationPanelController(this);
         startRequests();
         loadDashboard();
     }
@@ -199,6 +202,10 @@ public class AdminMainActivity extends com.example.libraryonline.ui.auth.Session
         if (catalogueSyncManager != null) {
             catalogueSyncManager.close();
             catalogueSyncManager = null;
+        }
+        if (circulationController != null) {
+            circulationController.close();
+            circulationController = null;
         }
         requestsContainer.removeAllViews();
         resetRequestsContainer.removeAllViews();
