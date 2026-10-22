@@ -2,7 +2,12 @@ package com.example.libraryonline.ui.reader;
 
 import android.os.Bundle;
 import android.view.View;
+import android.widget.LinearLayout;
+import android.widget.NumberPicker;
+import android.widget.TextView;
 import android.widget.Toast;
+
+import androidx.appcompat.app.AlertDialog;
 
 import androidx.core.view.*;
 
@@ -11,6 +16,7 @@ import com.example.libraryonline.data.local.dao.BookTitleDao;
 import com.example.libraryonline.data.local.db.DatabaseHelper;
 import com.example.libraryonline.data.model.BookTitle;
 import com.example.libraryonline.data.remote.firebase.BookCatalogueSyncManager;
+import com.example.libraryonline.data.remote.firebase.OnlineBorrowRequestRepository;
 import com.example.libraryonline.data.session.*;
 import com.example.libraryonline.ui.auth.SessionActivity;
 import com.google.firebase.firestore.*;
@@ -28,6 +34,8 @@ public class BookDetailActivity extends SessionActivity {
     private long generation;
     private Boolean remoteVisible;
     private boolean leaving;
+    private boolean submittingRequest;
+    private OnlineBorrowRequestRepository requestRepository;
 
     @Override
     protected void onCreate(Bundle state) {
@@ -51,15 +59,85 @@ public class BookDetailActivity extends SessionActivity {
         bookId = getIntent().getStringExtra(EXTRA_BOOK_ID);
         helper = new DatabaseHelper(getApplicationContext());
         findViewById(R.id.detailBack).setOnClickListener(v -> finish());
-        findViewById(R.id.detailBorrowOnline).setOnClickListener(v -> {
-            if (detail != null) {
-                Toast.makeText(this,
-                        "Chức năng mượn online chưa được kết nối với giao dịch Firestore.",
-                        Toast.LENGTH_LONG).show();
-            }
-        });
+        requestRepository = new OnlineBorrowRequestRepository();
+        findViewById(R.id.detailBorrowOnline).setOnClickListener(v -> showBorrowRequestDialog());
         findViewById(R.id.detailRetry).setOnClickListener(v -> {
             if (isSessionReady()) startCatalogue();
+        });
+    }
+
+    private void showBorrowRequestDialog() {
+        if (!isSessionReady() || submittingRequest) return;
+        if (Boolean.FALSE.equals(remoteVisible)) {
+            Toast.makeText(this, "Đầu sách không còn được công khai.", Toast.LENGTH_LONG).show();
+            return;
+        }
+        LinearLayout content = new LinearLayout(this);
+        content.setOrientation(LinearLayout.VERTICAL);
+        int pad = (int) (24 * getResources().getDisplayMetrics().density);
+        content.setPadding(pad, pad / 2, pad, 0);
+        TextView note = new TextView(this);
+        note.setText("Chọn số ngày mượn mong muốn. Thư viện sẽ kiểm tra và duyệt yêu cầu; gửi yêu cầu chưa có nghĩa là đã nhận sách.");
+        content.addView(note);
+        NumberPicker picker = new NumberPicker(this);
+        picker.setMinValue(1);
+        picker.setMaxValue(60);
+        picker.setValue(7);
+        picker.setWrapSelectorWheel(false);
+        content.addView(picker);
+        new AlertDialog.Builder(this)
+                .setTitle("Gửi yêu cầu mượn sách")
+                .setView(content)
+                .setNegativeButton("Hủy", null)
+                .setPositiveButton("Gửi yêu cầu", (dialog, which) -> submitBorrowRequest(picker.getValue()))
+                .show();
+    }
+
+    private void submitBorrowRequest(int days) {
+        if (submittingRequest || !isSessionReady()) return;
+        submittingRequest = true;
+        findViewById(R.id.detailBorrowOnline).setEnabled(false);
+        detail.status("Đang gửi yêu cầu mượn…");
+        requestRepository.submit(bookId, days, new OnlineBorrowRequestRepository.Callback() {
+            @Override public void onSuccess(String requestId) {
+                runOnUiThread(() -> {
+                    submittingRequest = false;
+                    if (isDestroyed()) return;
+                    detail.status("Đã gửi yêu cầu mượn sách. Mã yêu cầu: " + requestId);
+                    Toast.makeText(BookDetailActivity.this,
+                            "Đã gửi yêu cầu. Vui lòng chờ thư viện duyệt.", Toast.LENGTH_LONG).show();
+                    refreshButtonState();
+                });
+            }
+            @Override public void onFailure(Exception error) {
+                runOnUiThread(() -> {
+                    submittingRequest = false;
+                    if (isDestroyed()) return;
+                    String message = error == null ? null : error.getLocalizedMessage();
+                    if (message == null || message.trim().isEmpty())
+                        message = "Không gửi được yêu cầu. Vui lòng thử lại.";
+                    detail.status(message);
+                    Toast.makeText(BookDetailActivity.this, message, Toast.LENGTH_LONG).show();
+                    refreshButtonState();
+                });
+            }
+        });
+    }
+
+    private void refreshButtonState() {
+        if (submittingRequest || !isSessionReady() || Boolean.FALSE.equals(remoteVisible)) {
+            findViewById(R.id.detailBorrowOnline).setEnabled(false);
+            return;
+        }
+        worker.execute(() -> {
+            try {
+                BookTitle cached = new BookTitleDao(helper.getReadableDatabase()).findById(bookId);
+                runOnUiThread(() -> {
+                    if (!isDestroyed() && !submittingRequest)
+                        findViewById(R.id.detailBorrowOnline).setEnabled(
+                                cached != null && cached.availableCopies > 0);
+                });
+            } catch (Exception ignored) { }
         });
     }
 
