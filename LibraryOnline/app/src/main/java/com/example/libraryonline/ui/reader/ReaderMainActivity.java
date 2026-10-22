@@ -16,6 +16,10 @@ import com.example.libraryonline.R;
 import com.example.libraryonline.data.local.dao.BookTitleDao;
 import com.example.libraryonline.data.local.db.DatabaseHelper;
 import com.example.libraryonline.data.model.BookTitle;
+import com.example.libraryonline.data.model.LoanDetail;
+import com.example.libraryonline.data.model.LibraryNotification;
+import com.example.libraryonline.data.repository.LoanDetailRepository;
+import com.example.libraryonline.data.repository.LibraryNotificationRepository;
 import com.example.libraryonline.data.remote.firebase.BookCatalogueSyncManager;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
@@ -110,6 +114,8 @@ public class ReaderMainActivity extends com.example.libraryonline.ui.auth.Sessio
         loadReaderProfile();
         if (databaseHelper == null) databaseHelper = new DatabaseHelper(getApplicationContext());
         loadBooksFromSqlite();
+        loadReaderLoans(profile.user == null ? null : profile.user.userId);
+        loadReaderNotifications(profile.user == null ? null : profile.user.userId);
         catalogueSyncManager = new BookCatalogueSyncManager(getApplicationContext());
         catalogueSyncManager.start(
                 new BookCatalogueSyncManager.SyncListener() {
@@ -335,6 +341,133 @@ public class ReaderMainActivity extends com.example.libraryonline.ui.auth.Sessio
         for (BookTitle doc : latest)
             latestBooksContainer.addView(
                     createBookCard(doc, latestBooksContainer, R.layout.item_reader_book));
+    }
+
+    private void loadReaderLoans(String userId) {
+        LinearLayout container = findViewById(R.id.containerReaderLoans);
+        TextView summary = findViewById(R.id.textReaderLoansSummary);
+        if (container == null || summary == null) return;
+        if (userId == null || userId.trim().isEmpty()) {
+            summary.setText("Không xác định được tài khoản độc giả.");
+            return;
+        }
+        catalogueExecutor.execute(() -> {
+            List<LoanDetail> active;
+            try (LoanDetailRepository repository = new LoanDetailRepository(getApplicationContext())) {
+                active = repository.getActiveByUser(userId);
+            } catch (Exception failure) {
+                runOnUiThread(() -> summary.setText("Chưa tải được danh sách mượn. Vui lòng thử lại."));
+                return;
+            }
+            runOnUiThread(() -> {
+                if (isFinishing() || isDestroyed()) return;
+                container.removeAllViews();
+                summary.setText(active.isEmpty()
+                        ? "Bạn hiện không có sách đang mượn hoặc quá hạn."
+                        : "Bạn đang mượn " + active.size() + " cuốn sách.");
+                for (LoanDetail loan : active) {
+                    LinearLayout card = new LinearLayout(this);
+                    card.setOrientation(LinearLayout.VERTICAL);
+                    card.setPadding(dp(16), dp(14), dp(16), dp(14));
+                    card.setBackgroundResource(R.drawable.bg_reader_search);
+                    LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(
+                            LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
+                    params.bottomMargin = dp(10);
+                    container.addView(card, params);
+                    addInfoText(card, "Mã phiếu: " + safe(loan.loanReceiptId, "Chưa cập nhật"), true);
+                    addInfoText(card, "Mã bản sách: " + safe(loan.copyId, "Chưa cập nhật"), false);
+                    addInfoText(card, "Ngày mượn: " + safe(loan.borrowDate, "Chưa cập nhật"), false);
+                    addInfoText(card, "Hạn trả: " + safe(loan.dueDate, "Chưa cập nhật"), false);
+                    addInfoText(card, "Trạng thái: " + ("QuaHan".equals(loan.detailStatus) ? "Quá hạn" : "Đang mượn"), true);
+                }
+            });
+        });
+    }
+
+    private void loadReaderNotifications(String userId) {
+        LinearLayout container = findViewById(R.id.containerReaderNotifications);
+        TextView summary = findViewById(R.id.textReaderNotificationsSummary);
+        if (container == null || summary == null) return;
+        if (userId == null || userId.trim().isEmpty()) {
+            summary.setText("Không xác định được tài khoản độc giả.");
+            return;
+        }
+        catalogueExecutor.execute(() -> {
+            List<LibraryNotification> notifications;
+            try (LibraryNotificationRepository repository = new LibraryNotificationRepository(getApplicationContext())) {
+                notifications = repository.getByUser(userId);
+            } catch (Exception failure) {
+                runOnUiThread(() -> summary.setText("Chưa tải được thông báo. Vui lòng thử lại."));
+                return;
+            }
+            runOnUiThread(() -> {
+                if (isFinishing() || isDestroyed()) return;
+                container.removeAllViews();
+                int unread = 0;
+                for (LibraryNotification notification : notifications)
+                    if (notification.readAt == null || notification.readAt.trim().isEmpty()) unread++;
+                summary.setText(notifications.isEmpty()
+                        ? "Bạn chưa có thông báo nào."
+                        : notifications.size() + " thông báo · " + unread + " chưa đọc");
+                for (LibraryNotification notification : notifications) {
+                    LinearLayout card = new LinearLayout(this);
+                    card.setOrientation(LinearLayout.VERTICAL);
+                    card.setPadding(dp(16), dp(14), dp(16), dp(14));
+                    card.setBackgroundResource(R.drawable.bg_reader_search);
+                    LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(
+                            LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
+                    params.bottomMargin = dp(10);
+                    container.addView(card, params);
+                    boolean isUnread = notification.readAt == null || notification.readAt.trim().isEmpty();
+                    addInfoText(card, safe(notification.title, "Thông báo thư viện"), true);
+                    addInfoText(card, safe(notification.message, "Không có nội dung"), false);
+                    if (notification.scheduledAt != null && !notification.scheduledAt.trim().isEmpty())
+                        addInfoText(card, notification.scheduledAt, false);
+                    if (isUnread) {
+                        TextView markRead = new TextView(this);
+                        markRead.setText("Đánh dấu đã đọc");
+                        markRead.setTextColor(androidx.core.content.ContextCompat.getColor(this, R.color.library_blue));
+                        markRead.setPadding(0, dp(10), 0, 0);
+                        card.addView(markRead);
+                        markRead.setOnClickListener(v -> {
+                            markRead.setEnabled(false);
+                            catalogueExecutor.execute(() -> {
+                                boolean updated = false;
+                                try (LibraryNotificationRepository repository = new LibraryNotificationRepository(getApplicationContext())) {
+                                    updated = repository.markRead(notification.notificationId,
+                                            new java.text.SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss", Locale.ROOT)
+                                                    .format(new java.util.Date())) > 0;
+                                } catch (Exception ignored) { }
+                                boolean success = updated;
+                                runOnUiThread(() -> {
+                                    if (success) loadReaderNotifications(userId);
+                                    else {
+                                        markRead.setEnabled(true);
+                                        showMessage("Không thể cập nhật trạng thái thông báo.");
+                                    }
+                                });
+                            });
+                        });
+                    } else {
+                        addInfoText(card, "Đã đọc", true);
+                    }
+                }
+            });
+        });
+    }
+
+    private void addInfoText(LinearLayout parent, String value, boolean strong) {
+        TextView text = new TextView(this);
+        text.setText(value);
+        text.setTextColor(androidx.core.content.ContextCompat.getColor(this, R.color.library_text));
+        text.setTextSize(14);
+        if (strong) text.setTypeface(null, android.graphics.Typeface.BOLD);
+        text.setPadding(0, 0, 0, dp(6));
+        parent.addView(text);
+    }
+
+    private int dp(int value) {
+        return Math.round(value * getResources().getDisplayMetrics().density);
     }
 
     private void refreshCatalogueStatus() {
