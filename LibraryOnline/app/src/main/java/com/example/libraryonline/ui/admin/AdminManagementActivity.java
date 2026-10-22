@@ -39,7 +39,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
 /** Admin-only tools. Cloud-backed user/config changes are guarded by Firestore Rules. */
-public final class AdminManagementActivity extends SessionActivity {
+public class AdminManagementActivity extends SessionActivity {
     private final ExecutorService io = Executors.newSingleThreadExecutor();
     private FirebaseFirestore firestore;
     private String adminUid;
@@ -56,20 +56,41 @@ public final class AdminManagementActivity extends SessionActivity {
         firestore = FirebaseFirestore.getInstance();
         content = findViewById(R.id.adminManagementContent);
         findViewById(R.id.adminManagementBack).setOnClickListener(v -> finish());
-        findViewById(R.id.adminManagementReaders).setOnClickListener(v -> showReaders());
-        findViewById(R.id.adminManagementConfig).setOnClickListener(v -> showConfig());
-        findViewById(R.id.adminManagementReports).setOnClickListener(v -> showReports());
-        findViewById(R.id.adminManagementProfile).setOnClickListener(v -> showProfile());
+        com.google.android.material.bottomnavigation.BottomNavigationView nav =
+                findViewById(R.id.adminBottomNavigation);
+        nav.getMenu().findItem(R.id.navAdminRequests).setChecked(true);
+        nav.setOnItemSelectedListener(item -> {
+            int id = item.getItemId();
+            if (id == R.id.navAdminRequests) {
+                finish();  // Back to Management landing page.
+            } else if (id == R.id.navAdminInventory) {
+                startActivity(new android.content.Intent(this,
+                        com.example.libraryonline.ui.admin.inventory.InventoryActivity.class));
+                finish();
+            } else {
+                int tab = id == R.id.navAdminHome ? AdminHomeView.HOME
+                        : id == R.id.navAdminAccount ? AdminHomeView.ACCOUNT
+                        : id == R.id.navAdminCirculation ? AdminHomeView.CIRCULATION
+                        : AdminHomeView.REQUESTS;
+                AdminNavigation.returnToMain(this, tab);
+            }
+            return false;
+        });
     }
 
     @Override protected SessionProfile.Role expectedRole() { return SessionProfile.Role.ADMIN; }
 
+    /** Distinct Activity subclasses select their fixed screen. */
+    protected String managementSection() {
+        String input = getIntent().getStringExtra("section");
+        return "config".equals(input) || "reports".equals(input) ? input : "readers";
+    }
+
     @Override protected void onSessionAuthorized(SessionProfile profile) {
         adminUid = profile.uid;
-        String section = getIntent().getStringExtra("section");
+        String section = managementSection();
         if ("config".equals(section)) showConfig();
         else if ("reports".equals(section)) showReports();
-        else if ("profile".equals(section)) showProfile();
         else showReaders();
     }
 
@@ -79,6 +100,7 @@ public final class AdminManagementActivity extends SessionActivity {
     }
 
     @Override protected void onDestroy() {
+        if (usersListener != null) { usersListener.remove(); usersListener = null; }
         io.shutdownNow();
         super.onDestroy();
     }
@@ -377,70 +399,12 @@ public final class AdminManagementActivity extends SessionActivity {
         content.addView(refresh, matchWrap());
     }
 
-    private void showProfile() {
-        clearContent("Tài khoản Admin", "Email đăng nhập được quản lý bởi Firebase Authentication.");
-        EditText name = new EditText(this); name.setHint("Họ và tên"); name.setSingleLine(true);
-        EditText phone = new EditText(this); phone.setHint("Số điện thoại"); phone.setSingleLine(true);
-        EditText email = new EditText(this); email.setHint("Email công vụ"); email.setSingleLine(true);
-        email.setInputType(InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_VARIATION_EMAIL_ADDRESS);
-        content.addView(text("Email công vụ", 13, true), matchWrap());
-        content.addView(email, matchWrap()); content.addView(name, matchWrap()); content.addView(phone, matchWrap());
-        firestore.collection("Admins").document(adminUid).get().addOnSuccessListener(doc -> {
-            if (!isSessionReady() || !doc.exists()) return;
-            String storedName = value(doc, "fullName");
-            if (storedName.isEmpty()) storedName = value(doc, "name");
-            name.setText(storedName);
-            phone.setText(value(doc, "phone"));
-            FirebaseAuth auth = FirebaseAuth.getInstance();
-            String authEmail = auth.getCurrentUser() == null ? "" : auth.getCurrentUser().getEmail();
-            email.setText(authEmail.isEmpty() ? value(doc, "email") : authEmail);
-        }).addOnFailureListener(e -> toast("Không tải được hồ sơ Admin: " + safe(e.getMessage())));
-        Button save = button("Lưu thông tin liên hệ");
-        save.setOnClickListener(v -> {
-            String n = name.getText().toString().trim(), p = phone.getText().toString().trim();
-            String nextEmail = email.getText().toString().trim();
-            FirebaseUser currentUser = FirebaseAuth.getInstance().getCurrentUser();
-            if (n.length() < 2 || n.length() > 120) { name.setError("Tên phải từ 2 đến 120 ký tự"); return; }
-            if (!p.isEmpty() && !p.matches("^0(3|5|7|8|9)[0-9]{8}$")) { phone.setError("Số điện thoại không hợp lệ"); return; }
-            if (nextEmail.isEmpty() || !android.util.Patterns.EMAIL_ADDRESS.matcher(nextEmail).matches()) { email.setError("Email không hợp lệ"); return; }
-            if (currentUser == null) { logoutSession(); return; }
-            save.setEnabled(false);
-            Runnable writeProfile = () -> {
-                Map<String,Object> update = new HashMap<>();
-                update.put("fullName", n); update.put("phone", p); update.put("email", nextEmail);
-                update.put("updatedAt", FieldValue.serverTimestamp());
-                firestore.collection("Admins").document(adminUid).update(update)
-                        .addOnSuccessListener(x -> { save.setEnabled(true); toast("Đã cập nhật hồ sơ Admin."); })
-                        .addOnFailureListener(e -> {
-                            save.setEnabled(true);
-                            toast("Không đồng bộ được hồ sơ Admin: " + safe(e.getMessage()) + ". Hãy đăng nhập lại sau khi kiểm tra kết nối.");
-                            logoutSession();
-                        });
-            };
-            String oldEmail = currentUser.getEmail() == null ? "" : currentUser.getEmail();
-            if (oldEmail.equalsIgnoreCase(nextEmail)) {
-                writeProfile.run();
-            } else {
-                currentUser.updateEmail(nextEmail)
-                        .addOnSuccessListener(unused -> writeProfile.run())
-                        .addOnFailureListener(e -> {
-                            save.setEnabled(true);
-                            toast("Không đổi được email xác thực. Có thể cần đăng nhập lại để xác minh bảo mật.");
-                        });
-            }
-        });
-        content.addView(save, matchWrap());
-        Button password = button("Đổi mật khẩu quản trị");
-        password.setOnClickListener(v -> startActivity(new android.content.Intent(this, AdminPasswordActivity.class)));
-        content.addView(password, matchWrap());
-    }
-
     private void clearContent(String heading, String subtitle) {
         if (usersListener != null) { usersListener.remove(); usersListener = null; }
         searchInput = null;
         content.removeAllViews();
-        content.addView(text(heading, 22, true), matchWrap());
-        content.addView(text(subtitle, 13, false), matchWrap());
+        ((TextView) findViewById(R.id.adminManagementTitle)).setText(heading);
+        ((TextView) findViewById(R.id.adminManagementSubtitle)).setText(subtitle);
     }
 
     private EditText numericInput(String hint) {
@@ -453,13 +417,13 @@ public final class AdminManagementActivity extends SessionActivity {
     private static String value(DocumentSnapshot doc, String field) { String v = doc.getString(field); return v == null ? "" : v; }
     private TextView text(String value, int size, boolean bold) {
         TextView view = new TextView(this); view.setText(value); view.setTextSize(size);
-        view.setTextColor(getColor(R.color.library_text)); view.setPadding(0, dp(5), 0, dp(5));
+        view.setTextColor(getColor(R.color.admin_screen_ink)); view.setPadding(0, dp(5), 0, dp(5));
         if (bold) view.setTypeface(null, android.graphics.Typeface.BOLD);
         return view;
     }
     private Button button(String label) {
         Button b = new Button(this); b.setText(label); b.setAllCaps(false);
-        b.setBackgroundTintList(android.content.res.ColorStateList.valueOf(getColor(R.color.library_blue)));
+        b.setBackgroundTintList(android.content.res.ColorStateList.valueOf(getColor(R.color.admin_screen_primary)));
         b.setTextColor(getColor(R.color.library_surface)); return b;
     }
     private LinearLayout.LayoutParams matchWrap() {
