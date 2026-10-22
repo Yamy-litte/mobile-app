@@ -33,7 +33,7 @@ public final class AdminPasswordActivity extends SessionActivity {
         currentPassword.setBackgroundResource(R.drawable.bg_auth_input);
         currentPassword.setPadding(dp(14), 0, dp(14), 0);
         android.widget.LinearLayout form = (android.widget.LinearLayout) ((android.widget.ScrollView) findViewById(android.R.id.content).getChildAt(0)).getChildAt(0);
-        form.addView(currentPassword, 2, new android.widget.LinearLayout.LayoutParams(-1, dp(52)));
+        form.addView(currentPassword, 3, new android.widget.LinearLayout.LayoutParams(-1, dp(52)));
         password = findViewById(R.id.editNewPassword);
         confirm = findViewById(R.id.editConfirmPassword);
         PasswordVisibilityToggle.attach(password);
