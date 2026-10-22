@@ -171,7 +171,7 @@ test("only repair-hidden copy may be restored, with matching parent stock increm
   await assertSucceeds(hide.commit());
   await assertFails(updateDoc(child, { copyStatus: "SanSang", isHidden: false }));
   const restored = writeBatch(d);
-  restored.update(child, { copyStatus: "SanSang", isHidden: false });
+  restored.update(child, { copyStatus: "SanSang", isHidden: false, updatedAt: serverTimestamp() });
   restored.update(parent, { availableCopies: 1 });
   await assertSucceeds(restored.commit());
   const updatedParent = await getDoc(parent);
