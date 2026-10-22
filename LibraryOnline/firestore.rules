@@ -68,7 +68,7 @@ service cloud.firestore {
         && request.resource.data.cardStatus == 'HoatDong'
         && request.resource.data.email is string
         && request.resource.data.phone is string;
-      allow update: (
+      allow update: if (
           signedIn()
           && request.auth.uid == userId
           && resource.data.mustChangePassword == true
