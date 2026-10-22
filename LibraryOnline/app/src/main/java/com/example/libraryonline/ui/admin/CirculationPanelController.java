@@ -10,10 +10,13 @@ import com.example.libraryonline.R;
 import com.example.libraryonline.data.repository.CirculationRepository;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 /** Binds the manual barcode fallback to the transactional local circulation repository. */
 final class CirculationPanelController implements AutoCloseable {
     private final Activity activity;
+    private final ExecutorService worker = Executors.newSingleThreadExecutor();
     private final CirculationRepository repository;
     private final EditText readerBarcode;
     private final EditText copyBarcode;
@@ -92,16 +95,7 @@ final class CirculationPanelController implements AutoCloseable {
             showError("Phiên đăng nhập đã hết. Hãy đăng nhập lại.");
             return;
         }
-        collectFineButton.setEnabled(false);
-        try {
-            String message = repository.payPenalty(id, uid).message;
-            result.setText(message);
-            Toast.makeText(activity, message, Toast.LENGTH_LONG).show();
-        } catch (RuntimeException ex) {
-            showError(ex.getMessage() == null ? "Không thể ghi nhận thanh toán." : ex.getMessage());
-        } finally {
-            collectFineButton.setEnabled(true);
-        }
+        runOperation(() -> repository.payPenalty(id, uid).message);
     }
 
     private String currentAdminUid() {
@@ -113,17 +107,26 @@ final class CirculationPanelController implements AutoCloseable {
         borrowButton.setEnabled(false);
         returnButton.setEnabled(false);
         collectFineButton.setEnabled(false);
-        try {
-            String message = operation.run();
-            result.setText(message);
-            Toast.makeText(activity, message, Toast.LENGTH_LONG).show();
-        } catch (RuntimeException ex) {
-            showError(ex.getMessage() == null ? "Không thể thực hiện giao dịch." : ex.getMessage());
-        } finally {
-            borrowButton.setEnabled(true);
-            returnButton.setEnabled(true);
-            collectFineButton.setEnabled(true);
-        }
+        worker.execute(() -> {
+            String message;
+            boolean failed = false;
+            try {
+                message = operation.run();
+            } catch (RuntimeException ex) {
+                failed = true;
+                message = ex.getMessage() == null ? "Không thể thực hiện giao dịch." : ex.getMessage();
+            }
+            final String output = message;
+            final boolean error = failed;
+            activity.runOnUiThread(() -> {
+                if (activity.isFinishing() || activity.isDestroyed()) return;
+                result.setText(output);
+                Toast.makeText(activity, output, Toast.LENGTH_LONG).show();
+                borrowButton.setEnabled(true);
+                returnButton.setEnabled(true);
+                collectFineButton.setEnabled(true);
+            });
+        });
     }
 
     private void showError(String message) {
@@ -131,7 +134,7 @@ final class CirculationPanelController implements AutoCloseable {
         Toast.makeText(activity, message, Toast.LENGTH_LONG).show();
     }
 
-    @Override public void close() { repository.close(); }
+    @Override public void close() { worker.shutdownNow(); repository.close(); }
 
     private interface Operation { String run(); }
 }
