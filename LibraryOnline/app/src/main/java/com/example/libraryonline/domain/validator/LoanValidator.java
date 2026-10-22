@@ -47,7 +47,7 @@ public final class LoanValidator {
         if (copy == null || copy.copyId == null || copy.copyId.trim().isEmpty()) {
             return "Không tìm thấy cuốn sách.";
         }
-        if (copy.isHidden) return "Cuốn sách đang bị ẩn khỏi phục vụ.";
+        if (copy.isHidden || copy.parentTitleHidden) return "Cuốn sách đang bị ẩn khỏi phục vụ.";
         if (COPY_AVAILABLE.equals(copy.copyStatus)) return null;
         if (COPY_ONLINE_HOLD.equals(copy.copyStatus) && sameId(copy.priorityUserId, readerId)) return null;
         if (COPY_RESERVED.equals(copy.copyStatus) && sameId(copy.priorityUserId, readerId)) return null;
