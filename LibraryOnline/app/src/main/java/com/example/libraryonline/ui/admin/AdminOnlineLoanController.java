@@ -170,6 +170,26 @@ final class AdminOnlineLoanController {
             if (OnlineLoanRequestRepository.APPROVED.equals(state)) {
                 item.addView(label("Đã duyệt · Chờ Reader đến lấy trước "
                         + date(doc.getTimestamp("holdUntil")), true));
+                Timestamp until = doc.getTimestamp("holdUntil");
+                if (until != null && !until.toDate().after(new Date())) {
+                    Button release = button("Hết 24 giờ · Kiểm tra & trả cuốn về kho");
+                    release.setEnabled(!snapshot.getMetadata().isFromCache());
+                    item.addView(release);
+                    release.setOnClickListener(v -> {
+                        if (!current(uid) || !release.isEnabled()) return;
+                        release.setEnabled(false);
+                        repository.expire(doc.getId()).addOnCompleteListener(activity, task -> {
+                            if (!current(uid)) return;
+                            if (!task.isSuccessful()) {
+                                release.setEnabled(true);
+                                Toast.makeText(activity,
+                                        "Không thể trả kho: " + (task.getException() == null
+                                                ? "Cần đối soát." : task.getException().getMessage()),
+                                        Toast.LENGTH_LONG).show();
+                            }
+                        });
+                    });
+                }
                 if (!snapshot.getMetadata().isFromCache()) checkExpiry(doc, uid);
                 continue;
             }
