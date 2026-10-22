@@ -18,6 +18,8 @@ final class CirculationPanelController implements AutoCloseable {
     private final EditText readerBarcode;
     private final EditText copyBarcode;
     private final EditText loanDays;
+    private final EditText penaltyId;
+    private final Button collectFineButton;
     private final TextView result;
     private final Button borrowButton;
     private final Button returnButton;
@@ -28,11 +30,14 @@ final class CirculationPanelController implements AutoCloseable {
         readerBarcode = activity.findViewById(R.id.inputCirculationReaderBarcode);
         copyBarcode = activity.findViewById(R.id.inputCirculationCopyBarcode);
         loanDays = activity.findViewById(R.id.inputCirculationLoanDays);
+        penaltyId = activity.findViewById(R.id.inputCirculationPenaltyId);
+        collectFineButton = activity.findViewById(R.id.buttonCirculationCollectFine);
         result = activity.findViewById(R.id.textCirculationResult);
         borrowButton = activity.findViewById(R.id.buttonCirculationBorrow);
         returnButton = activity.findViewById(R.id.buttonCirculationReturn);
         borrowButton.setOnClickListener(v -> borrow());
         returnButton.setOnClickListener(v -> returnCopy());
+        collectFineButton.setOnClickListener(v -> collectFine());
     }
 
     private void borrow() {
@@ -69,7 +74,34 @@ final class CirculationPanelController implements AutoCloseable {
             showError("Phiên đăng nhập đã hết. Hãy đăng nhập lại.");
             return;
         }
-        runOperation(() -> repository.returnCopy(reader, copy, uid).message);
+        runOperation(() -> {
+            CirculationRepository.OperationResult operation = repository.returnCopy(reader, copy, uid);
+            if (operation.relatedId != null) penaltyId.setText(operation.relatedId);
+            return operation.message;
+        });
+    }
+
+    private void collectFine() {
+        String id = penaltyId.getText().toString().trim();
+        if (id.isEmpty()) {
+            showError("Nhập mã khoản phạt cần thu.");
+            return;
+        }
+        String uid = currentAdminUid();
+        if (uid == null) {
+            showError("Phiên đăng nhập đã hết. Hãy đăng nhập lại.");
+            return;
+        }
+        collectFineButton.setEnabled(false);
+        try {
+            String message = repository.payPenalty(id, uid).message;
+            result.setText(message);
+            Toast.makeText(activity, message, Toast.LENGTH_LONG).show();
+        } catch (RuntimeException ex) {
+            showError(ex.getMessage() == null ? "Không thể ghi nhận thanh toán." : ex.getMessage());
+        } finally {
+            collectFineButton.setEnabled(true);
+        }
     }
 
     private String currentAdminUid() {
@@ -80,6 +112,7 @@ final class CirculationPanelController implements AutoCloseable {
     private void runOperation(Operation operation) {
         borrowButton.setEnabled(false);
         returnButton.setEnabled(false);
+        collectFineButton.setEnabled(false);
         try {
             String message = operation.run();
             result.setText(message);
@@ -89,6 +122,7 @@ final class CirculationPanelController implements AutoCloseable {
         } finally {
             borrowButton.setEnabled(true);
             returnButton.setEnabled(true);
+            collectFineButton.setEnabled(true);
         }
     }
 
