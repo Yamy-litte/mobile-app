@@ -412,23 +412,38 @@ public class InventoryActivity extends SessionActivity {
                                     go(COPIES);
                                 }
                             });
-            row.findViewById(R.id.inventoryBookHide)
-                    .setVisibility(b.isHidden ? View.GONE : View.VISIBLE);
+            TextView titleVisibility = row.findViewById(R.id.inventoryBookHide);
+            titleVisibility.setText(
+                    b.isHidden ? R.string.inventory_ui_restore_title : R.string.inventory_ui_hide_title);
+            titleVisibility.setTextColor(
+                    androidx.core.content.ContextCompat.getColor(
+                            this, b.isHidden ? R.color.library_success : R.color.library_danger));
             bindAction(
                     row,
                     R.id.inventoryBookHide,
-                    () ->
-                            confirm(
-                                    "Ẩn đầu sách?",
-                                    "Đầu sách không còn xuất hiện cho Reader. Giữ nguyên các cuốn"
-                                            + " và lịch sử.",
-                                    () -> submit("hideTitle", b.bookTitleId, null, null, null)));
+                    () -> confirmTitleVisibility(b));
         }
         if (count == 0)
             label(
                     books.isEmpty()
                             ? "Chưa có dữ liệu kho. Làm mới để tải từ thư viện."
                             : "Không tìm thấy đầu sách phù hợp.");
+    }
+
+    /** Same confirmation for the catalogue card and title details, with no deletion. */
+    private void confirmTitleVisibility(BookTitle title) {
+        if (title.isHidden) {
+            confirm(
+                    "Hiện lại đầu sách?",
+                    "Đầu sách sẽ xuất hiện trở lại cho Reader. Các cuốn đã ẩn vẫn giữ nguyên "
+                            + "trạng thái cho đến khi được hiện lại riêng.",
+                    () -> submit("restoreTitle", title.bookTitleId, null, null, null));
+        } else {
+            confirm(
+                    "Ẩn đầu sách?",
+                    "Đầu sách không còn xuất hiện cho Reader. Giữ nguyên các cuốn và lịch sử.",
+                    () -> submit("hideTitle", title.bookTitleId, null, null, null));
+        }
     }
 
     private void openEditor(BookTitle existing) {
@@ -586,16 +601,13 @@ public class InventoryActivity extends SessionActivity {
                 b.availableCopies + " sẵn sàng / " + b.totalCopies + " đã nhập");
         bindAction(summary, R.id.inventoryEditTitle, () -> openEditor(b));
         bindAction(summary, R.id.inventoryIntake, () -> openIntake(b));
-        summary.findViewById(R.id.inventoryHideTitle)
-                .setVisibility(b.isHidden ? View.GONE : View.VISIBLE);
-        bindAction(
-                summary,
-                R.id.inventoryHideTitle,
-                () ->
-                        confirm(
-                                "Ẩn đầu sách?",
-                                "Ẩn khỏi Reader; không xóa các cuốn và lịch sử.",
-                                () -> submit("hideTitle", b.bookTitleId, null, null, null)));
+        TextView titleVisibility = summary.findViewById(R.id.inventoryHideTitle);
+        titleVisibility.setText(
+                b.isHidden ? R.string.inventory_ui_restore_title : R.string.inventory_ui_hide_title);
+        titleVisibility.setTextColor(
+                androidx.core.content.ContextCompat.getColor(
+                        this, b.isHidden ? R.color.library_success : R.color.library_danger));
+        bindAction(summary, R.id.inventoryHideTitle, () -> confirmTitleVisibility(b));
         List<BookCopy> ordered = new ArrayList<>(copies);
         Collections.sort(ordered, (l, r) -> safe(l.barcode).compareTo(safe(r.barcode)));
         int count = 0;
@@ -679,6 +691,20 @@ public class InventoryActivity extends SessionActivity {
                                                 + " sẽ ngừng phục vụ. Bản ghi và lịch sử được giữ"
                                                 + " nguyên.",
                                         () -> submit("retire", c.copyId, null, null, null)));
+        pageView.findViewById(R.id.copyRestore)
+                .setOnClickListener(
+                        v -> {
+                            BookCopy currentCopy = copy();
+                            BookTitle currentTitle = book();
+                            if (!canWrite() || currentTitle == null || currentTitle.isHidden
+                                    || !InventoryPolicy.canRestore(currentCopy)) return;
+                            confirm(
+                                    "Hiện lại cuốn sách?",
+                                    currentCopy.barcode
+                                            + " sẽ trở về trạng thái sẵn sàng và tăng số cuốn "
+                                            + "sẵn sàng của đầu sách lên một.",
+                                    () -> submit("restore", currentCopy.copyId, null, null, null));
+                        });
     }
 
     private List<BookCopy> receiptCopies() {
@@ -755,6 +781,25 @@ public class InventoryActivity extends SessionActivity {
             boolean ready = canWrite() && InventoryPolicy.isAvailable(c);
             pageView.findViewById(R.id.copyHide).setEnabled(ready);
             pageView.findViewById(R.id.copyRetire).setEnabled(ready);
+            boolean concealed = c != null && c.isHidden;
+            pageView.findViewById(R.id.copyHide)
+                    .setVisibility(concealed ? View.GONE : View.VISIBLE);
+            pageView.findViewById(R.id.copyRetire)
+                    .setVisibility(concealed ? View.GONE : View.VISIBLE);
+            BookTitle title = book();
+            boolean canRestore = InventoryPolicy.canRestore(c);
+            View restore = pageView.findViewById(R.id.copyRestore);
+            restore.setVisibility(canRestore ? View.VISIBLE : View.GONE);
+            restore.setEnabled(canWrite() && canRestore && title != null && !title.isHidden);
+            TextView hint = pageView.findViewById(R.id.copyRestoreHint);
+            hint.setVisibility(concealed ? View.VISIBLE : View.GONE);
+            if (concealed)
+                hint.setText(
+                        canRestore
+                                ? title != null && title.isHidden
+                                        ? R.string.inventory_ui_restore_title_first
+                                        : R.string.inventory_ui_restore_copy_hint
+                                : R.string.inventory_ui_restore_unavailable);
         }
     }
 

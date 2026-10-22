@@ -82,5 +82,15 @@
             style="@style/InventoryOutline"
             android:text="@string/inventory_ui_retire_copy"
             android:textColor="@color/library_danger"/>
+        <TextView
+            android:id="@+id/copyRestoreHint"
+            style="@style/InventoryCaption"
+            android:visibility="gone" />
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/copyRestore"
+            style="@style/InventoryOutline"
+            android:text="@string/inventory_ui_restore_copy"
+            android:textColor="@color/library_success"
+            android:visibility="gone"/>
     </LinearLayout>
 </LinearLayout>

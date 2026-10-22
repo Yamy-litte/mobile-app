@@ -7,6 +7,7 @@
     <string name="inventory_ui_resume">Tiếp tục thao tác</string>
     <string name="inventory_ui_copies">Các cuốn sách</string>
     <string name="inventory_ui_hide_title">Ẩn đầu sách</string>
+    <string name="inventory_ui_restore_title">Hiện lại đầu sách</string>
     <string name="inventory_ui_minus">−</string>
     <string name="inventory_ui_quantity">Số cuốn (1–5)</string>
     <string name="inventory_ui_plus">+</string>
@@ -41,6 +42,10 @@
     <string name="inventory_ui_hide_heading">Ẩn cuốn hoặc thanh lý</string>
     <string name="inventory_ui_retire_rule">Chỉ áp dụng với cuốn sẵn sàng, chưa ẩn và không có người được ưu tiên. Bản ghi và lịch sử được giữ nguyên.</string>
     <string name="inventory_ui_hide_copy">Ẩn cuốn sách</string>
+    <string name="inventory_ui_restore_copy">Hiện lại cuốn sách</string>
+    <string name="inventory_ui_restore_copy_hint">Cuốn đang sửa chữa có thể trở lại phục vụ. Chọn Hiện lại để xác nhận.</string>
+    <string name="inventory_ui_restore_title_first">Đầu sách đang ẩn. Hãy hiện lại đầu sách trước khi hiện cuốn sách.</string>
+    <string name="inventory_ui_restore_unavailable">Cuốn đã thanh lý hoặc mất không thể hiện lại. Bản ghi và lịch sử vẫn được lưu.</string>
     <string name="inventory_ui_retire_copy">Thanh lý cuốn sách</string>
     <string name="inventory_ui_labels_success">Đã xác nhận nhập kho thành công</string>
     <string name="inventory_ui_labels_note">Đây là barcode của các cuốn thuộc lần nhập vừa xác nhận. In bằng hệ thống Android hoặc chọn Lưu dưới dạng PDF.</string>
