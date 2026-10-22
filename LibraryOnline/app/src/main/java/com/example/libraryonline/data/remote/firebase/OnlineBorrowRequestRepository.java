@@ -3,9 +3,10 @@ package com.example.libraryonline.data.remote.firebase;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.firestore.DocumentReference;
 import com.google.firebase.firestore.FirebaseFirestore;
-import java.time.LocalDate;
-import java.time.ZoneId;
-import java.time.format.DateTimeFormatter;
+import java.text.SimpleDateFormat;
+import java.util.Date;
+import java.util.Locale;
+import java.util.TimeZone;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
@@ -43,10 +44,14 @@ public final class OnlineBorrowRequestRepository {
             String expiry = user.getString("cardExpiryDate");
             if (expiry != null && !expiry.trim().isEmpty()) {
                 try {
-                    if (LocalDate.parse(expiry, DateTimeFormatter.ISO_LOCAL_DATE)
-                            .isBefore(LocalDate.now(ZoneId.of("Asia/Ho_Chi_Minh"))))
+                    SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd", Locale.US);
+                    dateFormat.setLenient(false);
+                    dateFormat.setTimeZone(TimeZone.getTimeZone("Asia/Ho_Chi_Minh"));
+                    Date expiryDate = dateFormat.parse(expiry);
+                    String today = dateFormat.format(new Date());
+                    if (expiryDate == null || expiry.compareTo(today) < 0)
                         throw new IllegalStateException("Thẻ độc giả đã hết hạn.");
-                } catch (java.time.format.DateTimeParseException ex) {
+                } catch (java.text.ParseException ex) {
                     throw new IllegalStateException("Ngày hết hạn thẻ không hợp lệ. Vui lòng liên hệ thư viện.");
                 }
             }
