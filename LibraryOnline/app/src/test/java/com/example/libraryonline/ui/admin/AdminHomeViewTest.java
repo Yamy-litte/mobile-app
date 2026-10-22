@@ -30,6 +30,9 @@ public class AdminHomeViewTest {
         AdminHomeView home=new AdminHomeView(screen,AdminHomeView.HOME);
         assertEquals(View.VISIBLE,screen.findViewById(R.id.adminOverview).getVisibility());
         assertEquals(View.GONE,screen.findViewById(R.id.adminRequests).getVisibility());
+        assertNotNull(screen.findViewById(R.id.actionAdminReaders));
+        assertNotNull(screen.findViewById(R.id.actionAdminConfig));
+        assertNotNull(screen.findViewById(R.id.actionAdminReports));
         for(int id:new int[]{R.id.textAdminBookCount,R.id.textAdminReaderCount,R.id.textAdminCopyCount,R.id.textAdminRegistrationCount})
             assertEquals("—",((TextView)screen.findViewById(id)).getText().toString());
         View root=screen.findViewById(R.id.adminRoot);
