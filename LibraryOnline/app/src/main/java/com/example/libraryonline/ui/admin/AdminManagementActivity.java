@@ -482,13 +482,27 @@ public class AdminManagementActivity extends SessionActivity {
         updateFixedConfigLabels(holdOnline, holdReservation, lateFee, multiplier, fixedValues);
         source.setText("Đang hiển thị cấu hình cục bộ · Đang đồng bộ...");
 
-        firestore.collection("SystemConfigs").document("default").get()
+        // Never overwrite legacy/hidden fields with stale local defaults.
+        // The Admin must first verify server configuration before saving.
+        final boolean[] existingCloudConfig = {false};
+        Button save = button("Lưu cấu hình");
+        save.setEnabled(false);
+        content.addView(save, matchWrap());
+        TextView notice = text("Giới hạn mới chỉ có hiệu lực sau khi Firestore xác nhận lưu.",
+                12, false);
+        content.addView(notice, matchWrap());
+
+        firestore.collection("SystemConfigs").document("default")
+                .get(com.google.firebase.firestore.Source.SERVER)
                 .addOnSuccessListener(doc -> {
                     if (!isSessionReady()) return;
                     if (!doc.exists()) {
-                        source.setText("Chưa có cấu hình Firestore · Dùng giá trị mặc định trên thiết bị");
+                        source.setText("Chưa có cấu hình Firestore · Lần lưu đầu sẽ tạo cấu hình mặc định");
+                        save.setEnabled(true);
                         return;
                     }
+                    existingCloudConfig[0] = true;
+                    save.setEnabled(true);
                     setNumeric(maxBooks, number(doc, "maxBooksPerUser", parse(maxBooks)));
                     setNumeric(maxDays, number(doc, "maxLoanDays", parse(maxDays)));
                     fixedValues[0] = number(doc, "onlineHoldHours", fixedValues[0]);
@@ -497,19 +511,14 @@ public class AdminManagementActivity extends SessionActivity {
                     fixedValues[3] = number(doc, "lostBookMultiplier", fixedValues[3]);
                     updateFixedConfigLabels(
                             holdOnline, holdReservation, lateFee, multiplier, fixedValues);
-                    source.setText(doc.getMetadata().isFromCache()
-                            ? "Đang hiển thị cấu hình từ bộ nhớ đệm Firestore"
-                            : "Trực tuyến · Đã tải cấu hình Firestore");
+                    source.setText("Trực tuyến · Đã tải cấu hình Firestore");
                 })
                 .addOnFailureListener(error -> {
-                    if (isSessionReady()) source.setText(
-                            "Không kết nối được Firestore. Dữ liệu cục bộ có thể đã cũ.");
+                    if (isSessionReady()) {
+                        save.setEnabled(false);
+                        source.setText("Không kết nối được Firestore. Chưa thể lưu cấu hình khi ngoại tuyến.");
+                    }
                 });
-        Button save = button("Lưu cấu hình");
-        content.addView(save, matchWrap());
-        TextView notice = text("Giới hạn mới chỉ có hiệu lực sau khi Firestore xác nhận lưu.",
-                12, false);
-        content.addView(notice, matchWrap());
         save.setOnClickListener(v -> {
             if (!isSessionReady()) return;
             int books = parse(maxBooks), days = parse(maxDays),
@@ -523,17 +532,27 @@ public class AdminManagementActivity extends SessionActivity {
             save.setEnabled(false);
             source.setText("Đang lưu cấu hình lên Firestore...");
             Map<String,Object> data = new HashMap<>();
-            data.put("configId", "default");
             data.put("maxBooksPerUser", books);
             data.put("maxLoanDays", days);
-            data.put("onlineHoldHours", online);
-            data.put("reservationHoldHours", reserve);
-            data.put("lateFeePerDay", fee);
-            data.put("lostBookMultiplier", lost);
             data.put("updatedBy", adminUid);
             data.put("updatedAt", FieldValue.serverTimestamp());
-            firestore.collection("SystemConfigs").document("default").set(data)
-                    .addOnSuccessListener(unused -> {
+            com.google.firebase.firestore.DocumentReference configDoc =
+                    firestore.collection("SystemConfigs").document("default");
+            com.google.android.gms.tasks.Task<Void> operation;
+            if (existingCloudConfig[0]) {
+                // The only two business settings editable in the revised UI.
+                // Do not rewrite old reservation/loss multiplier fields.
+                operation = configDoc.update(data);
+            } else {
+                // Only initial creation needs all required legacy schema fields.
+                data.put("configId", "default");
+                data.put("onlineHoldHours", online);
+                data.put("reservationHoldHours", reserve);
+                data.put("lateFeePerDay", fee);
+                data.put("lostBookMultiplier", lost);
+                operation = configDoc.set(data);
+            }
+            operation.addOnSuccessListener(unused -> {
                         if (!isSessionReady()) return;
                         SystemConfig config = new SystemConfig();
                         config.configId = "default"; config.maxBooksPerUser = books; config.maxLoanDays = days;
