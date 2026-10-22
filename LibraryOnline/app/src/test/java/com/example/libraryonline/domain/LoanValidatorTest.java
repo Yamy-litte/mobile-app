@@ -21,6 +21,12 @@ public class LoanValidatorTest {
                 Arrays.asList("title-1"), "title-2"));
     }
 
+    @Test public void blocksAdminProfileFromReaderCheckout() {
+        User admin = activeReader();
+        admin.role = "Admin";
+        assertNotNull(LoanValidator.validateBorrow(admin, 0, 3, 7, 14, false, null, "title-1"));
+    }
+
     @Test public void blocksLockedCardAndOverdueReader() {
         User user = activeReader();
         user.cardStatus = "BiKhoa";
@@ -54,6 +60,14 @@ public class LoanValidatorTest {
         copy.priorityUserId = "reader-1";
         assertNull(LoanValidator.validateCopyCheckout(copy, "reader-1"));
         assertNotNull(LoanValidator.validateCopyCheckout(copy, "reader-2"));
+    }
+
+    @Test public void blocksHiddenParentTitleEvenIfCopyIsAvailable() {
+        BookCopy copy = new BookCopy();
+        copy.copyId = "copy-1";
+        copy.copyStatus = "SanSang";
+        copy.parentTitleHidden = true;
+        assertNotNull(LoanValidator.validateCopyCheckout(copy, "reader-1"));
     }
 
     @Test public void blocksHiddenCopyEvenIfAvailable() {
