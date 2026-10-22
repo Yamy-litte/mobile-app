@@ -72,6 +72,24 @@ public class BookDetailActivity extends SessionActivity {
             Toast.makeText(this, "Đầu sách không còn được công khai.", Toast.LENGTH_LONG).show();
             return;
         }
+        FirebaseFirestore.getInstance().collection("SystemConfigs").document("default").get()
+                .addOnSuccessListener(config -> {
+                    if (isDestroyed() || !isSessionReady()) return;
+                    Long configuredMax = config.getLong("maxLoanDays");
+                    if (!config.exists() || configuredMax == null || configuredMax < 1 || configuredMax > 60) {
+                        Toast.makeText(this, "Thư viện chưa cấu hình thời hạn mượn hợp lệ.", Toast.LENGTH_LONG).show();
+                        return;
+                    }
+                    openBorrowRequestDialog(configuredMax.intValue());
+                })
+                .addOnFailureListener(error -> {
+                    if (!isDestroyed()) Toast.makeText(this,
+                            "Không tải được cấu hình mượn sách. Vui lòng thử lại.",
+                            Toast.LENGTH_LONG).show();
+                });
+    }
+
+    private void openBorrowRequestDialog(int maxDays) {
         LinearLayout content = new LinearLayout(this);
         content.setOrientation(LinearLayout.VERTICAL);
         int pad = (int) (24 * getResources().getDisplayMetrics().density);
@@ -81,8 +99,8 @@ public class BookDetailActivity extends SessionActivity {
         content.addView(note);
         NumberPicker picker = new NumberPicker(this);
         picker.setMinValue(1);
-        picker.setMaxValue(60);
-        picker.setValue(7);
+        picker.setMaxValue(maxDays);
+        picker.setValue(Math.min(7, maxDays));
         picker.setWrapSelectorWheel(false);
         content.addView(picker);
         new AlertDialog.Builder(this)
