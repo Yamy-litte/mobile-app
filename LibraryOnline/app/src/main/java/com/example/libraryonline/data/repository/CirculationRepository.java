@@ -204,6 +204,66 @@ public final class CirculationRepository implements AutoCloseable {
         }
     }
 
+
+    /**
+     * Collects the remaining balance of one fine as a single cash payment.
+     * A paid fine cannot be charged again; the check and write share one SQLite transaction.
+     * Card unlocking is deliberately not automatic because the current schema cannot distinguish
+     * a fine-related lock from a separate manual administrative lock.
+     */
+    public OperationResult payPenalty(String penaltyId, String adminAuthUid) {
+        SQLiteDatabase db = helper.getWritableDatabase();
+        db.beginTransaction();
+        try {
+            String adminId = findActiveAdminId(db, adminAuthUid);
+            String userId = null;
+            int due = 0, paid = 0;
+            String status = null;
+            try (Cursor c = db.query("Penalties", new String[]{"userId","amountDue","amountPaid","penaltyStatus"},
+                    "penaltyId=?", new String[]{penaltyId == null ? "" : penaltyId.trim()},
+                    null, null, null, "1")) {
+                if (!c.moveToFirst()) throw new IllegalArgumentException("Không tìm thấy khoản phạt.");
+                userId = c.getString(0);
+                due = c.getInt(1);
+                paid = c.getInt(2);
+                status = c.getString(3);
+            }
+            int remaining = due - paid;
+            if (remaining <= 0 || "Paid".equals(status)) {
+                throw new IllegalArgumentException("Khoản phạt này đã được thanh toán đủ.");
+            }
+            String now = timestamp();
+            ContentValues payment = new ContentValues();
+            payment.put("paymentId", UUID.randomUUID().toString());
+            payment.put("penaltyId", penaltyId.trim());
+            payment.put("receivedBy", adminId);
+            payment.put("amountReceived", remaining);
+            payment.put("paymentMethod", "Cash");
+            payment.put("paymentStatus", "Confirmed");
+            payment.put("receivedAt", now);
+            payment.put("note", "Thu tiền mặt tại quầy");
+            db.insertOrThrow("PenaltyPayments", null, payment);
+
+            ContentValues penaltyUpdate = new ContentValues();
+            penaltyUpdate.put("amountPaid", due);
+            penaltyUpdate.put("penaltyStatus", "Paid");
+            penaltyUpdate.put("paidAt", now);
+            db.update("Penalties", penaltyUpdate, "penaltyId=? AND amountPaid<?",
+                    new String[]{penaltyId.trim(), String.valueOf(due)});
+
+            int outstanding = scalarInt(db,
+                    "SELECT COUNT(*) FROM Penalties WHERE userId=? AND penaltyStatus IN ('Unpaid','Partial')",
+                    new String[]{userId});
+            db.setTransactionSuccessful();
+            String message = outstanding == 0
+                    ? "Đã ghi nhận thu " + remaining + " đồng. Không còn khoản phạt chưa thanh toán. Thẻ chưa tự mở khóa vì dữ liệu hiện tại không phân biệt khóa do phạt với khóa thủ công."
+                    : "Đã ghi nhận thu " + remaining + " đồng. Độc giả vẫn còn khoản phạt chưa thanh toán.";
+            return new OperationResult(message, penaltyId.trim(), null, remaining);
+        } finally {
+            db.endTransaction();
+        }
+    }
+
     private static User findReaderByBarcode(SQLiteDatabase db, String barcode) {
         if (barcode == null || barcode.trim().isEmpty()) return null;
         try (Cursor c = db.query("Users", null, "barcode=?", new String[]{barcode.trim()}, null, null, null, "1")) {
