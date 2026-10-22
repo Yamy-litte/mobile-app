@@ -79,6 +79,25 @@
                 android:text="@string/circulation_return" />
         </LinearLayout>
 
+
+        <TextView
+            style="@style/CatalogueHeading"
+            android:layout_marginTop="24dp"
+            android:text="@string/circulation_penalty_id_label" />
+        <EditText
+            android:id="@+id/inputCirculationPenaltyId"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:singleLine="true"
+            android:inputType="text"
+            android:hint="@string/circulation_penalty_id_hint"
+            android:autofillHints="none" />
+        <Button
+            android:id="@+id/buttonCirculationCollectFine"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="12dp"
+            android:text="@string/circulation_collect_fine" />
         <TextView
             android:id="@+id/textCirculationResult"
             style="@style/CatalogueBody"
