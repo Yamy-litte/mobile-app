@@ -62,7 +62,7 @@ public final class ReaderHomeView {
 
     public void bindProfile(SessionProfile profile) {
         ((TextView) activity.findViewById(R.id.readerAccountName)).setText(profile.displayName);
-        ((TextView) activity.findViewById(R.id.readerAccountEmail)).setText(profile.email);
+        ((TextView) activity.findViewById(R.id.readerAccountEmailInput)).setText(profile.email);
         String barcode = profile.user == null ? null : profile.user.barcode;
         String status = profile.user == null ? null : profile.user.cardStatus;
         ((TextView) activity.findViewById(R.id.readerAccountBarcode))
@@ -84,7 +84,7 @@ public final class ReaderHomeView {
         for (int id :
                 new int[] {
                     R.id.readerAccountName,
-                    R.id.readerAccountEmail,
+                    R.id.readerAccountEmailInput,
                     R.id.readerAccountBarcode,
                     R.id.readerAccountStatus
                 }) ((TextView) activity.findViewById(id)).setText("");
