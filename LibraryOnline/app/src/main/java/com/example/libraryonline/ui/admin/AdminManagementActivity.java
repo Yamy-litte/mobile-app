@@ -66,7 +66,11 @@ public final class AdminManagementActivity extends SessionActivity {
 
     @Override protected void onSessionAuthorized(SessionProfile profile) {
         adminUid = profile.uid;
-        showReaders();
+        String section = getIntent().getStringExtra("section");
+        if ("config".equals(section)) showConfig();
+        else if ("reports".equals(section)) showReports();
+        else if ("profile".equals(section)) showProfile();
+        else showReaders();
     }
 
     @Override protected void onSessionStopped() {
