@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="online_borrow_send_request">Yêu cầu mượn Online</string>
+    <string name="online_borrow_request_hint">Yêu cầu cần Admin duyệt; sách chưa được giữ trước khi duyệt.</string>
+    <string name="online_borrow_choose_days">Số ngày muốn mượn</string>
+    <string name="online_borrow_reader_heading">Yêu cầu mượn Online</string>
+    <string name="online_borrow_admin_heading">Duyệt yêu cầu mượn Online</string>
+    <string name="online_borrow_admin_subheading">Xác nhận giữ sách hoặc từ chối yêu cầu; độc giả sẽ nhận thông báo.</string>
+    <string name="online_borrow_notifications">Thông báo mượn Online</string>
+    <string name="online_borrow_local_notifications">Thông báo trên thiết bị</string>
+    <string name="online_borrow_loading">Đang đồng bộ dữ liệu từ thư viện…</string>
+    <string name="online_borrow_empty">Chưa có yêu cầu nào.</string>
+    <string name="online_borrow_mark_read">Đánh dấu đã đọc</string>
+    <string name="online_borrow_review_approve">Duyệt và giữ sách</string>
+    <string name="online_borrow_review_reject">Từ chối</string>
+</resources>

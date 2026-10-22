@@ -101,6 +101,21 @@
                     android:layout_marginTop="16dp"
                     android:background="@drawable/bg_reader_book_card"
                     android:textStyle="bold" />
+                <Button
+                    android:id="@+id/detailRequestOnline"
+                    android:layout_width="match_parent"
+                    android:layout_height="52dp"
+                    android:layout_marginTop="12dp"
+                    android:backgroundTint="@color/library_blue"
+                    android:text="@string/online_borrow_send_request"
+                    android:textAllCaps="false"
+                    android:textColor="@color/white"/>
+                <TextView
+                    android:id="@+id/detailOnlineStatus"
+                    style="@style/CatalogueCaption"
+                    android:layout_marginTop="8dp"
+                    android:accessibilityLiveRegion="polite"
+                    android:text="@string/online_borrow_request_hint"/>
                 <TextView
                     style="@style/CatalogueHeading"
                     android:text="@string/book_about" />

@@ -26,6 +26,24 @@
         </LinearLayout>
         <ImageView android:layout_width="18dp" android:layout_height="18dp" android:src="@drawable/ic_admin_arrow" android:contentDescription="@null" />
     </LinearLayout>
+    <LinearLayout android:id="@+id/adminHubOnlineLoans" style="@style/AdminScreenActionRow"
+        android:layout_height="76dp" android:contentDescription="@string/online_borrow_admin_heading">
+        <ImageView android:layout_width="25dp" android:layout_height="25dp"
+            android:src="@drawable/ic_admin_book" android:tint="@color/admin_screen_primary"
+            android:contentDescription="@null"/>
+        <LinearLayout android:layout_width="0dp" android:layout_height="wrap_content"
+            android:layout_weight="1" android:layout_marginStart="14dp"
+            android:orientation="vertical">
+            <TextView android:layout_width="match_parent" android:layout_height="wrap_content"
+                android:text="@string/online_borrow_admin_heading" android:textSize="16sp"
+                android:textColor="@color/admin_screen_ink" android:textStyle="bold"/>
+            <TextView android:layout_width="match_parent" android:layout_height="wrap_content"
+                android:layout_marginTop="4dp" android:text="@string/online_borrow_admin_subheading"
+                android:textSize="12sp" android:textColor="@color/admin_screen_muted"/>
+        </LinearLayout>
+        <ImageView android:layout_width="18dp" android:layout_height="18dp"
+            android:src="@drawable/ic_admin_arrow" android:contentDescription="@null"/>
+    </LinearLayout>
     <LinearLayout android:id="@+id/adminHubReaders" style="@style/AdminScreenActionRow" android:layout_height="76dp"
         android:contentDescription="Quản lý độc giả">
         <ImageView android:layout_width="25dp" android:layout_height="25dp" android:src="@drawable/ic_admin_people" android:tint="@color/admin_screen_primary" android:contentDescription="@null" />

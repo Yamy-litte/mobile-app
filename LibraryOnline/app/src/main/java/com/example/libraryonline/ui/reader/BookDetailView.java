@@ -55,6 +55,7 @@ public final class BookDetailView {
                                 book.availableCopies > 0
                                         ? R.color.library_success
                                         : R.color.library_muted));
+        activity.findViewById(R.id.detailRequestOnline).setEnabled(book.availableCopies > 0);
         text(
                 R.id.detailMetadata,
                 "Nhà xuất bản: "

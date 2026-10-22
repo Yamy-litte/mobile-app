@@ -242,6 +242,16 @@
                         android:layout_height="48dp"
                         android:text="@string/admin_refresh_requests"
                         android:textColor="@color/library_blue" />
+                    <TextView android:id="@+id/textAdminOnlineHeading"
+                        style="@style/AdminHeading" android:layout_marginTop="24dp"
+                        android:text="@string/online_borrow_admin_heading"/>
+                    <TextView android:id="@+id/textAdminOnlineCount"
+                        style="@style/AdminBody" android:layout_marginTop="6dp"
+                        android:accessibilityLiveRegion="polite"
+                        android:text="@string/online_borrow_loading"/>
+                    <LinearLayout android:id="@+id/containerAdminOnlineRequests"
+                        android:layout_width="match_parent" android:layout_height="wrap_content"
+                        android:orientation="vertical" android:layout_marginBottom="16dp"/>
                     <TextView
                         android:id="@+id/textPendingCount"
                         style="@style/AdminHeading"

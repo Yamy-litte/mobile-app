@@ -10,9 +10,18 @@
         android:layout_height="wrap_content"
         android:orientation="vertical"
         android:padding="20dp">
-        <TextView
-            style="@style/CatalogueHeading"
-            android:text="Thông báo" />
+        <TextView style="@style/CatalogueHeading"
+            android:text="@string/online_borrow_notifications"/>
+        <TextView android:id="@+id/textReaderOnlineNotificationsSummary"
+            style="@style/CatalogueBody" android:layout_marginTop="6dp"
+            android:text="@string/online_borrow_loading"/>
+        <LinearLayout android:id="@+id/containerReaderOnlineNotifications"
+            android:layout_width="match_parent" android:layout_height="wrap_content"
+            android:layout_marginTop="12dp" android:layout_marginBottom="20dp"
+            android:orientation="vertical"/>
+        <TextView style="@style/CatalogueHeading"
+            android:text="@string/online_borrow_local_notifications"/>
+
         <TextView
             android:id="@+id/textReaderNotificationsSummary"
             style="@style/CatalogueBody"
