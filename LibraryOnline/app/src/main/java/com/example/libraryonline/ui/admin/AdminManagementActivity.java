@@ -494,7 +494,9 @@ public class AdminManagementActivity extends SessionActivity {
                     fixedValues[3] = number(doc, "lostBookMultiplier", fixedValues[3]);
                     updateFixedConfigLabels(
                             holdOnline, holdReservation, lateFee, multiplier, fixedValues);
-                    source.setText("Trực tuyến · Đã tải cấu hình Firestore");
+                    source.setText(doc.getMetadata().isFromCache()
+                            ? "Đang hiển thị cấu hình từ bộ nhớ đệm Firestore"
+                            : "Trực tuyến · Đã tải cấu hình Firestore");
                 })
                 .addOnFailureListener(error -> {
                     if (isSessionReady()) source.setText(
