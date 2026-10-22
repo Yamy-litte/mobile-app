@@ -47,8 +47,13 @@ public final class BookCatalogueSyncManager implements AutoCloseable {
     private volatile boolean closed;
 
     public BookCatalogueSyncManager(Context context) {
-        databaseHelper = new DatabaseHelper(context.getApplicationContext());
-        firestore = FirebaseFirestore.getInstance();
+        this(new DatabaseHelper(context.getApplicationContext()), FirebaseFirestore.getInstance());
+    }
+
+    // Package-private dependency seam for lifecycle tests that do not exercise Firestore.
+    BookCatalogueSyncManager(DatabaseHelper databaseHelper, FirebaseFirestore firestore) {
+        this.databaseHelper = databaseHelper;
+        this.firestore = firestore;
     }
 
     public synchronized void start(SyncListener listener) {
