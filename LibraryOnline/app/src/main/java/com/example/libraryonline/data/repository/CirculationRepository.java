@@ -314,11 +314,20 @@ public final class CirculationRepository implements AutoCloseable {
     }
 
     private static String findActiveAdminId(SQLiteDatabase db, String authUid) {
-        try (Cursor c = db.rawQuery("SELECT adminId FROM Admins WHERE userId=? AND adminStatus='Active' LIMIT 1",
-                new String[]{authUid == null ? "" : authUid})) {
-            if (c.moveToFirst()) return c.getString(0);
+        if (authUid == null || authUid.trim().isEmpty()) {
+            throw new IllegalArgumentException("Phiên Admin không hợp lệ.");
         }
-        throw new IllegalArgumentException("Tài khoản hiện tại không có hồ sơ Admin đang hoạt động trong SQLite.");
+        try (Cursor c = db.rawQuery("SELECT adminId,adminStatus FROM Admins WHERE userId=? LIMIT 1",
+                new String[]{authUid})) {
+            if (c.moveToFirst()) {
+                if ("Active".equals(c.getString(1)) || "HoatDong".equals(c.getString(1))) return c.getString(0);
+                throw new IllegalArgumentException("Tài khoản Admin trong bộ nhớ cục bộ đã bị vô hiệu hóa.");
+            }
+        }
+        // A valid Firebase Admin session can exist before a legacy local Admin row is available.
+        // The receipt/payment admin foreign keys are nullable, so preserve the operation without
+        // inventing an employee code or a local authorization record.
+        return null;
     }
 
     private static BookCopy findCopyByBarcode(SQLiteDatabase db, String barcode) {
