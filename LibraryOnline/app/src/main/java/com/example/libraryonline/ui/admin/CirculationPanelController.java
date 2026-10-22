@@ -119,12 +119,14 @@ final class CirculationPanelController implements AutoCloseable {
             final String output = message;
             final boolean error = failed;
             activity.runOnUiThread(() -> {
-                if (activity.isFinishing() || activity.isDestroyed()) return;
-                result.setText(output);
-                Toast.makeText(activity, output, Toast.LENGTH_LONG).show();
                 borrowButton.setEnabled(true);
                 returnButton.setEnabled(true);
                 collectFineButton.setEnabled(true);
+                if (activity.isFinishing() || activity.isDestroyed()) return;
+                if (activity instanceof com.example.libraryonline.ui.auth.SessionActivity
+                        && !((com.example.libraryonline.ui.auth.SessionActivity) activity).isSessionReady()) return;
+                result.setText(output);
+                Toast.makeText(activity, output, Toast.LENGTH_LONG).show();
             });
         });
     }
@@ -134,7 +136,23 @@ final class CirculationPanelController implements AutoCloseable {
         Toast.makeText(activity, message, Toast.LENGTH_LONG).show();
     }
 
-    @Override public void close() { worker.shutdownNow(); repository.close(); }
+    @Override public void close() {
+        worker.shutdown();
+        Thread closer = new Thread(() -> {
+            try {
+                if (!worker.awaitTermination(5, java.util.concurrent.TimeUnit.SECONDS)) {
+                    worker.shutdownNow();
+                    worker.awaitTermination(2, java.util.concurrent.TimeUnit.SECONDS);
+                }
+            } catch (InterruptedException interrupted) {
+                Thread.currentThread().interrupt();
+                worker.shutdownNow();
+            } finally {
+                repository.close();
+            }
+        }, "circulation-db-close");
+        closer.start();
+    }
 
     private interface Operation { String run(); }
 }
