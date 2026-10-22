@@ -574,33 +574,230 @@ public class AdminManagementActivity extends SessionActivity {
     }
 
     private void showReports() {
-        clearContent("Báo cáo tiền phạt", "Báo cáo đọc từ SQLite trên thiết bị này; chưa phải báo cáo hợp nhất toàn hệ thống.");
-        TextView report = text("Đang tổng hợp dữ liệu…", 15, false);
-        content.addView(report, matchWrap());
-        io.execute(() -> {
-            long today = 0, month = 0, outstanding = 0, payments = 0;
-            String dayKey = new SimpleDateFormat("yyyy-MM-dd", Locale.ROOT).format(new Date());
-            String monthKey = new SimpleDateFormat("yyyy-MM", Locale.ROOT).format(new Date());
-            try (DatabaseHelper helper = new DatabaseHelper(getApplicationContext())) {
-                android.database.sqlite.SQLiteDatabase db = helper.getReadableDatabase();
-                today = sum(db, "SELECT COALESCE(SUM(amountReceived),0) FROM PenaltyPayments WHERE paymentStatus='Confirmed' AND substr(receivedAt,1,10)=?", dayKey);
-                month = sum(db, "SELECT COALESCE(SUM(amountReceived),0) FROM PenaltyPayments WHERE paymentStatus='Confirmed' AND substr(receivedAt,1,7)=?", monthKey);
-                outstanding = sum(db, "SELECT COALESCE(SUM(amountDue-amountPaid),0) FROM Penalties WHERE penaltyStatus IN ('Unpaid','Partial')", null);
-                payments = scalar(db, "SELECT COUNT(*) FROM PenaltyPayments WHERE paymentStatus='Confirmed'", null);
-            } catch (Exception ignored) {}
-            final long d = today, m = month, o = outstanding, p = payments;
-            runOnUiThread(() -> {
-                if (!isSessionReady()) return;
-                NumberFormat money = NumberFormat.getIntegerInstance(new Locale("vi", "VN"));
-                report.setText("Thu phạt hôm nay: " + money.format(d) + " đ\n"
-                        + "Thu phạt tháng này: " + money.format(m) + " đ\n"
-                        + "Tiền phạt còn nợ (ước tính): " + money.format(o) + " đ\n"
-                        + "Số giao dịch đã xác nhận trên thiết bị: " + p);
-            });
-        });
+        clearContent("Báo cáo thu phạt", "Dữ liệu SQLite trên thiết bị · Không phải tổng hợp toàn hệ thống");
+        TextView status = text("Đang tải các khoản thu trên thiết bị...", 13, false);
+        status.setBackgroundResource(R.drawable.bg_admin_screen_readonly);
+        status.setPadding(dp(11), dp(10), dp(11), dp(10));
+        content.addView(status, matchWrap());
+
+        LinearLayout tabs = new LinearLayout(this);
+        tabs.setOrientation(LinearLayout.HORIZONTAL);
+        tabs.setBackgroundResource(R.drawable.bg_admin_screen_readonly);
+        final Button[] choices = new Button[3];
+        final String[] labels = {"Ngày", "Tuần", "Tháng"};
+        content.addView(tabs, matchWrap());
+
+        LinearLayout totals = panel();
+        TextView heading = text("Tiền phạt đã thu", 16, true);
+        TextView collected = text("—", 29, true);
+        collected.setTextColor(getColor(R.color.admin_screen_primary));
+        TextView transactionCount = text("Đang tải số giao dịch...", 13, false);
+        TextView outstanding = text("Nợ chờ thu: —", 14, true);
+        totals.addView(heading, matchWrap());
+        totals.addView(collected, matchWrap());
+        totals.addView(transactionCount, matchWrap());
+        totals.addView(outstanding, matchWrap());
+        content.addView(totals, matchWrap());
+
+        LinearLayout trend = panel();
+        trend.addView(text("Đã thu trong 7 ngày gần nhất", 17, true), matchWrap());
+        LinearLayout bars = new LinearLayout(this);
+        bars.setOrientation(LinearLayout.HORIZONTAL);
+        bars.setGravity(android.view.Gravity.BOTTOM);
+        trend.addView(bars, matchWrap());
+        content.addView(trend, matchWrap());
+
+        LinearLayout recentCard = panel();
+        recentCard.addView(text("Khoản đã thu", 17, true), matchWrap());
+        TextView recent = text("Đang tải...", 13, false);
+        recent.setLineSpacing(dp(5), 1);
+        recentCard.addView(recent, matchWrap());
+        content.addView(recentCard, matchWrap());
+
+        LinearLayout debtCard = panel();
+        debtCard.addView(text("Nợ trễ hạn chờ thu", 17, true), matchWrap());
+        TextView debts = text("Đang tải...", 13, false);
+        debts.setLineSpacing(dp(5), 1);
+        debtCard.addView(debts, matchWrap());
+        content.addView(debtCard, matchWrap());
+
         Button refresh = button("Làm mới báo cáo");
-        refresh.setOnClickListener(v -> showReports());
         content.addView(refresh, matchWrap());
+
+        final int[] period = {0};
+        Runnable fetch = () -> {
+            for (int i = 0; i < choices.length; i++) {
+                boolean selected = i == period[0];
+                choices[i].setBackgroundTintList(
+                        android.content.res.ColorStateList.valueOf(
+                                getColor(selected ? R.color.admin_screen_primary
+                                        : R.color.library_surface)));
+                choices[i].setTextColor(getColor(selected ? R.color.white : R.color.admin_screen_ink));
+            }
+            status.setText("Đang tổng hợp các giao dịch trên thiết bị...");
+            io.execute(() -> {
+                final ReportSnapshot data;
+                try (DatabaseHelper helper = new DatabaseHelper(getApplicationContext())) {
+                    data = queryPenaltyReport(helper.getReadableDatabase(), period[0]);
+                } catch (RuntimeException error) {
+                    runOnUiThread(() -> {
+                        if (isSessionReady() && !isFinishing()) {
+                            status.setText("Không đọc được báo cáo SQLite: " + safe(error.getMessage()));
+                            collected.setText("—");
+                            transactionCount.setText("Không có dữ liệu xác thực");
+                            outstanding.setText("Nợ chờ thu: —");
+                            bars.removeAllViews();
+                            recent.setText("Không tải được");
+                            debts.setText("Không tải được");
+                        }
+                    });
+                    return;
+                }
+                runOnUiThread(() -> {
+                    if (!isSessionReady() || isFinishing() || isDestroyed()) return;
+                    status.setText("Dữ liệu tại thiết bị · " + data.periodLabel);
+                    NumberFormat currency = NumberFormat.getIntegerInstance(new Locale("vi", "VN"));
+                    collected.setText(currency.format(data.collected) + " đ");
+                    transactionCount.setText("Giao dịch đã xác nhận trong kỳ: " + data.payments);
+                    outstanding.setText("Nợ chờ thu (tách riêng): " +
+                            currency.format(data.outstanding) + " đ");
+                    recent.setText(data.recentPayments.isEmpty()
+                            ? "Chưa có khoản thu được ghi trên thiết bị."
+                            : android.text.TextUtils.join("\n", data.recentPayments));
+                    debts.setText(data.unpaidPenalties.isEmpty()
+                            ? "Chưa ghi nhận khoản nợ trễ hạn trên thiết bị."
+                            : android.text.TextUtils.join("\n", data.unpaidPenalties));
+                    buildWeeklyPenaltyBars(bars, data.lastSevenDays);
+                });
+            });
+        };
+        for (int i = 0; i < choices.length; i++) {
+            final int index = i;
+            choices[i] = button(labels[i]);
+            choices[i].setTextSize(12);
+            tabs.addView(choices[i], new LinearLayout.LayoutParams(0, dp(44), 1));
+            choices[i].setOnClickListener(v -> {
+                period[0] = index;
+                fetch.run();
+            });
+        }
+        refresh.setOnClickListener(v -> fetch.run());
+        fetch.run();
+    }
+
+    private static final class ReportSnapshot {
+        long collected, outstanding;
+        int payments;
+        String periodLabel;
+        long[] lastSevenDays = new long[7];
+        java.util.List<String> recentPayments = new java.util.ArrayList<>();
+        java.util.List<String> unpaidPenalties = new java.util.ArrayList<>();
+    }
+
+    private ReportSnapshot queryPenaltyReport(
+            android.database.sqlite.SQLiteDatabase db, int period) {
+        ReportSnapshot result = new ReportSnapshot();
+        SimpleDateFormat formatter = new SimpleDateFormat("yyyy-MM-dd", Locale.ROOT);
+        Calendar clock = Calendar.getInstance();
+        String today = formatter.format(clock.getTime());
+        Calendar start = (Calendar) clock.clone();
+        if (period == 1) start.add(Calendar.DAY_OF_MONTH,
+                -((start.get(Calendar.DAY_OF_WEEK) + 5) % 7));
+        else if (period == 2) start.set(Calendar.DAY_OF_MONTH, 1);
+        String from = formatter.format(start.getTime());
+        Calendar until = (Calendar) clock.clone();
+        if (period == 0) until.add(Calendar.DAY_OF_MONTH, 1);
+        else if (period == 1) {
+            until = (Calendar) start.clone();
+            until.add(Calendar.DAY_OF_MONTH, 7);
+        } else {
+            until.set(Calendar.DAY_OF_MONTH, 1);
+            until.add(Calendar.MONTH, 1);
+        }
+        String to = formatter.format(until.getTime());
+        result.periodLabel = period == 0 ? "Ngày " + today
+                : period == 1 ? "Tuần bắt đầu " + from : "Tháng " + from.substring(0, 7);
+        String restriction = "paymentStatus='Confirmed' AND substr(receivedAt,1,10)>=? "
+                + "AND substr(receivedAt,1,10)<?";
+        try (android.database.Cursor c = db.rawQuery(
+                "SELECT COALESCE(SUM(amountReceived),0),COUNT(*) FROM PenaltyPayments WHERE "
+                        + restriction, new String[]{from, to})) {
+            if (c.moveToFirst()) {
+                result.collected = c.getLong(0);
+                result.payments = c.getInt(1);
+            }
+        }
+        result.outstanding = sum(db, "SELECT COALESCE(SUM(amountDue-amountPaid),0) "
+                + "FROM Penalties WHERE penaltyStatus IN ('Unpaid','Partial')", null);
+
+        Calendar days = Calendar.getInstance();
+        days.add(Calendar.DAY_OF_MONTH, -6);
+        String[] keys = new String[7];
+        for (int i = 0; i < 7; i++) {
+            keys[i] = formatter.format(days.getTime());
+            days.add(Calendar.DAY_OF_MONTH, 1);
+        }
+        try (android.database.Cursor c = db.rawQuery(
+                "SELECT substr(receivedAt,1,10),SUM(amountReceived) FROM PenaltyPayments "
+                        + "WHERE paymentStatus='Confirmed' AND substr(receivedAt,1,10)>=? "
+                        + "AND substr(receivedAt,1,10)<=? GROUP BY substr(receivedAt,1,10)",
+                new String[]{keys[0], keys[6]})) {
+            while (c.moveToNext()) {
+                String key = c.getString(0);
+                for (int i = 0; i < keys.length; i++)
+                    if (keys[i].equals(key)) {
+                        result.lastSevenDays[i] = c.getLong(1);
+                        break;
+                    }
+            }
+        }
+
+        NumberFormat amount = NumberFormat.getIntegerInstance(new Locale("vi", "VN"));
+        try (android.database.Cursor c = db.rawQuery(
+                "SELECT COALESCE(NULLIF(u.fullName,''),'Độc giả'),pp.amountReceived,pp.receivedAt "
+                        + "FROM PenaltyPayments pp JOIN Penalties p ON p.penaltyId=pp.penaltyId "
+                        + "LEFT JOIN Users u ON u.userId=p.userId "
+                        + "WHERE pp.paymentStatus='Confirmed' ORDER BY pp.receivedAt DESC LIMIT 5", null)) {
+            while (c.moveToNext())
+                result.recentPayments.add(c.getString(0) + " · Đã thu " + amount.format(c.getLong(1))
+                        + " đ · " + c.getString(2));
+        }
+        try (android.database.Cursor c = db.rawQuery(
+                "SELECT COALESCE(NULLIF(u.fullName,''),'Độc giả'),p.amountDue-p.amountPaid,p.daysLate "
+                        + "FROM Penalties p LEFT JOIN Users u ON u.userId=p.userId "
+                        + "WHERE p.penaltyStatus IN ('Unpaid','Partial') ORDER BY p.createdAt DESC LIMIT 5", null)) {
+            while (c.moveToNext())
+                result.unpaidPenalties.add(c.getString(0) + " · Còn nợ " +
+                        amount.format(c.getLong(1)) + " đ · " + c.getInt(2) + " ngày trễ");
+        }
+        return result;
+    }
+
+    private void buildWeeklyPenaltyBars(LinearLayout container, long[] amounts) {
+        container.removeAllViews();
+        long max = 1;
+        for (long value : amounts) max = Math.max(max, value);
+        Calendar day = Calendar.getInstance();
+        day.add(Calendar.DAY_OF_MONTH, -6);
+        SimpleDateFormat formatter = new SimpleDateFormat("dd/MM", Locale.ROOT);
+        for (int i = 0; i < 7; i++) {
+            LinearLayout column = new LinearLayout(this);
+            column.setOrientation(LinearLayout.VERTICAL);
+            column.setGravity(android.view.Gravity.BOTTOM | android.view.Gravity.CENTER_HORIZONTAL);
+            int height = amounts[i] <= 0 ? 0 : Math.max(dp(4),
+                    (int) Math.round(dp(90) * amounts[i] / (double) max));
+            View bar = new View(this);
+            bar.setBackgroundColor(getColor(R.color.admin_screen_primary));
+            LinearLayout.LayoutParams barParams = new LinearLayout.LayoutParams(dp(22), height);
+            barParams.bottomMargin = dp(6);
+            column.addView(bar, barParams);
+            TextView label = text(formatter.format(day.getTime()), 10, false);
+            label.setGravity(android.view.Gravity.CENTER);
+            column.addView(label, new LinearLayout.LayoutParams(-1, dp(28)));
+            LinearLayout.LayoutParams columnParams = new LinearLayout.LayoutParams(0, dp(130), 1);
+            container.addView(column, columnParams);
+            day.add(Calendar.DAY_OF_MONTH, 1);
+        }
     }
 
     private void clearContent(String heading, String subtitle) {
