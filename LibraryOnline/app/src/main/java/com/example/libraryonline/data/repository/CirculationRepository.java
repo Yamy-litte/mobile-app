@@ -29,6 +29,21 @@ public final class CirculationRepository implements AutoCloseable {
         helper = new DatabaseHelper(context.getApplicationContext());
     }
 
+    /**
+     * Process expired reservation holds independently of borrow/return activity.
+     * WorkManager calls this periodically; the transaction keeps queue transfer atomic.
+     */
+    public void processExpiredReservationHolds() {
+        SQLiteDatabase db = helper.getWritableDatabase();
+        db.beginTransaction();
+        try {
+            expireTimedOutReservations(db, timestamp());
+            db.setTransactionSuccessful();
+        } finally {
+            db.endTransaction();
+        }
+    }
+
     public OperationResult borrow(String readerBarcode, String copyBarcode, int requestedDays,
                                   String adminAuthUid) {
         SQLiteDatabase db = helper.getWritableDatabase();
