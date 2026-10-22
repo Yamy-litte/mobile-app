@@ -379,19 +379,19 @@ public class ReaderMainActivity extends com.example.libraryonline.ui.auth.Sessio
                         ? "Bạn hiện không có sách đang mượn hoặc quá hạn."
                         : "Bạn đang mượn " + active.size() + " cuốn sách.");
                 for (LoanDetail loan : active) {
-                    LinearLayout card = new LinearLayout(this);
-                    card.setOrientation(LinearLayout.VERTICAL);
-                    card.setPadding(dp(16), dp(14), dp(16), dp(14));
-                    card.setBackgroundResource(R.drawable.bg_reader_search);
-                    LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(
-                            LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
-                    params.bottomMargin = dp(10);
-                    container.addView(card, params);
-                    addInfoText(card, "Mã phiếu: " + safe(loan.loanReceiptId, "Chưa cập nhật"), true);
-                    addInfoText(card, "Mã bản sách: " + safe(loan.copyId, "Chưa cập nhật"), false);
-                    addInfoText(card, "Ngày mượn: " + safe(loan.borrowDate, "Chưa cập nhật"), false);
-                    addInfoText(card, "Hạn trả: " + safe(loan.dueDate, "Chưa cập nhật"), false);
-                    addInfoText(card, "Trạng thái: " + ("QuaHan".equals(loan.detailStatus) ? "Quá hạn" : "Đang mượn"), true);
+                    View card = getLayoutInflater().inflate(
+                            R.layout.item_reader_loan_record, container, false);
+                    container.addView(card);
+                    ((TextView) card.findViewById(R.id.readerLoanReceipt)).setText(
+                            "Mã phiếu: " + safe(loan.loanReceiptId, "Chưa cập nhật"));
+                    ((TextView) card.findViewById(R.id.readerLoanCopy)).setText(
+                            "Mã bản sách: " + safe(loan.copyId, "Chưa cập nhật"));
+                    ((TextView) card.findViewById(R.id.readerLoanBorrow)).setText(
+                            "Ngày mượn: " + safe(loan.borrowDate, "Chưa cập nhật"));
+                    ((TextView) card.findViewById(R.id.readerLoanDue)).setText(
+                            "Hạn trả: " + safe(loan.dueDate, "Chưa cập nhật"));
+                    ((TextView) card.findViewById(R.id.readerLoanStatus)).setText(
+                            "Trạng thái: " + ("QuaHan".equals(loan.detailStatus) ? "Quá hạn" : "Đang mượn"));
                 }
             });
         });
@@ -423,25 +423,22 @@ public class ReaderMainActivity extends com.example.libraryonline.ui.auth.Sessio
                         ? "Bạn chưa có thông báo nào."
                         : notifications.size() + " thông báo · " + unread + " chưa đọc");
                 for (LibraryNotification notification : notifications) {
-                    LinearLayout card = new LinearLayout(this);
-                    card.setOrientation(LinearLayout.VERTICAL);
-                    card.setPadding(dp(16), dp(14), dp(16), dp(14));
-                    card.setBackgroundResource(R.drawable.bg_reader_search);
-                    LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(
-                            LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
-                    params.bottomMargin = dp(10);
-                    container.addView(card, params);
+                    View card = getLayoutInflater().inflate(
+                            R.layout.item_reader_local_notification, container, false);
+                    container.addView(card);
+                    ((TextView) card.findViewById(R.id.readerLocalNotifTitle)).setText(
+                            safe(notification.title, "Thông báo thư viện"));
+                    ((TextView) card.findViewById(R.id.readerLocalNotifMessage)).setText(
+                            safe(notification.message, "Không có nội dung"));
+                    TextView date = card.findViewById(R.id.readerLocalNotifDate);
+                    if (notification.scheduledAt == null || notification.scheduledAt.trim().isEmpty()) {
+                        date.setVisibility(View.GONE);
+                    } else {
+                        date.setText(notification.scheduledAt);
+                    }
+                    TextView markRead = card.findViewById(R.id.readerLocalNotifRead);
                     boolean isUnread = notification.readAt == null || notification.readAt.trim().isEmpty();
-                    addInfoText(card, safe(notification.title, "Thông báo thư viện"), true);
-                    addInfoText(card, safe(notification.message, "Không có nội dung"), false);
-                    if (notification.scheduledAt != null && !notification.scheduledAt.trim().isEmpty())
-                        addInfoText(card, notification.scheduledAt, false);
                     if (isUnread) {
-                        TextView markRead = new TextView(this);
-                        markRead.setText("Đánh dấu đã đọc");
-                        markRead.setTextColor(androidx.core.content.ContextCompat.getColor(this, R.color.library_blue));
-                        markRead.setPadding(0, dp(10), 0, 0);
-                        card.addView(markRead);
                         markRead.setOnClickListener(v -> {
                             markRead.setEnabled(false);
                             catalogueExecutor.execute(() -> {
@@ -462,21 +459,13 @@ public class ReaderMainActivity extends com.example.libraryonline.ui.auth.Sessio
                             });
                         });
                     } else {
-                        addInfoText(card, "Đã đọc", true);
+                        markRead.setText("Đã đọc");
+                        markRead.setTextColor(androidx.core.content.ContextCompat.getColor(
+                                this, R.color.text_secondary));
                     }
                 }
             });
         });
-    }
-
-    private void addInfoText(LinearLayout parent, String value, boolean strong) {
-        TextView text = new TextView(this);
-        text.setText(value);
-        text.setTextColor(androidx.core.content.ContextCompat.getColor(this, R.color.library_text));
-        text.setTextSize(14);
-        if (strong) text.setTypeface(null, android.graphics.Typeface.BOLD);
-        text.setPadding(0, 0, 0, dp(6));
-        parent.addView(text);
     }
 
     private int dp(int value) {
