@@ -149,6 +149,14 @@ public final class AdminManagementActivity extends SessionActivity {
 
     private void updateCardStatus(DocumentSnapshot doc, String status) {
         if (!isSessionReady()) return;
+        if ("HoatDong".equals(status)) {
+            String expiry = value(doc, "cardExpiryDate");
+            String today = new SimpleDateFormat("yyyy-MM-dd", Locale.ROOT).format(new Date());
+            if (!expiry.isEmpty() && expiry.compareTo(today) < 0) {
+                toast("Thẻ đã hết hạn. Hãy dùng chức năng Gia hạn 1 năm trước khi mở khóa.");
+                return;
+            }
+        }
         privateSupportDialog().setTitle(status.equals("BiKhoa") ? "Khóa thẻ độc giả" : "Mở khóa thẻ")
                 .setMessage("Cập nhật trạng thái thẻ của " + value(doc, "fullName") + "?")
                 .setNegativeButton("Hủy", null)
