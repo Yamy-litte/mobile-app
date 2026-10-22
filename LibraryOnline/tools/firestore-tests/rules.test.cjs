@@ -3,7 +3,7 @@ const { before, after, beforeEach, test } = require("node:test");
 const fs = require("node:fs");
 const { URL } = require("node:url");
 const { initializeTestEnvironment, assertSucceeds, assertFails } = require("@firebase/rules-unit-testing");
-const { collection, query, where, getCountFromServer, doc, setDoc, getDoc, updateDoc, deleteDoc, writeBatch, serverTimestamp } = require("firebase/firestore");
+const { collection, query, where, getDocs, getCountFromServer, doc, setDoc, getDoc, updateDoc, deleteDoc, deleteField, writeBatch, serverTimestamp, Timestamp } = require("firebase/firestore");
 let env;
 const projectId = "demo-library-online";
 const category = { categoryId: "cat", name: "Văn học", isActive: true };
@@ -223,4 +223,111 @@ test("five-copy intake fits access budget and invalid child rolls back parent", 
   bad.set(doc(d,"BookCopies/bad"),{...copy,copyStatus:"Invented"});
   await assertFails(bad.commit());
   require("node:assert/strict").equal((await getDoc(doc(d,"BookTitles/book"))).data().totalCopies,6);
+});
+
+
+function onlineRequestFixture() {
+  return {
+    requestId:"reader_book", userId:"reader", bookTitleId:"book",
+    bookTitle:"Real inventory", loanDays:14, status:"Pending", attempt:1,
+    createdAt:serverTimestamp(), updatedAt:serverTimestamp()
+  };
+}
+function onlineNoticeFixture(status, message) {
+  return {
+    requestId:"reader_book", userId:"reader", status, attempt:1,
+    title:"Yêu cầu mượn Online", message,
+    createdAt:serverTimestamp(), readAt:null
+  };
+}
+test("reader submits only their own active request, never a preorder or duplicate", async () => {
+  const own = db("reader"), request = doc(own,"OnlineLoanRequests/reader_book");
+  await assertFails(setDoc(doc(db("other"), "OnlineLoanRequests/reader_book"), onlineRequestFixture()));
+  await assertFails(setDoc(request, {...onlineRequestFixture(), loanDays:0}));
+  await assertFails(setDoc(request, {...onlineRequestFixture(), status:"Approved"}));
+  await assertFails(setDoc(request, {...onlineRequestFixture(), bookTitleId:"other"}));
+  await assertSucceeds(setDoc(request, onlineRequestFixture()));
+  await assertFails(setDoc(request, onlineRequestFixture()));
+  await assertSucceeds(getDoc(request));
+  await assertFails(getDoc(doc(db("other"), "OnlineLoanRequests/reader_book")));
+  const owned = await assertSucceeds(getDocs(query(collection(own, "OnlineLoanRequests"), where("userId","==","reader"))));
+  require("node:assert/strict").equal(owned.docs.length,1);
+});
+test("Admin rejection atomically creates a private Reader notification; Reader can resubmit", async () => {
+  const requestReader = doc(db("reader"), "OnlineLoanRequests/reader_book");
+  await setDoc(requestReader, onlineRequestFixture());
+  const admin = db("admin"), request = doc(admin,"OnlineLoanRequests/reader_book");
+  const notification = doc(admin,"OnlineLoanNotifications/reader_book_v1_Rejected");
+  const review = {
+    status:"Rejected", rejectionReason:"Không thể phục vụ hôm nay",
+    reviewedBy:"admin", reviewedAt:serverTimestamp(),
+    notificationId:notification.id, updatedAt:serverTimestamp()
+  };
+  await assertFails(updateDoc(request, review));
+  const batch=writeBatch(admin);
+  batch.update(request,review);
+  batch.set(notification, onlineNoticeFixture("Rejected", "Vui lòng thử lại sau"));
+  await assertSucceeds(batch.commit());
+  await assertFails(updateDoc(request,{status:"Approved"}));
+  await assertFails(updateDoc(doc(db("reader"),"OnlineLoanNotifications/reader_book_v1_Rejected"),{message:"Forged"}));
+  await assertSucceeds(updateDoc(doc(db("reader"),"OnlineLoanNotifications/reader_book_v1_Rejected"),{readAt:serverTimestamp()}));
+  await assertFails(updateDoc(doc(db("reader"),"OnlineLoanNotifications/reader_book_v1_Rejected"),{readAt:serverTimestamp()}));
+  await assertFails(getDoc(doc(db("other"),"OnlineLoanNotifications/reader_book_v1_Rejected")));
+  const retry = {
+    status:"Pending", attempt:2, loanDays:7,
+    createdAt:serverTimestamp(), updatedAt:serverTimestamp(),
+    reviewedBy:deleteField(), reviewedAt:deleteField(), notificationId:deleteField(),
+    rejectionReason:deleteField()
+  };
+  await assertSucceeds(updateDoc(requestReader,retry));
+});
+test("Admin approval holds exactly one available copy and creates one Reader notification", async () => {
+  const d=db("admin"), request=doc(d,"OnlineLoanRequests/reader_book");
+  await assertSucceeds(setDoc(doc(db("reader"),"OnlineLoanRequests/reader_book"),onlineRequestFixture()));
+  const notification=doc(d,"OnlineLoanNotifications/reader_book_v1_Approved");
+  const decision={
+    status:"Approved", copyId:"copy", reviewedBy:"admin",
+    reviewedAt:serverTimestamp(), updatedAt:serverTimestamp(),
+    notificationId:notification.id,
+    holdUntil:Timestamp.fromDate(new Date(Date.now()+24*3600000))
+  };
+  await assertFails(updateDoc(request, decision));
+  const batch=writeBatch(d);
+  batch.update(request,decision);
+  batch.update(doc(d,"BookCopies/copy"),{copyStatus:"ChoLay",priorityUserId:"reader",updatedAt:serverTimestamp()});
+  batch.update(doc(d,"BookTitles/book"),{availableCopies:0,updatedAt:serverTimestamp()});
+  batch.set(notification,onlineNoticeFixture("Approved","Đến nhận sách trong 24 giờ"));
+  await assertSucceeds(batch.commit());
+  require("node:assert/strict").equal((await getDoc(doc(d,"BookTitles/book"))).data().availableCopies,0);
+  require("node:assert/strict").equal((await getDoc(doc(d,"BookCopies/copy"))).data().copyStatus,"ChoLay");
+  await assertFails(updateDoc(request,decision));
+  await assertFails(updateDoc(doc(db("reader"),"OnlineLoanRequests/reader_book"),{status:"Rejected"}));
+});
+test("expired online hold returns reserved copy once; unauthorized reader cannot expire it", async () => {
+  const now=new Date(Date.now()-2*3600000), older=new Date(Date.now()-26*3600000);
+  await env.withSecurityRulesDisabled(async c => {
+    const d=c.firestore(), batch=writeBatch(d);
+    batch.set(doc(d,"OnlineLoanRequests/reader_book"),{
+      requestId:"reader_book", userId:"reader", bookTitleId:"book",
+      bookTitle:"Real inventory", loanDays:14, attempt:1,
+      status:"Approved", createdAt:Timestamp.fromDate(older),
+      updatedAt:Timestamp.fromDate(older), copyId:"copy", reviewedBy:"admin",
+      reviewedAt:Timestamp.fromDate(older), holdUntil:Timestamp.fromDate(now),
+      notificationId:"reader_book_v1_Approved"
+    });
+    batch.update(doc(d,"BookCopies/copy"),{copyStatus:"ChoLay",priorityUserId:"reader"});
+    batch.update(doc(d,"BookTitles/book"),{availableCopies:0});
+    await batch.commit();
+  });
+  const d=db("admin"), request=doc(d,"OnlineLoanRequests/reader_book");
+  const notification=doc(d,"OnlineLoanNotifications/reader_book_v1_Expired");
+  await assertFails(updateDoc(doc(db("reader"),"OnlineLoanRequests/reader_book"),{status:"Expired"}));
+  const release=writeBatch(d);
+  release.update(request,{status:"Expired",notificationId:notification.id,updatedAt:serverTimestamp()});
+  release.update(doc(d,"BookCopies/copy"),{copyStatus:"SanSang",priorityUserId:null,updatedAt:serverTimestamp()});
+  release.update(doc(d,"BookTitles/book"),{availableCopies:1,updatedAt:serverTimestamp()});
+  release.set(notification,onlineNoticeFixture("Expired","Đã hết thời gian giữ sách."));
+  await assertSucceeds(release.commit());
+  require("node:assert/strict").equal((await getDoc(doc(d,"BookTitles/book"))).data().availableCopies,1);
+  await assertFails(release.commit());
 });
