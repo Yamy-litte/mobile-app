@@ -25,6 +25,7 @@ public final class LoanValidator {
         if (user == null || user.userId == null || user.userId.trim().isEmpty()) {
             return "Không tìm thấy hồ sơ độc giả.";
         }
+        if (!"Reader".equals(user.role)) return "Mã thẻ không thuộc về độc giả.";
         if (user.isDeleted) return "Thẻ độc giả đã ngừng sử dụng.";
         if (!CARD_ACTIVE.equals(user.cardStatus)) return "Thẻ độc giả chưa hoạt động hoặc đang bị khóa.";
         if (hasOverdueLoan) return "Độc giả đang có sách quá hạn chưa trả.";
