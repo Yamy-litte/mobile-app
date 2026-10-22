@@ -754,20 +754,6 @@ public class AdminManagementActivity extends SessionActivity {
     private int parse(EditText view) { try { return Integer.parseInt(view.getText().toString().trim()); } catch (Exception e) { return -1; } }
     private int number(DocumentSnapshot doc, String field, int fallback) { Long n = doc.getLong(field); return n == null ? fallback : n.intValue(); }
     private static String value(DocumentSnapshot doc, String field) { String v = doc.getString(field); return v == null ? "" : v; }
-    private TextView text(String value, int size, boolean bold) {
-        TextView view = new TextView(this); view.setText(value); view.setTextSize(size);
-        view.setTextColor(getColor(R.color.admin_screen_ink)); view.setPadding(0, dp(5), 0, dp(5));
-        if (bold) view.setTypeface(null, android.graphics.Typeface.BOLD);
-        return view;
-    }
-    private Button button(String label) {
-        Button b = new Button(this); b.setText(label); b.setAllCaps(false);
-        b.setBackgroundTintList(android.content.res.ColorStateList.valueOf(getColor(R.color.admin_screen_primary)));
-        b.setTextColor(getColor(R.color.library_surface)); return b;
-    }
-    private LinearLayout.LayoutParams matchWrap() {
-        LinearLayout.LayoutParams p = new LinearLayout.LayoutParams(-1, -2); p.topMargin = dp(6); p.bottomMargin = dp(6); return p;
-    }
     private int dp(int value) { return Math.round(value * getResources().getDisplayMetrics().density); }
     private String safe(String value) { return value == null ? "lỗi không xác định" : value; }
     private void toast(String message) { if (!isFinishing() && !isDestroyed()) Toast.makeText(this, message, Toast.LENGTH_LONG).show(); }
