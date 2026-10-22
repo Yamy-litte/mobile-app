@@ -410,73 +410,167 @@ public class AdminManagementActivity extends SessionActivity {
     }
 
     private void showConfig() {
-        clearContent("Cấu hình hệ thống", "Thông số được lưu trên Firestore và cache SQLite trên thiết bị Admin.");
-        EditText maxBooks = numericInput("Số cuốn mượn tối đa / độc giả");
+        clearContent("Cấu hình thư viện", "Thay đổi hạn mức mượn; các quy tắc khác chỉ đọc như bản thiết kế.");
+        TextView source = text("Đang kiểm tra cấu hình Firestore...", 13, false);
+        source.setBackgroundResource(R.drawable.bg_admin_screen_readonly);
+        source.setPadding(dp(12), dp(11), dp(12), dp(11));
+        content.addView(source, matchWrap());
+
+        LinearLayout form = panel();
+        form.addView(text("Hạn mức mượn", 19, true), matchWrap());
+        EditText maxBooks = numericInput("Số cuốn tối đa / độc giả");
         EditText maxDays = numericInput("Số ngày mượn tối đa");
-        EditText onlineHours = numericInput("Giờ giữ sách mượn online");
-        EditText reserveHours = numericInput("Giờ giữ chỗ đặt trước");
-        EditText fee = numericInput("Tiền phạt mỗi ngày (VNĐ)");
-        EditText multiplier = numericInput("Hệ số bồi thường sách mất");
-        content.addView(maxBooks, matchWrap()); content.addView(maxDays, matchWrap());
-        content.addView(onlineHours, matchWrap()); content.addView(reserveHours, matchWrap());
-        content.addView(fee, matchWrap()); content.addView(multiplier, matchWrap());
+        addNumberStepper(form, "Số cuốn tối đa / độc giả", maxBooks, 1, 20);
+        addNumberStepper(form, "Số ngày mượn tối đa", maxDays, 1, 60);
+        TextView help = text(
+                "Tính cả sách đang mượn và yêu cầu Online chờ lấy. Tổng không được vượt hạn mức.",
+                12, false);
+        form.addView(help, matchWrap());
+        content.addView(form, matchWrap());
+
+        LinearLayout fixed = panel();
+        fixed.addView(text("Quy tắc cố định · Chỉ đọc", 18, true), matchWrap());
+        TextView holdOnline = text("", 14, false);
+        TextView holdReservation = text("", 14, false);
+        TextView lateFee = text("", 14, false);
+        TextView multiplier = text("", 14, false);
+        for (TextView v : new TextView[]{holdOnline, holdReservation, lateFee, multiplier})
+            fixed.addView(v, matchWrap());
+        content.addView(fixed, matchWrap());
+
         SystemConfig local;
-        try (com.example.libraryonline.data.repository.SystemConfigRepository repo =
+        try (com.example.libraryonline.data.repository.SystemConfigRepository repository =
                      new com.example.libraryonline.data.repository.SystemConfigRepository(this)) {
-            local = repo.getCurrent();
-        } catch (Exception e) { local = null; }
-        if (local == null) local = new SystemConfig();
-        setNumeric(maxBooks, local.maxBooksPerUser); setNumeric(maxDays, local.maxLoanDays);
-        setNumeric(onlineHours, local.onlineHoldHours); setNumeric(reserveHours, local.reservationHoldHours);
-        setNumeric(fee, local.lateFeePerDay); setNumeric(multiplier, local.lostBookMultiplier);
-        final SystemConfig defaults = local;
+            local = repository.getCurrent();
+        } catch (RuntimeException error) {
+            local = null;
+        }
+        if (local == null) {
+            local = new SystemConfig();
+            local.maxBooksPerUser = 5;
+            local.maxLoanDays = 14;
+            local.onlineHoldHours = 24;
+            local.reservationHoldHours = 48;
+            local.lateFeePerDay = 5000;
+            local.lostBookMultiplier = 2;
+        }
+        setNumeric(maxBooks, local.maxBooksPerUser);
+        setNumeric(maxDays, local.maxLoanDays);
+        final int[] fixedValues = {
+                local.onlineHoldHours, local.reservationHoldHours,
+                local.lateFeePerDay, local.lostBookMultiplier
+        };
+        updateFixedConfigLabels(holdOnline, holdReservation, lateFee, multiplier, fixedValues);
+        source.setText("Đang hiển thị cấu hình cục bộ · Đang đồng bộ...");
+
         firestore.collection("SystemConfigs").document("default").get()
                 .addOnSuccessListener(doc -> {
-                    if (!isSessionReady() || !doc.exists()) return;
-                    setNumeric(maxBooks, number(doc, "maxBooksPerUser", defaults.maxBooksPerUser));
-                    setNumeric(maxDays, number(doc, "maxLoanDays", defaults.maxLoanDays));
-                    setNumeric(onlineHours, number(doc, "onlineHoldHours", defaults.onlineHoldHours));
-                    setNumeric(reserveHours, number(doc, "reservationHoldHours", defaults.reservationHoldHours));
-                    setNumeric(fee, number(doc, "lateFeePerDay", defaults.lateFeePerDay));
-                    setNumeric(multiplier, number(doc, "lostBookMultiplier", defaults.lostBookMultiplier));
+                    if (!isSessionReady()) return;
+                    if (!doc.exists()) {
+                        source.setText("Chưa có cấu hình Firestore · Dùng giá trị mặc định trên thiết bị");
+                        return;
+                    }
+                    setNumeric(maxBooks, number(doc, "maxBooksPerUser", parse(maxBooks)));
+                    setNumeric(maxDays, number(doc, "maxLoanDays", parse(maxDays)));
+                    fixedValues[0] = number(doc, "onlineHoldHours", fixedValues[0]);
+                    fixedValues[1] = number(doc, "reservationHoldHours", fixedValues[1]);
+                    fixedValues[2] = number(doc, "lateFeePerDay", fixedValues[2]);
+                    fixedValues[3] = number(doc, "lostBookMultiplier", fixedValues[3]);
+                    updateFixedConfigLabels(
+                            holdOnline, holdReservation, lateFee, multiplier, fixedValues);
+                    source.setText("Trực tuyến · Đã tải cấu hình Firestore");
+                })
+                .addOnFailureListener(error -> {
+                    if (isSessionReady()) source.setText(
+                            "Không kết nối được Firestore. Dữ liệu cục bộ có thể đã cũ.");
                 });
         Button save = button("Lưu cấu hình");
+        content.addView(save, matchWrap());
+        TextView notice = text("Giới hạn mới chỉ có hiệu lực sau khi Firestore xác nhận lưu.",
+                12, false);
+        content.addView(notice, matchWrap());
         save.setOnClickListener(v -> {
-            int books = parse(maxBooks), days = parse(maxDays), online = parse(onlineHours),
-                    reserve = parse(reserveHours), dailyFee = parse(fee), lost = parse(multiplier);
-            if (books < 1 || books > 20 || days < 1 || days > 60 || online < 1 || online > 168
-                    || reserve < 1 || reserve > 336 || dailyFee < 0 || dailyFee > 1000000 || lost < 1 || lost > 10) {
-                toast("Thông số ngoài giới hạn cho phép. Kiểm tra lại các giá trị.");
+            if (!isSessionReady()) return;
+            int books = parse(maxBooks), days = parse(maxDays),
+                    online = fixedValues[0], reserve = fixedValues[1],
+                    fee = fixedValues[2], lost = fixedValues[3];
+            if (books < 1 || books > 20 || days < 1 || days > 60
+                    || online < 1 || reserve < 1 || fee < 0 || lost < 1) {
+                toast("Hạn mức ngoài giới hạn cho phép. Kiểm tra lại thông tin.");
                 return;
             }
             save.setEnabled(false);
+            source.setText("Đang lưu cấu hình lên Firestore...");
             Map<String,Object> data = new HashMap<>();
-            data.put("configId", "default"); data.put("maxBooksPerUser", books); data.put("maxLoanDays", days);
-            data.put("onlineHoldHours", online); data.put("reservationHoldHours", reserve);
-            data.put("lateFeePerDay", dailyFee); data.put("lostBookMultiplier", lost);
-            data.put("updatedBy", adminUid); data.put("updatedAt", FieldValue.serverTimestamp());
+            data.put("configId", "default");
+            data.put("maxBooksPerUser", books);
+            data.put("maxLoanDays", days);
+            data.put("onlineHoldHours", online);
+            data.put("reservationHoldHours", reserve);
+            data.put("lateFeePerDay", fee);
+            data.put("lostBookMultiplier", lost);
+            data.put("updatedBy", adminUid);
+            data.put("updatedAt", FieldValue.serverTimestamp());
             firestore.collection("SystemConfigs").document("default").set(data)
                     .addOnSuccessListener(unused -> {
+                        if (!isSessionReady()) return;
                         SystemConfig config = new SystemConfig();
                         config.configId = "default"; config.maxBooksPerUser = books; config.maxLoanDays = days;
                         config.onlineHoldHours = online; config.reservationHoldHours = reserve;
-                        config.lateFeePerDay = dailyFee; config.lostBookMultiplier = lost;
-                        config.updatedBy = null; // Bootstrap Admins may not have a local parent row.
+                        config.lateFeePerDay = fee; config.lostBookMultiplier = lost;
+                        config.updatedBy = null;
                         config.updatedAt = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.ROOT).format(new Date());
                         io.execute(() -> {
-                            try (com.example.libraryonline.data.repository.SystemConfigRepository repo =
+                            try (com.example.libraryonline.data.repository.SystemConfigRepository repository =
                                          new com.example.libraryonline.data.repository.SystemConfigRepository(this)) {
-                                if (repo.getCurrent() == null) repo.create(config); else repo.update(config);
-                            } catch (Exception e) { runOnUiThread(() -> toast("Đã lưu cloud nhưng lỗi cache cục bộ.")); }
+                                if (repository.getCurrent() == null) repository.create(config);
+                                else repository.update(config);
+                            } catch (RuntimeException error) {
+                                runOnUiThread(() -> { if (isSessionReady())
+                                    toast("Đã lưu Firestore nhưng chưa cập nhật cache SQLite."); });
+                            }
                         });
                         save.setEnabled(true);
-                        toast("Đã lưu cấu hình hệ thống.");
-                    }).addOnFailureListener(e -> {
+                        source.setText("Trực tuyến · Đã lưu cấu hình Firestore");
+                        toast("Đã lưu hạn mức mượn.");
+                    })
+                    .addOnFailureListener(error -> {
+                        if (!isSessionReady()) return;
                         save.setEnabled(true);
-                        toast("Không lưu được cấu hình: " + safe(e.getMessage()));
+                        source.setText("Lưu thất bại · Không có thay đổi được xác nhận");
+                        toast("Không lưu được cấu hình: " + safe(error.getMessage()));
                     });
         });
-        content.addView(save, matchWrap());
+    }
+
+    private void addNumberStepper(LinearLayout parent, String title,
+                                  EditText field, int min, int max) {
+        parent.addView(text(title, 14, true), matchWrap());
+        LinearLayout controls = new LinearLayout(this);
+        controls.setOrientation(LinearLayout.HORIZONTAL);
+        controls.setGravity(android.view.Gravity.CENTER_VERTICAL);
+        Button less = button("−");
+        Button more = button("+");
+        less.setContentDescription("Giảm " + title);
+        more.setContentDescription("Tăng " + title);
+        controls.addView(less, new LinearLayout.LayoutParams(dp(46), dp(48)));
+        field.setGravity(android.view.Gravity.CENTER);
+        field.setBackgroundResource(R.drawable.bg_admin_screen_field);
+        controls.addView(field, new LinearLayout.LayoutParams(0, dp(48), 1));
+        controls.addView(more, new LinearLayout.LayoutParams(dp(46), dp(48)));
+        less.setOnClickListener(v -> field.setText(String.valueOf(Math.max(min, parse(field) - 1))));
+        more.setOnClickListener(v -> field.setText(String.valueOf(Math.min(max,
+                Math.max(min - 1, parse(field)) + 1))));
+        parent.addView(controls, matchWrap());
+    }
+
+    private void updateFixedConfigLabels(TextView online, TextView reservation,
+                                          TextView fee, TextView multiplier, int[] values) {
+        online.setText("Giữ sách Online: " + values[0] + " giờ");
+        reservation.setText("Ưu tiên đặt trước: " + values[1] + " giờ");
+        fee.setText("Phạt trả chậm: " + NumberFormat.getIntegerInstance(new Locale("vi", "VN"))
+                .format(values[2]) + " đ / ngày");
+        multiplier.setText("Bồi thường sách mất: giá bìa × " + values[3]);
     }
 
     private void showReports() {
