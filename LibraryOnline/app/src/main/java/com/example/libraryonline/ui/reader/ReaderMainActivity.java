@@ -40,6 +40,7 @@ import java.util.concurrent.Executors;
 public class ReaderMainActivity extends com.example.libraryonline.ui.auth.SessionActivity {
     private ReaderHomeView homeView;
     private ReaderAccountController accountController;
+    private ReaderOnlineLoanController onlineLoanController;
 
     private FirebaseFirestore firestore;
     private FirebaseAuth auth;
@@ -102,6 +103,7 @@ public class ReaderMainActivity extends com.example.libraryonline.ui.auth.Sessio
         bindViews();
         bindActions();
         accountController = new ReaderAccountController(this);
+        onlineLoanController = new ReaderOnlineLoanController(this);
         homeView.setOnTabChangedListener(tab -> {
             if (tab != ReaderHomeView.ACCOUNT) accountController.onLeaveAccount();
         });
@@ -126,6 +128,7 @@ public class ReaderMainActivity extends com.example.libraryonline.ui.auth.Sessio
         loadBooksFromSqlite();
         loadReaderLoans(profile.user == null ? null : profile.user.userId);
         loadReaderNotifications(profile.user == null ? null : profile.user.userId);
+        if (onlineLoanController != null) onlineLoanController.start(profile.uid);
         catalogueSyncManager = new BookCatalogueSyncManager(getApplicationContext());
         catalogueSyncManager.start(
                 new BookCatalogueSyncManager.SyncListener() {
@@ -540,6 +543,7 @@ public class ReaderMainActivity extends com.example.libraryonline.ui.auth.Sessio
 
     @Override
     protected void onSessionStopped() {
+        if (onlineLoanController != null) onlineLoanController.stop();
         if (accountController != null) accountController.onLeaveAccount();
         if (homeView != null) homeView.clearProfile();
         if (catalogueSyncManager != null) {
