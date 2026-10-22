@@ -18,7 +18,6 @@ import android.widget.Toast;
 import com.example.libraryonline.R;
 import com.example.libraryonline.ui.auth.ChangePasswordActivity;
 import com.google.zxing.BarcodeFormat;
-import com.google.zxing.WriterException;
 import com.google.zxing.common.BitMatrix;
 import com.google.zxing.oned.Code128Writer;
 import com.google.firebase.auth.FirebaseAuth;
@@ -175,7 +174,7 @@ public final class ReaderAccountController {
                     LinearLayout.LayoutParams.MATCH_PARENT, dp(92));
             barcodeParams.topMargin = dp(12);
             card.addView(barcodeImage, barcodeParams);
-        } catch (WriterException | IllegalArgumentException error) {
+        } catch (IllegalArgumentException error) {
             toast("Không tạo được barcode thẻ độc giả.");
             return;
         }
