@@ -68,6 +68,11 @@ public class AdminHomeViewTest {
         assertEquals(View.VISIBLE,screen.findViewById(R.id.adminRequests).getVisibility());
         screen.findViewById(R.id.buttonAdminAccount).performClick();
         assertEquals(AdminHomeView.ACCOUNT,home.selectedTab());assertEquals(View.VISIBLE,screen.findViewById(R.id.buttonAdminLogout).getVisibility());
+        assertNotNull(screen.findViewById(R.id.textAdminProfileDob));
+        assertNotNull(screen.findViewById(R.id.textAdminProfilePhone));
+        assertNotNull(screen.findViewById(R.id.textAdminProfileEmail));
+        assertNotNull(screen.findViewById(R.id.buttonAdminEditProfile));
+        assertNotNull(screen.findViewById(R.id.buttonAdminChangePassword));
         screen.findViewById(R.id.navAdminHome).performClick();assertEquals(AdminHomeView.HOME,home.selectedTab());
         assertFalse(screen.findViewById(R.id.navAdminAccount).isSelected());
     }
