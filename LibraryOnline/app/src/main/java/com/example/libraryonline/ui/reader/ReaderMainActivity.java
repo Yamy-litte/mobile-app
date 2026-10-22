@@ -87,6 +87,7 @@ public class ReaderMainActivity extends com.example.libraryonline.ui.auth.Sessio
                         new androidx.activity.OnBackPressedCallback(true) {
                             @Override
                             public void handleOnBackPressed() {
+                                if (accountController != null && accountController.closeEditor()) return;
                                 if (homeView.onBack()) return;
                                 setEnabled(false);
                                 getOnBackPressedDispatcher().onBackPressed();
