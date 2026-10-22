@@ -35,20 +35,19 @@
     <!-- Compatibility aliases for Admin: no independent screen background/text palette. -->
     <color name="admin_screen_bg">@color/background</color>
     <color name="admin_screen_ink">@color/text_primary</color>
-    <color name="admin_screen_primary">#1C605A</color>
-    <color name="admin_screen_primary_dark">#174F4A</color>
+    <color name="admin_screen_primary">@color/library_blue</color>
+    <color name="admin_screen_primary_dark">@color/library_blue_dark</color>
     <color name="admin_screen_muted">@color/text_secondary</color>
     <color name="admin_screen_border">@color/border</color>
-    <color name="admin_screen_soft">#EDF5F3</color>
+    <color name="admin_screen_soft">@color/library_accent_background</color>
     <color name="admin_screen_readonly">@color/input_background</color>
     <color name="admin_screen_orange">#C95B37</color>
     <color name="admin_screen_green">#28833B</color>
     <color name="admin_screen_red">#C62828</color>
 
     <!-- Online loan brand/selection accents remain unchanged. -->
-    <color name="online_forest">#195D55</color>
-    <color name="online_tint">#EAF4F0</color>
+    <color name="online_forest">@color/library_blue</color>
+    <color name="online_tint">@color/library_accent_background</color>
     <color name="online_canvas">@color/background</color>
-    <!-- Original beige tint used by the Online back button only, not a screen canvas. -->
-    <color name="online_back_button_background">#FFF9F3</color>
+
 </resources>

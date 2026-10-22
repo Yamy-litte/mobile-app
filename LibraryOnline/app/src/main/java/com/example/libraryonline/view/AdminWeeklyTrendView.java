@@ -1,4 +1,4 @@
-package com.example.libraryonline.ui.admin;
+package com.example.libraryonline.view;
 
 import android.content.Context;
 import android.graphics.Canvas;

@@ -113,38 +113,19 @@ public class AdminManagementActivity extends SessionActivity {
         if (!isSessionReady()) return;
         clearContent("Tìm độc giả", "Tìm theo họ tên hoặc số điện thoại. Thẻ được quản lý trên Firestore.");
         readerFilter = "all";
-        searchInput = new EditText(this);
-        searchInput.setSingleLine(true);
-        searchInput.setHint("Tìm theo tên / SĐT");
+        View screen = getLayoutInflater().inflate(R.layout.view_admin_reader_list, content, false);
+        content.addView(screen);
+        searchInput = screen.findViewById(R.id.adminReaderSearch);
         searchInput.setText(searchText);
-        searchInput.setTextColor(getColor(R.color.admin_screen_ink));
-        searchInput.setTextSize(14);
-        searchInput.setBackgroundResource(R.drawable.bg_admin_screen_field);
-        searchInput.setCompoundDrawablesWithIntrinsicBounds(R.drawable.ic_inventory_search, 0, 0, 0);
-        searchInput.setCompoundDrawablePadding(dp(10));
-        searchInput.setPadding(dp(16), 0, dp(16), 0);
-        content.addView(searchInput, new LinearLayout.LayoutParams(-1, dp(52)));
-
-        readersSummary = text("Đang tải danh sách độc giả...", 13, false);
-        readersSummary.setBackgroundResource(R.drawable.bg_admin_screen_readonly);
-        readersSummary.setPadding(dp(12), dp(10), dp(12), dp(10));
-        content.addView(readersSummary, matchWrap());
-
-        android.widget.HorizontalScrollView filterScroll = new android.widget.HorizontalScrollView(this);
-        filterScroll.setHorizontalScrollBarEnabled(false);
-        LinearLayout chips = new LinearLayout(this);
-        chips.setOrientation(LinearLayout.HORIZONTAL);
+        readersSummary = screen.findViewById(R.id.adminReaderSummary);
+        resultsContainer = screen.findViewById(R.id.adminReaderResults);
         String[] keys = {"all", "active", "expired", "locked"};
-        String[] labels = {"Tất cả", "Hoạt động", "Hết hạn", "Bị khóa"};
+        int[] ids = {R.id.adminReaderFilter0, R.id.adminReaderFilter1,
+                R.id.adminReaderFilter2, R.id.adminReaderFilter3};
         java.util.List<Button> choices = new java.util.ArrayList<>();
         for (int i = 0; i < keys.length; i++) {
             final String key = keys[i];
-            Button chip = button(labels[i]);
-            chip.setTextSize(12);
-            chip.setMinHeight(dp(42));
-            LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(-2, dp(42));
-            lp.setMargins(0, dp(7), dp(8), dp(8));
-            chips.addView(chip, lp);
+            Button chip = screen.findViewById(ids[i]);
             choices.add(chip);
             chip.setOnClickListener(v -> {
                 readerFilter = key;
@@ -153,13 +134,6 @@ public class AdminManagementActivity extends SessionActivity {
             });
         }
         styleReaderFilterChips(choices, keys);
-        filterScroll.addView(chips);
-        content.addView(filterScroll, matchWrap());
-
-        resultsContainer = new LinearLayout(this);
-        resultsContainer.setOrientation(LinearLayout.VERTICAL);
-        content.addView(resultsContainer, matchWrap());
-
         searchInput.addTextChangedListener(new android.text.TextWatcher() {
             @Override public void beforeTextChanged(CharSequence text, int start, int count, int after) {}
             @Override public void onTextChanged(CharSequence text, int start, int before, int count) {
@@ -186,10 +160,7 @@ public class AdminManagementActivity extends SessionActivity {
     private void styleReaderFilterChips(java.util.List<Button> chips, String[] keys) {
         for (int i = 0; i < keys.length; i++) {
             boolean selected = keys[i].equals(readerFilter);
-            chips.get(i).setBackgroundTintList(android.content.res.ColorStateList.valueOf(
-                    getColor(selected ? R.color.admin_screen_primary : R.color.library_surface)));
-            chips.get(i).setTextColor(getColor(
-                    selected ? R.color.white : R.color.admin_screen_ink));
+            chips.get(i).setSelected(selected);
         }
     }
 
@@ -264,83 +235,73 @@ public class AdminManagementActivity extends SessionActivity {
             if ("expired".equals(readerFilter) && (!isExpired || isLocked)) continue;
             if ("locked".equals(readerFilter) && !isLocked) continue;
             visible++;
-            LinearLayout card = panel();
-            LinearLayout.LayoutParams margins = matchWrap();
-            margins.bottomMargin = dp(10);
-            resultsContainer.addView(card, margins);
-            TextView heading = text(name.isEmpty() ? "Độc giả" : name, 17, true);
-            card.addView(heading, matchWrap());
-            TextView status = text("Mã thẻ: " + value(doc, "barcode") + " · "
-                            + (isLocked ? "Bị khóa" : isExpired ? "Hết hạn" : "Hoạt động"),
-                    13, true);
+            View card = getLayoutInflater().inflate(
+                    R.layout.item_admin_reader_profile, resultsContainer, false);
+            resultsContainer.addView(card);
+            ((TextView) card.findViewById(R.id.adminReaderCardName))
+                    .setText(name.isEmpty() ? "Độc giả" : name);
+            TextView status = card.findViewById(R.id.adminReaderCardStatus);
+            status.setText("Mã thẻ: " + value(doc, "barcode") + " · "
+                    + (isLocked ? "Bị khóa" : isExpired ? "Hết hạn" : "Hoạt động"));
             status.setTextColor(getColor(isLocked ? R.color.admin_screen_red
                     : isExpired ? R.color.admin_screen_orange : R.color.admin_screen_green));
-            card.addView(status, matchWrap());
-            card.addView(text("Email: " + value(doc, "email"), 13, false), matchWrap());
-            card.addView(text("SĐT: " + (phone.isEmpty() ? "Chưa cập nhật" : phone), 13, false), matchWrap());
-            card.addView(text("Hạn thẻ: " + (expiry.isEmpty() ? "Chưa cập nhật" : expiry), 12, false), matchWrap());
-            Button open = button("Xem hồ sơ");
-            open.setOnClickListener(v -> showReaderDetails(doc));
-            card.addView(open, matchWrap());
+            ((TextView) card.findViewById(R.id.adminReaderCardEmail))
+                    .setText("Email: " + value(doc, "email"));
+            ((TextView) card.findViewById(R.id.adminReaderCardPhone))
+                    .setText("SĐT: " + (phone.isEmpty() ? "Chưa cập nhật" : phone));
+            ((TextView) card.findViewById(R.id.adminReaderCardExpiry))
+                    .setText("Hạn thẻ: " + (expiry.isEmpty() ? "Chưa cập nhật" : expiry));
+            card.findViewById(R.id.adminReaderCardOpen)
+                    .setOnClickListener(v -> showReaderDetails(doc));
         }
         readersSummary.setText("Tổng: " + users.size()
                 + "  |  Hoạt động: " + active
                 + "  |  Hết hạn: " + expired
                 + "  |  Bị khóa: " + locked);
-        if (visible == 0)
-            resultsContainer.addView(text("Không tìm thấy độc giả phù hợp.", 14, false), matchWrap());
+        if (visible == 0) {
+            TextView empty = (TextView) getLayoutInflater().inflate(
+                    R.layout.view_ui_text_secondary, resultsContainer, false);
+            empty.setText("Không tìm thấy độc giả phù hợp.");
+            resultsContainer.addView(empty);
+        }
     }
 
     /** Detail sub-screen from Figma; only card status/expiry are mutable for readers. */
     private void showReaderDetails(DocumentSnapshot doc) {
         if (!isSessionReady()) return;
         clearContent("Hồ sơ độc giả", "Chi tiết thẻ và lịch sử được ghi trên thiết bị.");
-        Button back = button("← Trở về danh sách độc giả");
-        back.setOnClickListener(v -> showReaders());
-        content.addView(back, matchWrap());
-
-        LinearLayout card = panel();
-        content.addView(card, matchWrap());
-        card.addView(text(value(doc, "fullName"), 21, true), matchWrap());
-        card.addView(text("Mã thẻ: " + value(doc, "barcode"), 14, true), matchWrap());
+        View screen = getLayoutInflater().inflate(R.layout.view_admin_reader_detail, content, false);
+        content.addView(screen);
+        screen.findViewById(R.id.adminReaderDetailBack).setOnClickListener(v -> showReaders());
+        ((TextView) screen.findViewById(R.id.adminReaderDetailName))
+                .setText(value(doc, "fullName"));
+        ((TextView) screen.findViewById(R.id.adminReaderDetailBarcode))
+                .setText("Mã thẻ: " + value(doc, "barcode"));
         String status = value(doc, "cardStatus");
-        TextView state = text("Trạng thái: " + ("BiKhoa".equals(status) ? "Bị khóa" : "HoatDong".equals(status) ? "Hoạt động" : status),
-                14, true);
+        TextView state = screen.findViewById(R.id.adminReaderDetailStatus);
+        state.setText("Trạng thái: " + ("BiKhoa".equals(status) ? "Bị khóa"
+                : "HoatDong".equals(status) ? "Hoạt động" : status));
         state.setTextColor(getColor("BiKhoa".equals(status)
                 ? R.color.admin_screen_red : R.color.admin_screen_green));
-        card.addView(state, matchWrap());
-        card.addView(text("Hiệu lực đến: " + value(doc, "cardExpiryDate"), 13, false), matchWrap());
-
-        LinearLayout identity = panel();
-        content.addView(identity, matchWrap());
-        identity.addView(text("Thông tin độc giả", 17, true), matchWrap());
-        identity.addView(text("Email: " + value(doc, "email"), 14, false), matchWrap());
-        identity.addView(text("Số điện thoại: " + value(doc, "phone"), 14, false), matchWrap());
-        identity.addView(text("Ngày sinh: " + value(doc, "dateOfBirth"), 14, false), matchWrap());
-
-        Button history = button("Xem lịch sử mượn và các khoản phạt");
-        history.setOnClickListener(v -> showReaderHistory(doc));
-        content.addView(history, matchWrap());
-
-        Button lock = button("BiKhoa".equals(status) ? "Mở khóa thẻ" : "Khóa thẻ thủ công");
-        lock.setOnClickListener(v -> updateCardStatus(doc, "BiKhoa".equals(status) ? "HoatDong" : "BiKhoa"));
-        content.addView(lock, matchWrap());
-        Button renew = button("Gia hạn thẻ thêm 1 năm");
-        renew.setOnClickListener(v -> renewCard(doc));
-        content.addView(renew, matchWrap());
-
-        TextView note = text("Hồ sơ cloud và lịch sử SQLite có phạm vi dữ liệu khác nhau. "
-                + "Việc khóa thẻ và gia hạn cần xác nhận trước khi cập nhật Firestore.", 12, false);
-        content.addView(note, matchWrap());
+        ((TextView) screen.findViewById(R.id.adminReaderDetailExpiry))
+                .setText("Hiệu lực đến: " + value(doc, "cardExpiryDate"));
+        ((TextView) screen.findViewById(R.id.adminReaderDetailEmail))
+                .setText("Email: " + value(doc, "email"));
+        ((TextView) screen.findViewById(R.id.adminReaderDetailPhone))
+                .setText("Số điện thoại: " + value(doc, "phone"));
+        ((TextView) screen.findViewById(R.id.adminReaderDetailBirth))
+                .setText("Ngày sinh: " + value(doc, "dateOfBirth"));
+        screen.findViewById(R.id.adminReaderDetailHistory)
+                .setOnClickListener(v -> showReaderHistory(doc));
+        Button lock = screen.findViewById(R.id.adminReaderDetailLock);
+        lock.setText("BiKhoa".equals(status) ? "Mở khóa thẻ" : "Khóa thẻ thủ công");
+        lock.setOnClickListener(v -> updateCardStatus(doc,
+                "BiKhoa".equals(status) ? "HoatDong" : "BiKhoa"));
+        screen.findViewById(R.id.adminReaderDetailRenew)
+                .setOnClickListener(v -> renewCard(doc));
     }
 
-    private LinearLayout panel() {
-        LinearLayout box = new LinearLayout(this);
-        box.setOrientation(LinearLayout.VERTICAL);
-        box.setPadding(dp(15), dp(15), dp(15), dp(15));
-        box.setBackgroundResource(R.drawable.bg_admin_screen_card);
-        return box;
-    }
+
 
     private void updateCardStatus(DocumentSnapshot doc, String status) {
         if (!isSessionReady()) return;
@@ -427,35 +388,23 @@ public class AdminManagementActivity extends SessionActivity {
 
     private void showConfig() {
         clearContent("Cấu hình thư viện", "Thay đổi hạn mức mượn; các quy tắc khác chỉ đọc như bản thiết kế.");
-        TextView source = text("Đang kiểm tra cấu hình Firestore...", 13, false);
-        source.setBackgroundResource(R.drawable.bg_admin_screen_readonly);
-        source.setPadding(dp(12), dp(11), dp(12), dp(11));
-        content.addView(source, matchWrap());
+        View screen = getLayoutInflater().inflate(R.layout.view_admin_config_panel, content, false);
+        content.addView(screen);
+        TextView source = screen.findViewById(R.id.adminConfigSource);
+        EditText maxBooks = screen.findViewById(R.id.adminConfigBooksInput);
+        EditText maxDays = screen.findViewById(R.id.adminConfigDaysInput);
+        bindNumberStepper(screen, R.id.adminConfigBooksMinus, R.id.adminConfigBooksPlus,
+                maxBooks, 1, 20);
+        bindNumberStepper(screen, R.id.adminConfigDaysMinus, R.id.adminConfigDaysPlus,
+                maxDays, 1, 60);
+        TextView holdOnline = screen.findViewById(R.id.adminConfigOnlineHold);
+        TextView holdReservation = screen.findViewById(R.id.adminConfigReserve);
+        TextView lateFee = screen.findViewById(R.id.adminConfigLateFee);
+        TextView multiplier = screen.findViewById(R.id.adminConfigMultiplier);
+        Button save = screen.findViewById(R.id.adminConfigSave);
+        save.setEnabled(false);
 
-        LinearLayout form = panel();
-        form.addView(text("Hạn mức mượn", 19, true), matchWrap());
-        EditText maxBooks = numericInput("Số cuốn tối đa / độc giả");
-        EditText maxDays = numericInput("Số ngày mượn tối đa");
-        addNumberStepper(form, "Số cuốn tối đa / độc giả", maxBooks, 1, 20);
-        addNumberStepper(form, "Số ngày mượn tối đa", maxDays, 1, 60);
-        TextView help = text(
-                "Tính cả sách đang mượn và yêu cầu Online chờ lấy. Tổng không được vượt hạn mức.",
-                12, false);
-        form.addView(help, matchWrap());
-        content.addView(form, matchWrap());
 
-        LinearLayout fixed = panel();
-        fixed.addView(text("Quy tắc cố định · Chỉ đọc", 18, true), matchWrap());
-        TextView holdOnline = text("", 14, false);
-        TextView holdReservation = text("", 14, false);
-        TextView lateFee = text("", 14, false);
-        TextView multiplier = text("", 14, false);
-        // Reservation priority and the old automatic lost-book multiplier are
-        // intentionally not exposed in the revised UI. Keep the corresponding
-        // legacy config fields intact so existing Firestore/SQLite data survives.
-        for (TextView v : new TextView[]{holdOnline, lateFee})
-            fixed.addView(v, matchWrap());
-        content.addView(fixed, matchWrap());
 
         SystemConfig local;
         try (com.example.libraryonline.data.repository.SystemConfigRepository repository =
@@ -485,12 +434,7 @@ public class AdminManagementActivity extends SessionActivity {
         // Never overwrite legacy/hidden fields with stale local defaults.
         // The Admin must first verify server configuration before saving.
         final boolean[] existingCloudConfig = {false};
-        Button save = button("Lưu cấu hình");
-        save.setEnabled(false);
-        content.addView(save, matchWrap());
-        TextView notice = text("Giới hạn mới chỉ có hiệu lực sau khi Firestore xác nhận lưu.",
-                12, false);
-        content.addView(notice, matchWrap());
+
 
         firestore.collection("SystemConfigs").document("default")
                 .get(com.google.firebase.firestore.Source.SERVER)
@@ -583,25 +527,14 @@ public class AdminManagementActivity extends SessionActivity {
         });
     }
 
-    private void addNumberStepper(LinearLayout parent, String title,
-                                  EditText field, int min, int max) {
-        parent.addView(text(title, 14, true), matchWrap());
-        LinearLayout controls = new LinearLayout(this);
-        controls.setOrientation(LinearLayout.HORIZONTAL);
-        controls.setGravity(android.view.Gravity.CENTER_VERTICAL);
-        Button less = button("−");
-        Button more = button("+");
-        less.setContentDescription("Giảm " + title);
-        more.setContentDescription("Tăng " + title);
-        controls.addView(less, new LinearLayout.LayoutParams(dp(46), dp(48)));
-        field.setGravity(android.view.Gravity.CENTER);
-        field.setBackgroundResource(R.drawable.bg_admin_screen_field);
-        controls.addView(field, new LinearLayout.LayoutParams(0, dp(48), 1));
-        controls.addView(more, new LinearLayout.LayoutParams(dp(46), dp(48)));
-        less.setOnClickListener(v -> field.setText(String.valueOf(Math.max(min, parse(field) - 1))));
-        more.setOnClickListener(v -> field.setText(String.valueOf(Math.min(max,
-                Math.max(min - 1, parse(field)) + 1))));
-        parent.addView(controls, matchWrap());
+    private void bindNumberStepper(View screen, int minusId, int plusId,
+                                   EditText field, int min, int max) {
+        Button less = screen.findViewById(minusId);
+        Button more = screen.findViewById(plusId);
+        less.setOnClickListener(v -> field.setText(
+                String.valueOf(Math.max(min, parse(field) - 1))));
+        more.setOnClickListener(v -> field.setText(
+                String.valueOf(Math.min(max, Math.max(min - 1, parse(field)) + 1))));
     }
 
     private void updateFixedConfigLabels(TextView online, TextView reservation,
@@ -615,54 +548,22 @@ public class AdminManagementActivity extends SessionActivity {
 
     private void showReports() {
         clearContent("Báo cáo thu phạt", "Dữ liệu SQLite trên thiết bị · Không phải tổng hợp toàn hệ thống");
-        TextView status = text("Đang tải các khoản thu trên thiết bị...", 13, false);
-        status.setBackgroundResource(R.drawable.bg_admin_screen_readonly);
-        status.setPadding(dp(11), dp(10), dp(11), dp(10));
-        content.addView(status, matchWrap());
+        View screen = getLayoutInflater().inflate(R.layout.view_admin_reports_panel, content, false);
+        content.addView(screen);
+        TextView status = screen.findViewById(R.id.adminReportStatus);
+        TextView collected = screen.findViewById(R.id.adminReportCollected);
+        TextView transactionCount = screen.findViewById(R.id.adminReportTransactions);
+        TextView outstanding = screen.findViewById(R.id.adminReportDebtTotal);
+        LinearLayout bars = screen.findViewById(R.id.adminReportBars);
+        TextView recent = screen.findViewById(R.id.adminReportRecent);
+        TextView debts = screen.findViewById(R.id.adminReportUnpaid);
+        Button refresh = screen.findViewById(R.id.adminReportRefresh);
+        final Button[] choices = {
+                screen.findViewById(R.id.adminReportPeriod0),
+                screen.findViewById(R.id.adminReportPeriod1),
+                screen.findViewById(R.id.adminReportPeriod2)
+        };
 
-        LinearLayout tabs = new LinearLayout(this);
-        tabs.setOrientation(LinearLayout.HORIZONTAL);
-        tabs.setBackgroundResource(R.drawable.bg_admin_screen_readonly);
-        final Button[] choices = new Button[3];
-        final String[] labels = {"Ngày", "Tuần", "Tháng"};
-        content.addView(tabs, matchWrap());
-
-        LinearLayout totals = panel();
-        TextView heading = text("Tiền phạt đã thu", 16, true);
-        TextView collected = text("—", 29, true);
-        collected.setTextColor(getColor(R.color.admin_screen_primary));
-        TextView transactionCount = text("Đang tải số giao dịch...", 13, false);
-        TextView outstanding = text("Nợ chờ thu: —", 14, true);
-        totals.addView(heading, matchWrap());
-        totals.addView(collected, matchWrap());
-        totals.addView(transactionCount, matchWrap());
-        totals.addView(outstanding, matchWrap());
-        content.addView(totals, matchWrap());
-
-        LinearLayout trend = panel();
-        trend.addView(text("Đã thu trong 7 ngày gần nhất", 17, true), matchWrap());
-        LinearLayout bars = new LinearLayout(this);
-        bars.setOrientation(LinearLayout.HORIZONTAL);
-        bars.setGravity(android.view.Gravity.BOTTOM);
-        trend.addView(bars, matchWrap());
-        content.addView(trend, matchWrap());
-
-        LinearLayout recentCard = panel();
-        recentCard.addView(text("Khoản đã thu", 17, true), matchWrap());
-        TextView recent = text("Đang tải...", 13, false);
-        recent.setLineSpacing(dp(5), 1);
-        recentCard.addView(recent, matchWrap());
-        content.addView(recentCard, matchWrap());
-
-        LinearLayout debtCard = panel();
-        debtCard.addView(text("Nợ trễ hạn chờ thu", 17, true), matchWrap());
-        TextView debts = text("Đang tải...", 13, false);
-        debts.setLineSpacing(dp(5), 1);
-        debtCard.addView(debts, matchWrap());
-        content.addView(debtCard, matchWrap());
-
-        Button refresh = button("Làm mới báo cáo");
-        content.addView(refresh, matchWrap());
 
         final int[] period = {0};
         Runnable fetch = () -> {
@@ -670,11 +571,7 @@ public class AdminManagementActivity extends SessionActivity {
             final int request = ++reportGeneration;
             for (int i = 0; i < choices.length; i++) {
                 boolean selected = i == requestedPeriod;
-                choices[i].setBackgroundTintList(
-                        android.content.res.ColorStateList.valueOf(
-                                getColor(selected ? R.color.admin_screen_primary
-                                        : R.color.library_surface)));
-                choices[i].setTextColor(getColor(selected ? R.color.white : R.color.admin_screen_ink));
+                choices[i].setSelected(selected);
             }
             status.setText("Đang tổng hợp các giao dịch trên thiết bị...");
             io.execute(() -> {
@@ -716,9 +613,6 @@ public class AdminManagementActivity extends SessionActivity {
         };
         for (int i = 0; i < choices.length; i++) {
             final int index = i;
-            choices[i] = button(labels[i]);
-            choices[i].setTextSize(12);
-            tabs.addView(choices[i], new LinearLayout.LayoutParams(0, dp(44), 1));
             choices[i].setOnClickListener(v -> {
                 period[0] = index;
                 fetch.run();
@@ -824,21 +718,17 @@ public class AdminManagementActivity extends SessionActivity {
         day.add(Calendar.DAY_OF_MONTH, -6);
         SimpleDateFormat formatter = new SimpleDateFormat("dd/MM", Locale.ROOT);
         for (int i = 0; i < 7; i++) {
-            LinearLayout column = new LinearLayout(this);
-            column.setOrientation(LinearLayout.VERTICAL);
-            column.setGravity(android.view.Gravity.BOTTOM | android.view.Gravity.CENTER_HORIZONTAL);
+            View column = getLayoutInflater().inflate(
+                    R.layout.item_admin_report_bar, container, false);
+            View bar = column.findViewById(R.id.adminReportBarFill);
             int height = amounts[i] <= 0 ? 0 : Math.max(dp(4),
                     (int) Math.round(dp(90) * amounts[i] / (double) max));
-            View bar = new View(this);
-            bar.setBackgroundColor(getColor(R.color.admin_screen_primary));
-            LinearLayout.LayoutParams barParams = new LinearLayout.LayoutParams(dp(22), height);
-            barParams.bottomMargin = dp(6);
-            column.addView(bar, barParams);
-            TextView label = text(formatter.format(day.getTime()), 10, false);
-            label.setGravity(android.view.Gravity.CENTER);
-            column.addView(label, new LinearLayout.LayoutParams(-1, dp(28)));
-            LinearLayout.LayoutParams columnParams = new LinearLayout.LayoutParams(0, dp(130), 1);
-            container.addView(column, columnParams);
+            android.view.ViewGroup.LayoutParams barParams = bar.getLayoutParams();
+            barParams.height = height;
+            bar.setLayoutParams(barParams);
+            ((TextView) column.findViewById(R.id.adminReportBarDay))
+                    .setText(formatter.format(day.getTime()));
+            container.addView(column);
             day.add(Calendar.DAY_OF_MONTH, 1);
         }
     }
@@ -851,28 +741,12 @@ public class AdminManagementActivity extends SessionActivity {
         ((TextView) findViewById(R.id.adminManagementSubtitle)).setText(subtitle);
     }
 
-    private EditText numericInput(String hint) {
-        EditText input = new EditText(this); input.setHint(hint); input.setSingleLine(true);
-        input.setInputType(InputType.TYPE_CLASS_NUMBER); return input;
-    }
+
+
     private void setNumeric(EditText view, int value) { view.setText(String.valueOf(value)); }
     private int parse(EditText view) { try { return Integer.parseInt(view.getText().toString().trim()); } catch (Exception e) { return -1; } }
     private int number(DocumentSnapshot doc, String field, int fallback) { Long n = doc.getLong(field); return n == null ? fallback : n.intValue(); }
     private static String value(DocumentSnapshot doc, String field) { String v = doc.getString(field); return v == null ? "" : v; }
-    private TextView text(String value, int size, boolean bold) {
-        TextView view = new TextView(this); view.setText(value); view.setTextSize(size);
-        view.setTextColor(getColor(R.color.admin_screen_ink)); view.setPadding(0, dp(5), 0, dp(5));
-        if (bold) view.setTypeface(null, android.graphics.Typeface.BOLD);
-        return view;
-    }
-    private Button button(String label) {
-        Button b = new Button(this); b.setText(label); b.setAllCaps(false);
-        b.setBackgroundTintList(android.content.res.ColorStateList.valueOf(getColor(R.color.admin_screen_primary)));
-        b.setTextColor(getColor(R.color.library_surface)); return b;
-    }
-    private LinearLayout.LayoutParams matchWrap() {
-        LinearLayout.LayoutParams p = new LinearLayout.LayoutParams(-1, -2); p.topMargin = dp(6); p.bottomMargin = dp(6); return p;
-    }
     private int dp(int value) { return Math.round(value * getResources().getDisplayMetrics().density); }
     private String safe(String value) { return value == null ? "lỗi không xác định" : value; }
     private void toast(String message) { if (!isFinishing() && !isDestroyed()) Toast.makeText(this, message, Toast.LENGTH_LONG).show(); }

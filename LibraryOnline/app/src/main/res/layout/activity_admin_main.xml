@@ -91,7 +91,7 @@
                     <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
                         android:orientation="vertical" android:background="@drawable/bg_admin_screen_card" android:padding="12dp">
                         <TextView style="@style/AdminScreenCaption" android:text="@string/admin_screen_weekly_source" />
-                        <com.example.libraryonline.ui.admin.AdminWeeklyTrendView
+                        <com.example.libraryonline.view.AdminWeeklyTrendView
                             android:id="@+id/adminWeeklyTrend" android:layout_width="match_parent"
                             android:layout_height="172dp" android:layout_marginTop="6dp" />
                     </LinearLayout>

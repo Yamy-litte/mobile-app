@@ -1,6 +1,5 @@
 package com.example.libraryonline.ui.reader;
 
-import android.graphics.Typeface;
 import android.os.Handler;
 import android.os.Looper;
 import android.view.View;
@@ -8,7 +7,6 @@ import android.widget.LinearLayout;
 import android.widget.TextView;
 import android.widget.Toast;
 
-import androidx.core.content.ContextCompat;
 
 import com.example.libraryonline.R;
 import com.example.libraryonline.ui.notifications.OnlineLoanAlertCenter;
@@ -106,33 +104,6 @@ final class ReaderOnlineLoanController {
         ((TextView) activity.findViewById(id)).setText(value);
     }
 
-    private int dp(int n) {
-        return Math.round(n * activity.getResources().getDisplayMetrics().density);
-    }
-
-    private TextView line(String value, boolean heading) {
-        TextView text = new TextView(activity);
-        text.setText(value);
-        text.setTextColor(ContextCompat.getColor(activity,
-                heading ? R.color.library_text : R.color.library_muted));
-        text.setTextSize(heading ? 16 : 13);
-        if (heading) text.setTypeface(null, Typeface.BOLD);
-        text.setPadding(0, dp(3), 0, dp(4));
-        return text;
-    }
-
-    private LinearLayout card(LinearLayout parent) {
-        LinearLayout view = new LinearLayout(activity);
-        view.setOrientation(LinearLayout.VERTICAL);
-        view.setPadding(dp(16), dp(12), dp(16), dp(14));
-        view.setBackgroundResource(R.drawable.bg_reader_search);
-        LinearLayout.LayoutParams spacing =
-                new LinearLayout.LayoutParams(-1, -2);
-        spacing.bottomMargin = dp(10);
-        parent.addView(view, spacing);
-        return view;
-    }
-
     private String time(Timestamp timestamp) {
         if (timestamp == null) return "Chưa đồng bộ";
         return new SimpleDateFormat("dd/MM/yyyy HH:mm", new Locale("vi","VN"))
@@ -168,29 +139,42 @@ final class ReaderOnlineLoanController {
                 : records.size() + " đầu sách đã yêu cầu"
                   + (snapshot.getMetadata().isFromCache() ? " · Đang hiển thị dữ liệu đã lưu" : ""));
         for (DocumentSnapshot doc : records) {
-            LinearLayout item = card(container);
+            View item = activity.getLayoutInflater().inflate(
+                    R.layout.item_reader_online_request, container, false);
+            container.addView(item);
             String title = doc.getString("bookTitle");
             String status = doc.getString("status");
-            item.addView(line(title == null ? "Đầu sách" : title, true));
-            item.addView(line(OnlineLoanRequestRepository.label(status), false));
+            ((TextView) item.findViewById(R.id.readerOnlineItemTitle))
+                    .setText(title == null ? "Đầu sách" : title);
+            ((TextView) item.findViewById(R.id.readerOnlineItemStatus))
+                    .setText(OnlineLoanRequestRepository.label(status));
             Long days = doc.getLong("loanDays");
-            item.addView(line("Thời hạn mượn yêu cầu: " + (days == null ? "—" : days) + " ngày", false));
+            ((TextView) item.findViewById(R.id.readerOnlineItemDays))
+                    .setText("Thời hạn mượn yêu cầu: " + (days == null ? "—" : days) + " ngày");
             if (OnlineLoanRequestRepository.APPROVED.equals(status)) {
                 Timestamp hold = doc.getTimestamp("holdUntil");
-                item.addView(line("Đã giữ sách cho bạn · Chờ lấy", true));
-                item.addView(line("Mã cuốn: " + (doc.getString("copyId") == null
-                        ? "Đang đồng bộ" : doc.getString("copyId")), false));
-                item.addView(line("Nhận trước: " + time(hold), false));
-                TextView countdown = line(remainingText(hold), true);
-                countdown.setTextColor(ContextCompat.getColor(activity, R.color.library_success));
-                item.addView(countdown);
+                item.findViewById(R.id.readerOnlineItemApproved).setVisibility(View.VISIBLE);
+                TextView copy = item.findViewById(R.id.readerOnlineItemCopy);
+                copy.setVisibility(View.VISIBLE);
+                copy.setText("Mã cuốn: " + (doc.getString("copyId") == null
+                        ? "Đang đồng bộ" : doc.getString("copyId")));
+                TextView holdTime = item.findViewById(R.id.readerOnlineItemHold);
+                holdTime.setVisibility(View.VISIBLE);
+                holdTime.setText("Nhận trước: " + time(hold));
+                TextView countdown = item.findViewById(R.id.readerOnlineItemCountdown);
+                countdown.setVisibility(View.VISIBLE);
+                countdown.setText(remainingText(hold));
+                item.findViewById(R.id.readerOnlineItemHelp).setVisibility(View.VISIBLE);
                 if (hold != null) activeCountdowns.put(countdown, hold);
-                item.addView(line("Hạn trả chỉ tính từ khi Admin thực tế giao sách tại quầy.", false));
             }
             if (OnlineLoanRequestRepository.REJECTED.equals(status)
-                    && doc.getString("rejectionReason") != null)
-                item.addView(line("Lý do: " + doc.getString("rejectionReason"), false));
-            item.addView(line("Gửi: " + time(doc.getTimestamp("createdAt")), false));
+                    && doc.getString("rejectionReason") != null) {
+                TextView rejection = item.findViewById(R.id.readerOnlineItemReject);
+                rejection.setText("Lý do: " + doc.getString("rejectionReason"));
+                rejection.setVisibility(View.VISIBLE);
+            }
+            ((TextView) item.findViewById(R.id.readerOnlineItemSent))
+                    .setText("Gửi: " + time(doc.getTimestamp("createdAt")));
         }
         if (!activeCountdowns.isEmpty() && current(authorizedUid))
             clockHandler.postDelayed(countdownPulse, 60_000L);
@@ -217,16 +201,20 @@ final class ReaderOnlineLoanController {
                 : notifications.size() + " thông báo · " + unread + " chưa đọc"
                 + (snapshot.getMetadata().isFromCache() ? " · Bản đã lưu" : ""));
         for (DocumentSnapshot notification : notifications) {
-            LinearLayout item = card(container);
-            item.addView(line(notification.getString("title") == null
-                    ? "Thông báo thư viện" : notification.getString("title"), true));
-            item.addView(line(notification.getString("message") == null
-                    ? "" : notification.getString("message"), false));
-            item.addView(line(time(notification.getTimestamp("createdAt")), false));
+            View item = activity.getLayoutInflater().inflate(
+                    R.layout.item_reader_online_notification, container, false);
+            container.addView(item);
+            ((TextView) item.findViewById(R.id.readerOnlineNotTitle)).setText(
+                    notification.getString("title") == null
+                            ? "Thông báo thư viện" : notification.getString("title"));
+            ((TextView) item.findViewById(R.id.readerOnlineNotMessage)).setText(
+                    notification.getString("message") == null
+                            ? "" : notification.getString("message"));
+            ((TextView) item.findViewById(R.id.readerOnlineNotDate)).setText(
+                    time(notification.getTimestamp("createdAt")));
             if (notification.get("readAt") == null) {
-                TextView mark = line(activity.getString(R.string.online_borrow_mark_read), true);
-                mark.setTextColor(ContextCompat.getColor(activity, R.color.library_blue));
-                item.addView(mark);
+                TextView mark = item.findViewById(R.id.readerOnlineNotRead);
+                mark.setVisibility(View.VISIBLE);
                 String uid = authorizedUid;
                 mark.setOnClickListener(v -> {
                     if (!current(uid) || !mark.isEnabled()) return;
@@ -240,10 +228,9 @@ final class ReaderOnlineLoanController {
                                             "Không đánh dấu được thông báo. Hãy thử lại.",
                                             Toast.LENGTH_LONG).show();
                                 }
-                                // Successful writes will update the live Firestore listener.
                             });
                 });
-            } else item.addView(line("Đã đọc", false));
+            } else item.findViewById(R.id.readerOnlineNotDone).setVisibility(View.VISIBLE);
         }
     }
 }

@@ -10,6 +10,7 @@ import android.widget.TextView;
 import android.widget.Toast;
 
 import com.example.libraryonline.R;
+import com.example.libraryonline.view.AdminWeeklyTrendView;
 import com.example.libraryonline.data.local.dao.AdminDashboardStatsDao;
 import com.example.libraryonline.data.local.db.DatabaseHelper;
 import com.example.libraryonline.utils.PasswordVisibilityToggle;
