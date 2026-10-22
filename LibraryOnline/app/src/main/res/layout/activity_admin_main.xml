@@ -469,6 +469,14 @@
                         android:backgroundTint="@color/library_blue"
                         android:textColor="@color/library_surface" />
                     <Button
+                        android:id="@+id/buttonAdminManagement"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="8dp"
+                        android:text="Quản lý độc giả, cấu hình và báo cáo"
+                        android:backgroundTint="@color/library_blue"
+                        android:textColor="@color/library_surface" />
+                    <Button
                         android:id="@+id/buttonAdminLogout"
                         style="?attr/borderlessButtonStyle"
                         android:layout_width="match_parent"
