@@ -29,9 +29,16 @@ public final class BookCoverLoader {
 
         String source = address.trim();
         Uri uri = Uri.parse(source);
-        Object model = "file".equalsIgnoreCase(uri.getScheme())
-                ? new File(uri.getPath())
-                : source;
+        Object model = source;
+        if ("file".equalsIgnoreCase(uri.getScheme())) {
+            String path = uri.getPath();
+            // Robolectric on Windows may represent file:///C:/... with a leading slash.
+            // Java then treats /C:/... as a root-relative path rather than drive C.
+            if (path != null && path.matches("^/[A-Za-z]:/.*")) {
+                path = path.substring(1);
+            }
+            model = path == null ? source : new File(path);
+        }
 
         Glide.with(image)
                 .load(model)
