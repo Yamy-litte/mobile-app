@@ -108,6 +108,15 @@ public class ReaderMainActivity extends com.example.libraryonline.ui.auth.Sessio
         onlineLoanController = new ReaderOnlineLoanController(this);
         homeView.setOnTabChangedListener(tab -> {
             if (tab != ReaderHomeView.ACCOUNT) accountController.onLeaveAccount();
+            if (isSessionReady()) {
+                FirebaseUser user = auth.getCurrentUser();
+                if (user != null && (tab == ReaderHomeView.LOANS
+                        || tab == ReaderHomeView.NOTIFICATIONS)) {
+                    loadReaderLoans(user.getUid());
+                    if (tab == ReaderHomeView.NOTIFICATIONS)
+                        loadReaderNotifications(user.getUid());
+                }
+            }
         });
         buildCategories();
     }
