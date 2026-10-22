@@ -260,15 +260,30 @@ service cloud.firestore {
       let old = resource.data;
       let next = request.resource.data;
       let parent = /databases/$(database)/documents/BookTitles/$(old.bookTitleId);
-      return (!(old.copyStatus in ['DangSuaChua', 'ThanhLy', 'DaMat'])
+      let restoreRepairCopy =
+          old.copyStatus == 'DangSuaChua'
+          && old.isHidden == true
+          && old.priorityUserId == null
+          && next.copyStatus == 'SanSang'
+          && next.isHidden == false
+          && next.priorityUserId == null
+          && next.diff(old).affectedKeys().hasOnly(['copyStatus', 'isHidden', 'updatedAt'])
+          && get(parent).data.isHidden == false
+          && getAfter(parent).data.isHidden == false
+          && getAfter(parent).data.availableCopies == get(parent).data.availableCopies + 1
+          && getAfter(parent).data.totalCopies == get(parent).data.totalCopies;
+      return (
+          // Existing hide/retire behaviour remains unchanged.
+          (!(old.copyStatus in ['DangSuaChua', 'ThanhLy', 'DaMat'])
               || (next.copyStatus == old.copyStatus && next.isHidden == old.isHidden))
-        && (!(next.copyStatus in ['DangSuaChua', 'ThanhLy']) || next.copyStatus == old.copyStatus
-            || (old.copyStatus == 'SanSang' && old.isHidden == false
-                && old.priorityUserId == null && next.priorityUserId == null && next.isHidden == true
-                && getAfter(parent).data.availableCopies == get(parent).data.availableCopies - 1
-                && getAfter(parent).data.totalCopies == get(parent).data.totalCopies))
-        && (next.isHidden == old.isHidden || (next.isHidden == true
-            && next.copyStatus in ['DangSuaChua', 'ThanhLy']));
+          && (!(next.copyStatus in ['DangSuaChua', 'ThanhLy']) || next.copyStatus == old.copyStatus
+              || (old.copyStatus == 'SanSang' && old.isHidden == false
+                  && old.priorityUserId == null && next.priorityUserId == null && next.isHidden == true
+                  && getAfter(parent).data.availableCopies == get(parent).data.availableCopies - 1
+                  && getAfter(parent).data.totalCopies == get(parent).data.totalCopies))
+          && (next.isHidden == old.isHidden || (next.isHidden == true
+              && next.copyStatus in ['DangSuaChua', 'ThanhLy']))
+        ) || restoreRepairCopy;
     }
 
     // Physical copies: readers may inspect availability; only active admins mutate inventory.
