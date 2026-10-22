@@ -1,0 +1,58 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/adminManagementRoot"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:background="@color/library_background">
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:padding="12dp">
+        <Button
+            android:id="@+id/adminManagementBack"
+            android:layout_width="wrap_content"
+            android:layout_height="48dp"
+            android:text="Quay lại"
+            android:textAllCaps="false" />
+        <TextView
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:gravity="center"
+            android:text="QUẢN TRỊ HỆ THỐNG"
+            android:textColor="@color/library_text"
+            android:textStyle="bold"
+            android:textSize="17sp" />
+    </LinearLayout>
+    <HorizontalScrollView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:fillViewport="true"
+        android:scrollbars="none">
+        <LinearLayout
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:paddingHorizontal="8dp">
+            <Button android:id="@+id/adminManagementReaders" android:layout_width="wrap_content" android:layout_height="48dp" android:text="Độc giả" android:textAllCaps="false" />
+            <Button android:id="@+id/adminManagementConfig" android:layout_width="wrap_content" android:layout_height="48dp" android:text="Cấu hình" android:textAllCaps="false" />
+            <Button android:id="@+id/adminManagementReports" android:layout_width="wrap_content" android:layout_height="48dp" android:text="Báo cáo" android:textAllCaps="false" />
+            <Button android:id="@+id/adminManagementProfile" android:layout_width="wrap_content" android:layout_height="48dp" android:text="Tài khoản" android:textAllCaps="false" />
+        </LinearLayout>
+    </HorizontalScrollView>
+    <ScrollView
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:fillViewport="true"
+        android:padding="16dp">
+        <LinearLayout
+            android:id="@+id/adminManagementContent"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical" />
+    </ScrollView>
+</LinearLayout>

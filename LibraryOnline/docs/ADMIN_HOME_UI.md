@@ -10,7 +10,7 @@ Hoàn thiện giao diện Java/XML theo bố cục trang Admin trong PDF Figma n
 
 - Trang chủ: thông tin Admin đã xác minh, thống kê tổng đầu sách, hồ sơ Reader, bản sao sách và thẻ chờ duyệt; nhóm công việc đăng ký/khôi phục; lối tắt vào luồng đã có.
 - Duyệt thẻ: gom yêu cầu đăng ký và khôi phục mật khẩu vào trang riêng. Giữ nguyên xử lý duyệt/từ chối hiện tại, hiển thị loading/rỗng/lỗi/cache và nút làm mới.
-- Tài khoản: tên/email từ session đã xác minh, đồng bộ danh mục và đăng xuất. Avatar cũng mở mục này.
+- Tài khoản: tải hồ sơ Admin từ `Admins/{uid}`; hiển thị họ tên, ngày sinh, số điện thoại, email công vụ và vai trò. Cho phép cập nhật số điện thoại/email; đổi email yêu cầu xác minh lại bằng mật khẩu Firebase Auth rồi cập nhật hồ sơ Firestore. Có lối tắt đổi mật khẩu, đồng bộ danh mục, quản lý độc giả/cấu hình/báo cáo và đăng xuất. Avatar cũng mở mục này.
 - Ba tab cố định dưới màn hình; giữ tab khi Activity được tạo lại; Back từ mục con quay về trang chủ. Bố cục cuộn, hỗ trợ insets thanh hệ thống và nhãn tiêu đề accessibility qua ViewCompat để tương thích minSdk 23.
 - Giữ SessionActivity kiểm tra quyền server, dừng listener khi ra nền; bỏ kết quả thống kê/listener cũ khi phiên hoặc lần tải thay đổi. Không mở thêm Activity được exported.
 
@@ -29,7 +29,8 @@ Các phần Figma như biểu đồ mượn, số Admin hoạt động, báo cá
 
 ## File thay đổi
 
-- `ui/admin/AdminMainActivity.java`: nối layout, số liệu tổng quan read-only, trạng thái yêu cầu, tab/back/insets, tài khoản và nút đồng bộ đang có; cập nhật màu thẻ yêu cầu.
+- `ui/admin/AdminMainActivity.java`: nối layout, số liệu tổng quan read-only, trạng thái yêu cầu, tab/back/insets; tải hồ sơ Admin từ Firestore, sửa thông tin liên hệ với xác minh Firebase Auth khi đổi email, và nối các hành động bảo mật/quản trị.
+- `res/layout/activity_admin_main.xml`, `res/values/admin_strings.xml`: thiết kế lại tab Tài khoản theo nhóm Hồ sơ, Bảo mật & phiên đăng nhập và Công cụ quản trị.
 - `ui/admin/AdminHomeView.java`: điều hướng giữa ba vùng và lối tắt; khôi phục tab.
 - `res/layout/activity_admin_main.xml`: toàn bộ cấu trúc Home/Requests/Account và thanh điều hướng.
 - `res/values/colors.xml`, `themes.xml`: bảng màu chung và theme sáng; `admin_strings.xml`, `admin_styles.xml`: nội dung và kiểu giao diện Admin. `admin_colors.xml` đã được bỏ.
@@ -60,3 +61,11 @@ Không thay schema, dependency, lockfile hoặc `firestore.rules`. Không deploy
 - Render Admin, Login, Reader ở 320dp với cấu hình `notnight` và `night`: nền cả ba là RGB(245,247,252), tức `#F5F7FC`; ảnh day/night của từng màn hình giống nhau trong phép so sánh pixel.
 - Chạy lại toàn bộ 48 test Android, build debug và lint thành công. Chưa kiểm tra trực tiếp trên thiết bị thật.
 - Không thay đổi Rules hoặc deploy Firebase.
+
+
+## Tài khoản Admin theo thiết kế Figma
+
+- Hồ sơ dùng dữ liệu document `Admins/{uid}` và email từ Firebase Authentication khi cần đối chiếu. Ngày sinh đọc lần lượt từ `dateOfBirth`, `birthDate` hoặc `dob` để tương thích hồ sơ hiện có; nếu chưa có dữ liệu, UI hiển thị “Chưa cập nhật”, không dựng dữ liệu mẫu.
+- Sửa liên hệ cập nhật `phone`, `email`, `updatedAt`. Khi email thay đổi, yêu cầu mật khẩu hiện tại, reauthenticate Firebase Auth và cập nhật email Auth trước khi ghi hồ sơ. Nếu ghi Firestore thất bại, app thử rollback email Auth; nếu rollback cũng thất bại, phiên được đăng xuất và yêu cầu sửa hồ sơ thủ công để tránh tiếp tục bằng phiên không nhất quán.
+- Đổi mật khẩu mở `AdminPasswordActivity`, tiếp tục kiểm tra phiên Admin và dùng Firebase Auth. Quyền Admin vẫn lấy từ `Admins/{uid}.adminStatus`; giao diện không thể tự cấp quyền.
+- Chưa kiểm thử thao tác email thật với Firebase production sau thay đổi này; cần chạy build/test và smoke test trên thiết bị trước khi merge.

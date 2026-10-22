@@ -16,6 +16,8 @@ import com.example.libraryonline.utils.EmailSender;
 import com.google.firebase.FirebaseApp;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
+import com.google.firebase.auth.AuthCredential;
+import com.google.firebase.auth.EmailAuthProvider;
 import com.google.firebase.firestore.DocumentSnapshot;
 import com.google.firebase.firestore.FieldValue;
 import com.google.firebase.firestore.FirebaseFirestore;
@@ -46,7 +48,9 @@ public class AdminMainActivity extends com.example.libraryonline.ui.auth.Session
     private BookCatalogueSyncManager catalogueSyncManager;
     private Button syncButton;
     private AdminHomeView homeView;
+    private CirculationPanelController circulationController;
     private long dashboardGeneration, requestsGeneration;
+    private String adminUid, adminPhone = "", adminBirthDate = "", adminDisplayName = "";
     private Integer registrationCount, resetCount;
     private boolean registrationCached, resetCached, registrationError, resetError;
 
@@ -130,7 +134,176 @@ public class AdminMainActivity extends com.example.libraryonline.ui.auth.Session
                             stopRequestListeners();
                             startRequests();
                         });
+        findViewById(R.id.actionAdminReaders).setOnClickListener(v -> openManagementSection("readers"));
+        findViewById(R.id.actionAdminConfig).setOnClickListener(v -> openManagementSection("config"));
+        findViewById(R.id.actionAdminReports).setOnClickListener(v -> openManagementSection("reports"));
         findViewById(R.id.buttonAdminLogout).setOnClickListener(v -> logoutSession());
+        findViewById(R.id.buttonAdminEditProfile).setOnClickListener(v -> showEditAdminContact());
+        findViewById(R.id.buttonAdminChangePassword).setOnClickListener(v -> {
+            if (isSessionReady())
+                startActivity(new android.content.Intent(this, AdminPasswordActivity.class));
+        });
+    }
+
+    private void openManagementSection(String section) {
+        if (!isSessionReady()) return;
+        android.content.Intent intent = new android.content.Intent(this, AdminManagementActivity.class);
+        intent.putExtra("section", section);
+        startActivity(intent);
+    }
+
+    private void loadAdminProfile(com.example.libraryonline.data.session.SessionProfile profile) {
+        if (!isSessionReady()) return;
+        firestore.collection("Admins").document(profile.uid).get()
+                .addOnSuccessListener(doc -> {
+                    if (!isSessionReady() || !profile.uid.equals(adminUid)) return;
+                    String name = doc.getString("fullName");
+                    String email = doc.getString("email");
+                    String phone = doc.getString("phone");
+                    String dob = doc.getString("dateOfBirth");
+                    if (dob == null || dob.trim().isEmpty()) dob = doc.getString("birthDate");
+                    if (dob == null || dob.trim().isEmpty()) dob = doc.getString("dob");
+                    adminDisplayName = name == null || name.trim().isEmpty()
+                            ? profile.displayName : name.trim();
+                    adminPhone = phone == null ? "" : phone.trim();
+                    adminBirthDate = dob == null ? "" : dob.trim();
+                    ((TextView) findViewById(R.id.textAdminProfileName)).setText(adminDisplayName);
+                    ((TextView) findViewById(R.id.textAdminProfilePhone)).setText(
+                            adminPhone.isEmpty() ? getString(R.string.admin_profile_unavailable) : adminPhone);
+                    ((TextView) findViewById(R.id.textAdminProfileDob)).setText(
+                            adminBirthDate.isEmpty() ? getString(R.string.admin_profile_unavailable) : adminBirthDate);
+                    String authEmail = auth.getCurrentUser() == null ? profile.email : auth.getCurrentUser().getEmail();
+                    String shownEmail = email == null || email.trim().isEmpty() ? authEmail : email.trim();
+                    ((TextView) findViewById(R.id.textAdminProfileEmail)).setText(
+                            shownEmail == null || shownEmail.isEmpty()
+                                    ? getString(R.string.admin_profile_unavailable) : shownEmail);
+                })
+                .addOnFailureListener(error -> {
+                    if (!isSessionReady()) return;
+                    ((TextView) findViewById(R.id.textAdminProfilePhone))
+                            .setText(getString(R.string.admin_profile_unavailable));
+                    ((TextView) findViewById(R.id.textAdminProfileDob))
+                            .setText(getString(R.string.admin_profile_unavailable));
+                    Toast.makeText(this, "Không tải được hồ sơ quản trị từ Firestore.", Toast.LENGTH_LONG).show();
+                });
+    }
+
+    private void showEditAdminContact() {
+        if (!isSessionReady()) return;
+        LinearLayout form = new LinearLayout(this);
+        form.setOrientation(LinearLayout.VERTICAL);
+        int pad = (int) (16 * getResources().getDisplayMetrics().density);
+        form.setPadding(pad, pad / 2, pad, 0);
+        EditText phone = new EditText(this);
+        phone.setSingleLine(true);
+        phone.setInputType(android.text.InputType.TYPE_CLASS_PHONE);
+        phone.setHint(getString(R.string.admin_phone_hint));
+        phone.setText(adminPhone);
+        form.addView(phone, new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT));
+        EditText email = new EditText(this);
+        email.setSingleLine(true);
+        email.setInputType(android.text.InputType.TYPE_CLASS_TEXT
+                | android.text.InputType.TYPE_TEXT_VARIATION_EMAIL_ADDRESS);
+        email.setHint(getString(R.string.admin_email_hint));
+        email.setText(auth.getCurrentUser() == null ? "" : auth.getCurrentUser().getEmail());
+        form.addView(email, new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT));
+        EditText password = new EditText(this);
+        password.setSingleLine(true);
+        password.setInputType(android.text.InputType.TYPE_CLASS_TEXT
+                | android.text.InputType.TYPE_TEXT_VARIATION_PASSWORD);
+        password.setHint(getString(R.string.admin_current_password_hint));
+        password.setSaveEnabled(false);
+        form.addView(password, new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT));
+        privateDialog().setTitle(R.string.admin_edit_contact_title).setView(form)
+                .setNegativeButton("Hủy", null)
+                .setPositiveButton("Lưu", (dialog, which) -> saveAdminContact(
+                        phone.getText().toString().trim(),
+                        email.getText().toString().trim(),
+                        password.getText().toString()))
+                .show();
+    }
+
+    private void saveAdminContact(String phoneValue, String emailValue, String currentPassword) {
+        if (!isSessionReady()) return;
+        if (!phoneValue.isEmpty() && !phoneValue.matches("^0(3|5|7|8|9)[0-9]{8}$")) {
+            Toast.makeText(this, "Số điện thoại phải gồm 10 số hợp lệ.", Toast.LENGTH_LONG).show();
+            return;
+        }
+        if (emailValue.isEmpty() || !android.util.Patterns.EMAIL_ADDRESS.matcher(emailValue).matches()) {
+            Toast.makeText(this, "Vui lòng nhập email hợp lệ.", Toast.LENGTH_LONG).show();
+            return;
+        }
+        FirebaseUser user = auth.getCurrentUser();
+        if (user == null || adminUid == null) { logoutSession(); return; }
+        String oldEmail = user.getEmail() == null ? "" : user.getEmail().trim();
+        String newEmail = emailValue.trim();
+        boolean emailChanged = !oldEmail.equalsIgnoreCase(newEmail);
+        if (emailChanged && currentPassword.trim().isEmpty()) {
+            Toast.makeText(this, "Cần nhập mật khẩu hiện tại để đổi email an toàn.", Toast.LENGTH_LONG).show();
+            return;
+        }
+        final Button saveButton = findViewById(R.id.buttonAdminEditProfile);
+        saveButton.setEnabled(false);
+        Runnable restoreButton = () -> { if (isSessionReady()) saveButton.setEnabled(true); };
+        com.google.android.gms.tasks.Task<Void> authTask;
+        if (emailChanged) {
+            AuthCredential credential = EmailAuthProvider.getCredential(oldEmail, currentPassword);
+            authTask = user.reauthenticate(credential)
+                    .continueWithTask(task -> {
+                        if (!task.isSuccessful()) return com.google.android.gms.tasks.Tasks.forException(
+                                task.getException() == null ? new IllegalStateException("Re-authentication failed") : task.getException());
+                        return user.updateEmail(newEmail);
+                    });
+        } else {
+            authTask = com.google.android.gms.tasks.Tasks.forResult(null);
+        }
+        authTask.addOnCompleteListener(authResult -> {
+            if (!isSessionReady()) return;
+            if (!authResult.isSuccessful()) {
+                restoreButton.run();
+                Toast.makeText(this, emailChanged
+                        ? getString(R.string.admin_reauth_failed)
+                        : getString(R.string.admin_profile_save_failed), Toast.LENGTH_LONG).show();
+                return;
+            }
+            Map<String, Object> updates = new HashMap<>();
+            updates.put("phone", phoneValue);
+            updates.put("email", newEmail);
+            updates.put("updatedAt", FieldValue.serverTimestamp());
+            firestore.collection("Admins").document(adminUid).update(updates)
+                    .addOnSuccessListener(ignored -> {
+                        if (!isSessionReady()) return;
+                        adminPhone = phoneValue;
+                        ((TextView) findViewById(R.id.textAdminProfilePhone)).setText(
+                                phoneValue.isEmpty() ? getString(R.string.admin_profile_unavailable) : phoneValue);
+                        ((TextView) findViewById(R.id.textAdminProfileEmail)).setText(newEmail);
+                        restoreButton.run();
+                        Toast.makeText(this, R.string.admin_profile_saved, Toast.LENGTH_LONG).show();
+                    })
+                    .addOnFailureListener(error -> {
+                        if (!isSessionReady()) return;
+                        restoreButton.run();
+                        if (emailChanged) {
+                            user.updateEmail(oldEmail).addOnCompleteListener(rollback -> {
+                                if (!rollback.isSuccessful()) {
+                                    Toast.makeText(this,
+                                            "Email Auth đã đổi nhưng chưa đồng bộ hồ sơ. Hãy đăng xuất và nhờ quản trị hệ thống sửa hồ sơ Admin.",
+                                            Toast.LENGTH_LONG).show();
+                                    logoutSession();
+                                } else {
+                                    Toast.makeText(this, getString(R.string.admin_profile_save_failed),
+                                            Toast.LENGTH_LONG).show();
+                                }
+                            });
+                        } else {
+                            Toast.makeText(this, getString(R.string.admin_profile_save_failed),
+                                    Toast.LENGTH_LONG).show();
+                        }
+                    });
+        });
     }
 
     private void openInventory() {
@@ -161,10 +334,13 @@ public class AdminMainActivity extends com.example.libraryonline.ui.auth.Session
     @Override
     protected void onSessionAuthorized(
             com.example.libraryonline.data.session.SessionProfile profile) {
-        ((TextView) findViewById(R.id.textAdminSession)).setText("Admin " + profile.displayName);
-        ((TextView) findViewById(R.id.textAdminProfileName)).setText(profile.displayName);
-        ((TextView) findViewById(R.id.textAdminProfileEmail))
-                .setText(profile.email == null ? "" : profile.email);
+        adminUid = profile.uid;
+        adminDisplayName = profile.displayName == null ? "Quản trị viên" : profile.displayName;
+        ((TextView) findViewById(R.id.textAdminSession)).setText("Admin " + adminDisplayName);
+        ((TextView) findViewById(R.id.textAdminProfileName)).setText(adminDisplayName);
+        loadAdminProfile(profile);
+        if (circulationController != null) circulationController.close();
+        circulationController = new CirculationPanelController(this);
         startRequests();
         loadDashboard();
     }
@@ -194,6 +370,10 @@ public class AdminMainActivity extends com.example.libraryonline.ui.auth.Session
         if (catalogueSyncManager != null) {
             catalogueSyncManager.close();
             catalogueSyncManager = null;
+        }
+        if (circulationController != null) {
+            circulationController.close();
+            circulationController = null;
         }
         requestsContainer.removeAllViews();
         resetRequestsContainer.removeAllViews();

@@ -30,6 +30,9 @@ public class AdminHomeViewTest {
         AdminHomeView home=new AdminHomeView(screen,AdminHomeView.HOME);
         assertEquals(View.VISIBLE,screen.findViewById(R.id.adminOverview).getVisibility());
         assertEquals(View.GONE,screen.findViewById(R.id.adminRequests).getVisibility());
+        assertNotNull(screen.findViewById(R.id.actionAdminReaders));
+        assertNotNull(screen.findViewById(R.id.actionAdminConfig));
+        assertNotNull(screen.findViewById(R.id.actionAdminReports));
         for(int id:new int[]{R.id.textAdminBookCount,R.id.textAdminReaderCount,R.id.textAdminCopyCount,R.id.textAdminRegistrationCount})
             assertEquals("—",((TextView)screen.findViewById(id)).getText().toString());
         View root=screen.findViewById(R.id.adminRoot);
@@ -68,6 +71,11 @@ public class AdminHomeViewTest {
         assertEquals(View.VISIBLE,screen.findViewById(R.id.adminRequests).getVisibility());
         screen.findViewById(R.id.buttonAdminAccount).performClick();
         assertEquals(AdminHomeView.ACCOUNT,home.selectedTab());assertEquals(View.VISIBLE,screen.findViewById(R.id.buttonAdminLogout).getVisibility());
+        assertNotNull(screen.findViewById(R.id.textAdminProfileDob));
+        assertNotNull(screen.findViewById(R.id.textAdminProfilePhone));
+        assertNotNull(screen.findViewById(R.id.textAdminProfileEmail));
+        assertNotNull(screen.findViewById(R.id.buttonAdminEditProfile));
+        assertNotNull(screen.findViewById(R.id.buttonAdminChangePassword));
         screen.findViewById(R.id.navAdminHome).performClick();assertEquals(AdminHomeView.HOME,home.selectedTab());
         assertFalse(screen.findViewById(R.id.navAdminAccount).isSelected());
     }
