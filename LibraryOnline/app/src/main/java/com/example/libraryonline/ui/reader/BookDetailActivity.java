@@ -1,6 +1,8 @@
 package com.example.libraryonline.ui.reader;
 
 import android.os.Bundle;
+import android.view.View;
+import android.widget.Toast;
 
 import androidx.core.view.*;
 
@@ -32,32 +34,33 @@ public class BookDetailActivity extends SessionActivity {
         super.onCreate(state);
         setContentView(R.layout.activity_reader_book_detail);
         WindowCompat.setDecorFitsSystemWindows(getWindow(), false);
-        ViewCompat.setOnApplyWindowInsetsListener(
-                findViewById(R.id.detailRoot),
-                (v, insets) -> {
-                    androidx.core.graphics.Insets bars =
-                            insets.getInsets(WindowInsetsCompat.Type.systemBars());
-                    v.setPadding(bars.left, bars.top, bars.right, bars.bottom);
-                    return WindowInsetsCompat.CONSUMED;
-                });
+        ViewCompat.setOnApplyWindowInsetsListener(findViewById(R.id.detailRoot), (v, insets) -> {
+            androidx.core.graphics.Insets bars = insets.getInsets(WindowInsetsCompat.Type.systemBars());
+            v.setPadding(bars.left, bars.top, bars.right, bars.bottom);
+            return WindowInsetsCompat.CONSUMED;
+        });
         com.google.android.material.bottomnavigation.BottomNavigationView navigation =
                 findViewById(R.id.readerBottomNavigation);
         navigation.getMenu().findItem(R.id.navReaderHome).setChecked(true);
-        navigation.setOnItemSelectedListener(
-                item -> {
-                    navigateToTab(item.getItemId());
-                    return false;
-                });
+        navigation.setOnItemSelectedListener(item -> {
+            navigateToTab(item.getItemId());
+            return false;
+        });
         navigation.setOnItemReselectedListener(item -> navigateToTab(item.getItemId()));
         detail = new BookDetailView(this);
         bookId = getIntent().getStringExtra(EXTRA_BOOK_ID);
         helper = new DatabaseHelper(getApplicationContext());
         findViewById(R.id.detailBack).setOnClickListener(v -> finish());
-        findViewById(R.id.detailRetry)
-                .setOnClickListener(
-                        v -> {
-                            if (isSessionReady()) startCatalogue();
-                        });
+        findViewById(R.id.detailBorrowOnline).setOnClickListener(v -> {
+            if (detail != null) {
+                Toast.makeText(this,
+                        "Chức năng mượn online chưa được kết nối với giao dịch Firestore.",
+                        Toast.LENGTH_LONG).show();
+            }
+        });
+        findViewById(R.id.detailRetry).setOnClickListener(v -> {
+            if (isSessionReady()) startCatalogue();
+        });
     }
 
     private void navigateToTab(int id) {
@@ -90,55 +93,42 @@ public class BookDetailActivity extends SessionActivity {
         remoteVisible = null;
         detail.status("Đang kiểm tra dữ liệu…");
         loadLocal(token);
-        documentListener =
-                FirebaseFirestore.getInstance()
-                        .collection("BookTitles")
-                        .document(bookId)
-                        .addSnapshotListener(
-                                MetadataChanges.INCLUDE,
-                                (snapshot, error) -> {
-                                    if (!current(token)) return;
-                                    if (error != null) {
-                                        detail.error(
-                                                "Không thể tải sách. Đang giữ dữ liệu đã lưu; hãy"
-                                                        + " thử lại.");
-                                        return;
-                                    }
-                                    if (snapshot == null) return;
-                                    if (snapshot.exists() || !snapshot.getMetadata().isFromCache())
-                                        remoteVisible =
-                                                snapshot.exists()
-                                                        && !Boolean.TRUE.equals(
-                                                                snapshot.getBoolean("isHidden"));
-                                    if (Boolean.FALSE.equals(remoteVisible)) {
-                                        detail.bind(null);
-                                        return;
-                                    }
-                                    detail.status(
-                                            snapshot.getMetadata().isFromCache()
-                                                    ? "Dữ liệu đã lưu — đang kiểm tra kết nối"
-                                                    : "Đã nhận cập nhật từ thư viện");
-                                    loadLocal(token);
-                                });
-        sync = new BookCatalogueSyncManager(getApplicationContext());
-        sync.start(
-                new BookCatalogueSyncManager.SyncListener() {
-                    @Override
-                    public void onSyncCompleted(int count) {
-                        runOnUiThread(
-                                () -> {
-                                    if (current(token)) loadLocal(token);
-                                });
+        documentListener = FirebaseFirestore.getInstance().collection("BookTitles").document(bookId)
+                .addSnapshotListener(MetadataChanges.INCLUDE, (snapshot, error) -> {
+                    if (!current(token)) return;
+                    if (error != null) {
+                        detail.error("Không thể tải sách. Đang giữ dữ liệu đã lưu; hãy thử lại.");
+                        return;
                     }
-
-                    @Override
-                    public void onSyncFailed(String message) {
-                        runOnUiThread(
-                                () -> {
-                                    if (current(token)) detail.error("Lỗi đồng bộ: " + message);
-                                });
+                    if (snapshot == null) return;
+                    if (snapshot.exists() || !snapshot.getMetadata().isFromCache())
+                        remoteVisible = snapshot.exists()
+                                && !Boolean.TRUE.equals(snapshot.getBoolean("isHidden"));
+                    if (Boolean.FALSE.equals(remoteVisible)) {
+                        detail.bind(null);
+                        return;
                     }
+                    detail.status(snapshot.getMetadata().isFromCache()
+                            ? "Dữ liệu đã lưu — đang kiểm tra kết nối"
+                            : "Đã nhận cập nhật từ thư viện");
+                    loadLocal(token);
                 });
+        sync = new BookCatalogueSyncManager(getApplicationContext());
+        sync.start(new BookCatalogueSyncManager.SyncListener() {
+            @Override
+            public void onSyncCompleted(int count) {
+                runOnUiThread(() -> {
+                    if (current(token)) loadLocal(token);
+                });
+            }
+
+            @Override
+            public void onSyncFailed(String message) {
+                runOnUiThread(() -> {
+                    if (current(token)) detail.error("Lỗi đồng bộ: " + message);
+                });
+            }
+        });
     }
 
     private boolean current(long token) {
@@ -146,25 +136,19 @@ public class BookDetailActivity extends SessionActivity {
     }
 
     private void loadLocal(long token) {
-        worker.execute(
-                () -> {
-                    try {
-                        BookTitle book =
-                                new BookTitleDao(helper.getReadableDatabase()).findById(bookId);
-                        runOnUiThread(
-                                () -> {
-                                    if (current(token))
-                                        detail.bind(
-                                                Boolean.FALSE.equals(remoteVisible) ? null : book);
-                                });
-                    } catch (Exception error) {
-                        runOnUiThread(
-                                () -> {
-                                    if (current(token))
-                                        detail.error("Không đọc được sách đã lưu. Hãy thử lại.");
-                                });
-                    }
+        worker.execute(() -> {
+            try {
+                BookTitle book = new BookTitleDao(helper.getReadableDatabase()).findById(bookId);
+                runOnUiThread(() -> {
+                    if (current(token))
+                        detail.bind(Boolean.FALSE.equals(remoteVisible) ? null : book);
                 });
+            } catch (Exception error) {
+                runOnUiThread(() -> {
+                    if (current(token)) detail.error("Không đọc được sách đã lưu. Hãy thử lại.");
+                });
+            }
+        });
     }
 
     private void stopCatalogue() {
