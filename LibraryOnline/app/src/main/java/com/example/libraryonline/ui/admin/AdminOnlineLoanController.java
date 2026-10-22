@@ -2,10 +2,8 @@ package com.example.libraryonline.ui.admin;
 
 import android.app.AlertDialog;
 import android.content.DialogInterface;
-import android.graphics.Typeface;
 import android.os.Handler;
 import android.os.Looper;
-import android.text.InputType;
 import android.view.View;
 import android.widget.Button;
 import android.widget.EditText;
@@ -13,7 +11,6 @@ import android.widget.LinearLayout;
 import android.widget.TextView;
 import android.widget.Toast;
 
-import androidx.core.content.ContextCompat;
 
 import com.example.libraryonline.R;
 import com.example.libraryonline.ui.notifications.OnlineLoanAlertCenter;
@@ -99,42 +96,6 @@ final class AdminOnlineLoanController {
                 && !activity.isDestroyed() && !activity.isFinishing();
     }
 
-    private int dp(int n) {
-        return Math.round(n * activity.getResources().getDisplayMetrics().density);
-    }
-
-    private TextView label(String value, boolean heading) {
-        TextView text = new TextView(activity);
-        text.setText(value);
-        text.setTextSize(heading ? 16 : 13);
-        text.setTextColor(ContextCompat.getColor(activity,
-                heading ? R.color.admin_screen_ink : R.color.admin_screen_muted));
-        if (heading) text.setTypeface(null, Typeface.BOLD);
-        text.setPadding(0, dp(4), 0, dp(5));
-        return text;
-    }
-
-    private LinearLayout card(LinearLayout container) {
-        LinearLayout card = new LinearLayout(activity);
-        card.setOrientation(LinearLayout.VERTICAL);
-        card.setPadding(dp(16), dp(12), dp(16), dp(16));
-        card.setBackgroundResource(R.drawable.bg_admin_screen_card);
-        LinearLayout.LayoutParams spacing = new LinearLayout.LayoutParams(-1, -2);
-        spacing.bottomMargin = dp(12);
-        container.addView(card, spacing);
-        return card;
-    }
-
-    private Button button(String value) {
-        Button b = new Button(activity);
-        b.setAllCaps(false);
-        b.setText(value);
-        b.setTextColor(ContextCompat.getColor(activity, R.color.white));
-        b.setBackgroundTintList(android.content.res.ColorStateList.valueOf(
-                ContextCompat.getColor(activity, R.color.admin_screen_primary)));
-        return b;
-    }
-
     private String date(Timestamp stamp) {
         if (stamp == null) return "Đang đồng bộ";
         return new SimpleDateFormat("dd/MM/yyyy HH:mm", new Locale("vi", "VN"))
@@ -193,19 +154,26 @@ final class AdminOnlineLoanController {
                     Toast.LENGTH_LONG).show();
         previousPending = pending;
 
-        if (pending == 0 && approved == 0)
-            container.addView(label("Hiện không có yêu cầu cần xử lý.", false));
+        if (pending == 0 && approved == 0) {
+            TextView empty = (TextView) activity.getLayoutInflater().inflate(
+                    R.layout.view_ui_text_secondary, container, false);
+            empty.setText("Hiện không có yêu cầu cần xử lý.");
+            container.addView(empty);
+        }
         String uid = adminUid;
         for (DocumentSnapshot doc : docs) {
             String state = doc.getString("status");
             if (!OnlineLoanRequestRepository.PENDING.equals(state)
                     && !OnlineLoanRequestRepository.APPROVED.equals(state)) continue;
-            LinearLayout item = card(container);
+            View item = activity.getLayoutInflater().inflate(
+                    R.layout.item_admin_online_request, container, false);
+            container.addView(item);
             String reader = doc.getString("userId");
             String title = doc.getString("bookTitle");
-            item.addView(label(title == null ? "Đầu sách" : title, true));
-            TextView who = label("Độc giả: " + (reader == null ? "—" : reader), false);
-            item.addView(who);
+            ((TextView) item.findViewById(R.id.adminOnlineItemTitle))
+                    .setText(title == null ? "Đầu sách" : title);
+            TextView who = item.findViewById(R.id.adminOnlineItemReader);
+            who.setText("Độc giả: " + (reader == null ? "—" : reader));
             if (reader != null) {
                 db.collection("Users").document(reader).get().addOnSuccessListener(user -> {
                     if (!current(uid) || item.getParent() == null || !user.exists()) return;
@@ -214,15 +182,18 @@ final class AdminOnlineLoanController {
                 });
             }
             Long days = doc.getLong("loanDays");
-            item.addView(label("Số ngày mượn: " + (days == null ? "—" : days), false));
+            ((TextView) item.findViewById(R.id.adminOnlineItemDays))
+                    .setText("Số ngày mượn: " + (days == null ? "—" : days));
             if (OnlineLoanRequestRepository.APPROVED.equals(state)) {
-                item.addView(label("Đã duyệt · Chờ Reader đến lấy trước "
-                        + date(doc.getTimestamp("holdUntil")), true));
+                TextView approvedNotice = item.findViewById(R.id.adminOnlineItemApproved);
+                approvedNotice.setText("Đã duyệt · Chờ Reader đến lấy trước "
+                        + date(doc.getTimestamp("holdUntil")));
+                approvedNotice.setVisibility(View.VISIBLE);
                 Timestamp until = doc.getTimestamp("holdUntil");
                 if (until != null && !until.toDate().after(new Date())) {
-                    Button release = button("Hết 24 giờ · Kiểm tra & trả cuốn về kho");
+                    Button release = item.findViewById(R.id.adminOnlineItemRelease);
+                    release.setVisibility(View.VISIBLE);
                     release.setEnabled(!snapshot.getMetadata().isFromCache());
-                    item.addView(release);
                     release.setOnClickListener(v -> {
                         if (!current(uid) || !release.isEnabled()) return;
                         release.setEnabled(false);
@@ -241,15 +212,12 @@ final class AdminOnlineLoanController {
                 if (!snapshot.getMetadata().isFromCache()) checkExpiry(doc, uid);
                 continue;
             }
-            item.addView(label("Gửi: " + date(doc.getTimestamp("createdAt")), false));
-            LinearLayout actions = new LinearLayout(activity);
-            actions.setOrientation(LinearLayout.HORIZONTAL);
-            Button approve = button(activity.getString(R.string.online_borrow_review_approve));
-            Button reject = button(activity.getString(R.string.online_borrow_review_reject));
-            LinearLayout.LayoutParams half = new LinearLayout.LayoutParams(0, dp(50), 1);
-            actions.addView(approve, half);
-            actions.addView(reject, new LinearLayout.LayoutParams(0, dp(50), 1));
-            item.addView(actions);
+            TextView sent = item.findViewById(R.id.adminOnlineItemSent);
+            sent.setText("Gửi: " + date(doc.getTimestamp("createdAt")));
+            sent.setVisibility(View.VISIBLE);
+            item.findViewById(R.id.adminOnlineItemActions).setVisibility(View.VISIBLE);
+            Button approve = item.findViewById(R.id.adminOnlineItemApprove);
+            Button reject = item.findViewById(R.id.adminOnlineItemReject);
             boolean canDecide = !snapshot.getMetadata().isFromCache();
             approve.setEnabled(canDecide);
             reject.setEnabled(canDecide);
@@ -261,14 +229,12 @@ final class AdminOnlineLoanController {
             });
             reject.setOnClickListener(v -> {
                 if (!current(uid)) return;
-                EditText reason = new EditText(activity);
-                reason.setSingleLine(false);
-                reason.setInputType(InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_FLAG_CAP_SENTENCES);
-                reason.setHint("Nhập lý do từ chối (ít nhất 5 ký tự)");
-                reason.setPadding(dp(16), dp(8), dp(16), dp(8));
+                View dialogView = activity.getLayoutInflater().inflate(
+                        R.layout.dialog_admin_online_reject, null, false);
+                EditText reason = dialogView.findViewById(R.id.adminOnlineRejectReason);
                 AlertDialog dialog = new AlertDialog.Builder(activity)
                         .setTitle("Từ chối yêu cầu")
-                        .setView(reason)
+                        .setView(dialogView)
                         .setNegativeButton("Hủy", null)
                         .setPositiveButton("Từ chối", (d, which) -> {
                             String value = reason.getText().toString().trim();
