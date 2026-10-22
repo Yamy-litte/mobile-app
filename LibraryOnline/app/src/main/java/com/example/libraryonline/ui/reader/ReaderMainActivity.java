@@ -87,7 +87,7 @@ public class ReaderMainActivity extends com.example.libraryonline.ui.auth.Sessio
                         new androidx.activity.OnBackPressedCallback(true) {
                             @Override
                             public void handleOnBackPressed() {
-                                if (accountController != null && accountController.closeEditor()) return;
+                                if (accountController != null && accountController.closeAccountSubscreen()) return;
                                 if (homeView.onBack()) return;
                                 setEnabled(false);
                                 getOnBackPressedDispatcher().onBackPressed();
@@ -102,6 +102,9 @@ public class ReaderMainActivity extends com.example.libraryonline.ui.auth.Sessio
         bindViews();
         bindActions();
         accountController = new ReaderAccountController(this);
+        homeView.setOnTabChangedListener(tab -> {
+            if (tab != ReaderHomeView.ACCOUNT) accountController.onLeaveAccount();
+        });
         buildCategories();
     }
 
@@ -534,6 +537,7 @@ public class ReaderMainActivity extends com.example.libraryonline.ui.auth.Sessio
 
     @Override
     protected void onSessionStopped() {
+        if (accountController != null) accountController.onLeaveAccount();
         if (homeView != null) homeView.clearProfile();
         if (catalogueSyncManager != null) {
             catalogueSyncManager.close();
@@ -556,6 +560,12 @@ public class ReaderMainActivity extends com.example.libraryonline.ui.auth.Sessio
 
     private void showMessage(String message) {
         Toast.makeText(this, message, Toast.LENGTH_LONG).show();
+    }
+
+    @Override
+    protected void onPause() {
+        if (accountController != null) accountController.restoreCardBrightness();
+        super.onPause();
     }
 
     @Override
