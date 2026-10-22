@@ -43,30 +43,22 @@ public final class BookDetailView {
         text(R.id.detailAuthor, present(book.author));
         text(R.id.detailCategory, present(book.category));
         text(R.id.detailDescription, present(book.description));
-        text(
-                R.id.detailAvailability,
-                book.availableCopies > 0
-                        ? "Có " + book.availableCopies + " cuốn sẵn sàng"
-                        : "Tạm hết sách sẵn sàng");
+        boolean available = book.availableCopies > 0;
+        text(R.id.detailAvailability, available
+                ? "Có " + book.availableCopies + " cuốn sẵn sàng"
+                : "Hết sách");
         ((TextView) activity.findViewById(R.id.detailAvailability))
-                .setTextColor(
-                        ContextCompat.getColor(
-                                activity,
-                                book.availableCopies > 0
-                                        ? R.color.library_success
-                                        : R.color.library_muted));
-        text(
-                R.id.detailMetadata,
-                "Nhà xuất bản: "
-                        + present(book.publisher)
-                        + "\nNăm xuất bản: "
-                        + (book.publishYear == null ? "Chưa cập nhật" : book.publishYear)
-                        + "\nISBN: "
-                        + present(book.isbn)
-                        + "\nTổng bản đã nhập: "
-                        + book.totalCopies);
-        BookCoverLoader.load(
-                book.coverUrl,
+                .setTextColor(ContextCompat.getColor(activity,
+                        available ? R.color.library_success : R.color.library_muted));
+        Button borrowButton = activity.findViewById(R.id.detailBorrowOnline);
+        borrowButton.setEnabled(available);
+        borrowButton.setText(available ? "Mượn sách online" : "Hết sách");
+        text(R.id.detailMetadata,
+                "Nhà xuất bản: " + present(book.publisher)
+                        + "\nNăm xuất bản: " + (book.publishYear == null ? "Chưa cập nhật" : book.publishYear)
+                        + "\nISBN: " + present(book.isbn)
+                        + "\nTổng bản đã nhập: " + book.totalCopies);
+        BookCoverLoader.load(book.coverUrl,
                 activity.findViewById(R.id.detailCover),
                 activity.findViewById(R.id.detailCoverFallback));
     }
