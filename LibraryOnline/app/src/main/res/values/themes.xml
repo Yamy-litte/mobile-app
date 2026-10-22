@@ -2,7 +2,7 @@
     <style name="Base.Theme.LibraryOnline" parent="Theme.Material3.Light.NoActionBar">
         <item name="colorPrimary">@color/library_blue</item>
         <item name="colorOnPrimary">@color/white</item>
-        <item name="colorSecondary">@color/library_navy</item>
+        <item name="colorSecondary">@color/library_blue</item>
         <item name="colorSurface">@color/surface</item>
         <!-- Material 3 cards, dialogs and elevated containers must stay white. -->
         <item name="colorSurfaceContainerLowest">@color/surface</item>
