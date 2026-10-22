@@ -86,7 +86,9 @@ service cloud.firestore {
           && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['cardStatus', 'cardExpiryDate', 'updatedAt'])
           && request.resource.data.cardStatus in ['HoatDong', 'BiKhoa', 'HetHan']
           && request.resource.data.cardExpiryDate is string
-          && request.resource.data.cardExpiryDate.matches('^[0-9]{4}-[0-9]{2}-[0-9]{2}
+          && request.resource.data.cardExpiryDate.matches('^[0-9]{4}-[0-9]{2}-[0-9]{2}$')
+          && request.resource.data.updatedAt == request.time
+        );
       allow delete: if false;
     }
 
