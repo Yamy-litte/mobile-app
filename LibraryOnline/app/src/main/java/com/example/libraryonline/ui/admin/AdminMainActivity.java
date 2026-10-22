@@ -52,6 +52,7 @@ public class AdminMainActivity extends com.example.libraryonline.ui.auth.Session
     private Button syncButton;
     private AdminHomeView homeView;
     private CirculationPanelController circulationController;
+    private AdminOnlineLoanController onlineLoanController;
     private long dashboardGeneration, requestsGeneration;
     private final java.util.concurrent.ExecutorService dashboardLocalWorker =
             java.util.concurrent.Executors.newSingleThreadExecutor();
@@ -120,12 +121,9 @@ public class AdminMainActivity extends com.example.libraryonline.ui.auth.Session
         findViewById(R.id.actionAdminInventory).setOnClickListener(v -> openInventory());
         findViewById(R.id.actionAdminBorrow).setOnClickListener(v -> openCounter());
         findViewById(R.id.actionAdminReturn).setOnClickListener(v -> openCounter());
-        findViewById(R.id.actionAdminOnline).setOnClickListener(v -> {
-            if (isSessionReady())
-                Toast.makeText(this,
-                        "Giao sách Online chưa được hỗ trợ tại quầy. Không tạo giao dịch giả.",
-                        Toast.LENGTH_LONG).show();
-        });
+        findViewById(R.id.actionAdminOnline).setOnClickListener(v -> openOnlineRequests());
+        findViewById(R.id.adminHubOnlineLoans).setOnClickListener(v -> openOnlineRequests());
+        onlineLoanController = new AdminOnlineLoanController(this);
         findViewById(R.id.buttonAdminAccountBack).setOnClickListener(
                 v -> homeView.show(AdminHomeView.HOME));
         bindCatalogueSyncButton();
@@ -417,6 +415,20 @@ public class AdminMainActivity extends com.example.libraryonline.ui.auth.Session
                 });
     }
 
+    private void openOnlineRequests() {
+        if (!isSessionReady()) return;
+        homeView.show(AdminHomeView.APPROVALS);
+        android.widget.ScrollView scroll = findViewById(R.id.adminScroll);
+        scroll.post(() -> {
+            if (!isSessionReady()) return;
+            android.graphics.Rect area = new android.graphics.Rect();
+            View target = findViewById(R.id.textAdminOnlineHeading);
+            target.getDrawingRect(area);
+            scroll.offsetDescendantRectToMyCoords(target, area);
+            scroll.smoothScrollTo(0, area.top);
+        });
+    }
+
     private void openCounter() {
         if (!isSessionReady()) return;
         homeView.show(AdminHomeView.CIRCULATION);
@@ -461,6 +473,7 @@ public class AdminMainActivity extends com.example.libraryonline.ui.auth.Session
         if (circulationController != null) circulationController.close();
         circulationController = new CirculationPanelController(this);
         startRequests();
+        if (onlineLoanController != null) onlineLoanController.start(profile.uid);
         loadDashboard();
     }
 
@@ -484,6 +497,7 @@ public class AdminMainActivity extends com.example.libraryonline.ui.auth.Session
 
     @Override
     protected void onSessionStopped() {
+        if (onlineLoanController != null) onlineLoanController.stop();
         dashboardGeneration++;
         stopRequestListeners();
         if (catalogueSyncManager != null) {
