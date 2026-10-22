@@ -8,7 +8,6 @@ import android.view.WindowManager;
 import android.view.View;
 import android.widget.Button;
 import android.widget.ImageView;
-import android.widget.LinearLayout;
 import android.widget.TextView;
 import android.text.TextUtils;
 import android.util.Patterns;
@@ -410,6 +409,11 @@ public final class ReaderAccountController {
         window.setAttributes(params);
         window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
         cardBrightnessApplied = true;
+    }
+
+    public void applyCardBrightnessIfVisible() {
+        if (cardPanel.getVisibility() == View.VISIBLE
+                && ((ReaderMainActivity) activity).isSessionReady()) applyCardBrightness();
     }
 
     public void restoreCardBrightness() {
