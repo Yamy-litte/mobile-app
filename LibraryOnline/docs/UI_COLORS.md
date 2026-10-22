@@ -59,6 +59,12 @@ Màu lỗi/thành công/cảnh báo là **màu trạng thái**, không dùng tha
 
 ### Cách kiểm tra
 
+Kiểm tra biên giới XML/UI và màu chuẩn bằng Python không cần thư viện ngoài:
+
+```sh
+python tools/check_ui_boundaries.py
+```
+
 Chạy trong thư mục `LibraryOnline`:
 
 ```sh
