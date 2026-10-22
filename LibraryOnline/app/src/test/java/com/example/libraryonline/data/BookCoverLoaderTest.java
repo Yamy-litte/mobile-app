@@ -59,9 +59,8 @@ public class BookCoverLoaderTest {
         return file;
     }
     private String imageFile() throws Exception {
-        // Glide's StringLoader handles absolute file paths directly; this avoids
-        // Robolectric/Windows URI normalization differences for local files.
-        return createImageFile().getAbsolutePath();
+        // Glide's Uri loader reliably decodes file:// URIs under Robolectric.
+        return Uri.fromFile(createImageFile()).toString();
     }
     private void awaitRequest() throws Exception {
         Request request = new DrawableImageViewTarget(image).getRequest();
