@@ -89,7 +89,7 @@ public class BookCoverLoaderTest {
         assertEquals(View.VISIBLE, fallback.getVisibility());
     }
     @Test public void httpCoverIsDecodedAndRebindingReusesTheCache() throws Exception {
-        byte[] png = java.nio.file.Files.readAllBytes(new File(new java.net.URI(imageFile())).toPath());
+        byte[] png = java.nio.file.Files.readAllBytes(new File(Uri.parse(imageFile()).getPath()).toPath());
         java.util.concurrent.atomic.AtomicInteger requests = new java.util.concurrent.atomic.AtomicInteger();
         java.net.ServerSocket server = new java.net.ServerSocket();
         server.bind(new java.net.InetSocketAddress("127.0.0.1", 0));
