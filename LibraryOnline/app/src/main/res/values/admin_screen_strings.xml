@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="admin_screen_home_subtitle">Đang cập nhật dữ liệu...</string>
+    <string name="admin_screen_today">Hoạt động hôm nay</string>
+    <string name="admin_screen_weekly">Xu hướng mượn tuần</string>
+    <string name="admin_screen_weekly_source">Số lượt mượn được lưu trên thiết bị</string>
+    <string name="admin_screen_recent">Hoạt động gần đây</string>
+    <string name="admin_screen_local_note">Số liệu mượn/trả chỉ tính từ SQLite trên thiết bị này.</string>
+    <string name="admin_screen_pending">Yêu cầu đang chờ</string>
+    <string name="admin_screen_quick_actions">Hành động nhanh</string>
+    <string name="admin_screen_borrow">Mượn trực tiếp</string>
+    <string name="admin_screen_return">Nhận trả sách</string>
+    <string name="admin_screen_add_book">Quản lý / thêm sách</string>
+    <string name="admin_screen_online">Giao sách Online / Đặt trước</string>
+    <string name="admin_screen_borrow_today">Phiếu mượn hôm nay</string>
+    <string name="admin_screen_return_today">Sách trả hôm nay</string>
+    <string name="admin_screen_waiting">Chờ giao sách</string>
+    <string name="admin_screen_overdue">Sách quá hạn</string>
+    <string name="admin_screen_report">Báo cáo thu phạt</string>
+    <string name="admin_screen_account_title">Tài khoản Admin</string>
+    <string name="admin_screen_identity">Thông tin hồ sơ</string>
+    <string name="admin_screen_name_readonly">Họ tên · Cố định</string>
+    <string name="admin_screen_birth_readonly">Ngày sinh · Cố định</string>
+    <string name="admin_screen_identity_note">Thông tin định danh không chỉnh sửa tại đây.</string>
+    <string name="admin_screen_contact">Thông tin liên hệ</string>
+    <string name="admin_screen_save_contact">Lưu liên hệ</string>
+    <string name="admin_screen_security">Bảo mật &amp; phiên đăng nhập</string>
+    <string name="admin_screen_data_loading">Đang tải dữ liệu trên thiết bị...</string>
+    <string name="admin_screen_data_error">Không tải được số liệu trên thiết bị này.</string>
+    <string name="admin_screen_recent_empty">Chưa có giao dịch được ghi nhận trên thiết bị này.</string>
+</resources>

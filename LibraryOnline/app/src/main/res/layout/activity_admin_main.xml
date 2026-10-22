@@ -5,7 +5,7 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:orientation="vertical"
-    android:background="@color/library_background">
+    android:background="@color/admin_screen_bg">
     <FrameLayout
         android:layout_width="match_parent"
         android:layout_height="0dp"
@@ -22,405 +22,202 @@
                 android:orientation="vertical"
                 android:padding="20dp">
                 <LinearLayout
+                    android:id="@+id/adminHomeHeader"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:orientation="horizontal"
-                    android:gravity="center_vertical">
-                    <LinearLayout
-                        android:layout_width="0dp"
-                        android:layout_weight="1"
-                        android:layout_height="wrap_content"
-                        android:orientation="vertical">
-                        <TextView
-                            android:id="@+id/textAdminBrand"
-                            style="@style/AdminBody"
-                            android:text="@string/admin_brand"
-                            android:textSize="10sp"
-                            android:letterSpacing="0.12" />
-                        <TextView
-                            android:id="@+id/textAdminSession"
-                            style="@style/AdminHeading"
-                            android:text="@string/admin_role"
-                            android:layout_marginTop="6dp"
-                            android:layout_marginBottom="4dp" />
+                    android:gravity="center_vertical"
+                    android:paddingTop="14dp"
+                    android:paddingBottom="10dp">
+                    <LinearLayout android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:orientation="vertical">
+                        <TextView android:id="@+id/textAdminSession" android:layout_width="match_parent"
+                            android:layout_height="wrap_content" android:fontFamily="serif" android:textStyle="bold"
+                            android:textSize="25sp" android:textColor="@color/admin_screen_ink"
+                            android:text="@string/admin_role" />
+                        <TextView android:id="@+id/textAdminBrand" style="@style/AdminScreenCaption"
+                            android:layout_marginTop="5dp" android:text="@string/admin_screen_home_subtitle" />
                     </LinearLayout>
-                    <TextView
-                        android:id="@+id/buttonAdminAccount"
-                        android:layout_width="48dp"
-                        android:layout_height="48dp"
-                        android:layout_marginStart="8dp"
-                        android:background="@drawable/bg_admin_avatar"
-                        android:gravity="center"
-                        android:text="AD"
-                        android:textColor="@color/library_blue"
-                        android:textStyle="bold"
+                    <TextView android:id="@+id/buttonAdminAccount"
+                        android:layout_width="48dp" android:layout_height="48dp" android:layout_marginStart="10dp"
+                        android:gravity="center" android:background="@drawable/bg_admin_avatar"
+                        android:clickable="true" android:focusable="true"
                         android:contentDescription="@string/admin_account"
-                        android:clickable="true"
-                        android:focusable="true" />
+                        android:text="AD" android:textStyle="bold" android:textColor="@color/admin_screen_primary" />
                 </LinearLayout>
-                <LinearLayout
-                    android:id="@+id/adminOverview"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:orientation="vertical">
-                    <TextView
-                        android:id="@+id/textAdminOverview"
-                        style="@style/AdminHeading"
-                        android:text="@string/admin_overview" />
-                    <LinearLayout
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:orientation="horizontal">
-                        <LinearLayout
-                            android:layout_width="0dp"
-                            android:layout_weight="1"
-                            android:layout_height="wrap_content"
-                            android:minHeight="120dp"
-                            android:layout_margin="5dp"
-                            android:padding="16dp"
-                            android:orientation="vertical"
-                            android:background="@drawable/bg_admin_card">
-                            <TextView
-                                android:id="@+id/textAdminBookCount"
-                                android:layout_width="match_parent"
-                                android:layout_height="wrap_content"
-                                android:minHeight="42dp"
-                                android:gravity="end|center_vertical"
-                                android:drawableStart="@drawable/ic_admin_book"
-                                android:text="@string/admin_dash"
-                                android:textSize="28sp"
-                                android:textStyle="bold"
-                                android:textColor="@color/library_blue" />
-                            <TextView
-                                style="@style/AdminBody"
-                                android:layout_marginTop="10dp"
-                                android:text="@string/admin_books" />
-                        </LinearLayout>
-                        <LinearLayout
-                            android:layout_width="0dp"
-                            android:layout_weight="1"
-                            android:layout_height="wrap_content"
-                            android:minHeight="120dp"
-                            android:layout_margin="5dp"
-                            android:padding="16dp"
-                            android:orientation="vertical"
-                            android:background="@drawable/bg_admin_card">
-                            <TextView
-                                android:id="@+id/textAdminReaderCount"
-                                android:layout_width="match_parent"
-                                android:layout_height="wrap_content"
-                                android:minHeight="42dp"
-                                android:gravity="end|center_vertical"
-                                android:drawableStart="@drawable/ic_admin_people"
-                                android:text="@string/admin_dash"
-                                android:textSize="28sp"
-                                android:textStyle="bold"
-                                android:textColor="@color/library_blue" />
-                            <TextView
-                                style="@style/AdminBody"
-                                android:layout_marginTop="10dp"
-                                android:text="@string/admin_readers" />
+                <LinearLayout android:id="@+id/adminOverview" android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical">
+                    <TextView android:id="@+id/textAdminOverview" style="@style/AdminScreenHeading" android:text="@string/admin_overview" />
+                    <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal">
+                        <LinearLayout style="@style/AdminScreenKpiCard">
+    <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal" android:gravity="center_vertical">
+        <ImageView android:layout_width="22dp" android:layout_height="22dp" android:src="@drawable/ic_admin_book" android:tint="@color/admin_screen_primary" android:contentDescription="@null" />
+        <TextView android:id="@+id/textAdminBookCount" style="@style/AdminScreenKpiNumber"
+            android:textColor="@color/admin_screen_primary" android:text="@string/admin_dash" />
+    </LinearLayout>
+    <TextView style="@style/AdminScreenCaption" android:layout_marginTop="11dp" android:text="@string/admin_books" />
+</LinearLayout>
+                        <LinearLayout style="@style/AdminScreenKpiCard">
+    <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal" android:gravity="center_vertical">
+        <ImageView android:layout_width="22dp" android:layout_height="22dp" android:src="@drawable/ic_admin_people" android:tint="@color/admin_screen_green" android:contentDescription="@null" />
+        <TextView android:id="@+id/textAdminReaderCount" style="@style/AdminScreenKpiNumber"
+            android:textColor="@color/admin_screen_green" android:text="@string/admin_dash" />
+    </LinearLayout>
+    <TextView style="@style/AdminScreenCaption" android:layout_marginTop="11dp" android:text="@string/admin_readers" />
+</LinearLayout>
+                    </LinearLayout>
+                    <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal">
+                        <LinearLayout style="@style/AdminScreenKpiCard">
+    <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal" android:gravity="center_vertical">
+        <ImageView android:layout_width="22dp" android:layout_height="22dp" android:src="@drawable/ic_admin_copy" android:tint="@color/admin_screen_orange" android:contentDescription="@null" />
+        <TextView android:id="@+id/textAdminCopyCount" style="@style/AdminScreenKpiNumber"
+            android:textColor="@color/admin_screen_orange" android:text="@string/admin_dash" />
+    </LinearLayout>
+    <TextView style="@style/AdminScreenCaption" android:layout_marginTop="11dp" android:text="@string/admin_copies" />
+</LinearLayout>
+                        <LinearLayout style="@style/AdminScreenKpiCard">
+    <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal" android:gravity="center_vertical">
+        <ImageView android:layout_width="22dp" android:layout_height="22dp" android:src="@drawable/ic_admin_check" android:tint="@color/admin_screen_primary" android:contentDescription="@null" />
+        <TextView android:id="@+id/textAdminRegistrationCount" style="@style/AdminScreenKpiNumber"
+            android:textColor="@color/admin_screen_primary" android:text="@string/admin_dash" />
+    </LinearLayout>
+    <TextView style="@style/AdminScreenCaption" android:layout_marginTop="11dp" android:text="@string/admin_pending" />
+</LinearLayout>
+                    </LinearLayout>
+                    <TextView android:id="@+id/textAdminDataStatus" style="@style/AdminScreenCaption"
+                        android:layout_marginTop="7dp" android:accessibilityLiveRegion="polite" android:text="@string/admin_loading" />
+                    <Button android:id="@+id/buttonAdminRefresh" android:layout_width="wrap_content" android:layout_height="42dp"
+                        android:text="@string/admin_refresh" android:textColor="@color/admin_screen_primary"
+                        style="?attr/borderlessButtonStyle" />
+                    <TextView style="@style/AdminScreenHeading" android:text="@string/admin_screen_weekly" />
+                    <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
+                        android:orientation="vertical" android:background="@drawable/bg_admin_screen_card" android:padding="12dp">
+                        <TextView style="@style/AdminScreenCaption" android:text="@string/admin_screen_weekly_source" />
+                        <com.example.libraryonline.ui.admin.AdminWeeklyTrendView
+                            android:id="@+id/adminWeeklyTrend" android:layout_width="match_parent"
+                            android:layout_height="172dp" android:layout_marginTop="6dp" />
+                    </LinearLayout>
+                    <TextView style="@style/AdminScreenHeading" android:text="@string/admin_screen_today" />
+                    <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal">
+                        <LinearLayout style="@style/AdminScreenKpiCard">
+    <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal" android:gravity="center_vertical">
+        <ImageView android:layout_width="22dp" android:layout_height="22dp" android:src="@drawable/ic_admin_copy" android:tint="@color/admin_screen_primary" android:contentDescription="@null" />
+        <TextView android:id="@+id/textAdminTodayBorrow" style="@style/AdminScreenKpiNumber"
+            android:textColor="@color/admin_screen_primary" android:text="@string/admin_dash" />
+    </LinearLayout>
+    <TextView style="@style/AdminScreenCaption" android:layout_marginTop="11dp" android:text="@string/admin_screen_borrow_today" />
+</LinearLayout>
+                        <LinearLayout style="@style/AdminScreenKpiCard">
+    <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal" android:gravity="center_vertical">
+        <ImageView android:layout_width="22dp" android:layout_height="22dp" android:src="@drawable/ic_admin_check" android:tint="@color/admin_screen_green" android:contentDescription="@null" />
+        <TextView android:id="@+id/textAdminTodayReturn" style="@style/AdminScreenKpiNumber"
+            android:textColor="@color/admin_screen_green" android:text="@string/admin_dash" />
+    </LinearLayout>
+    <TextView style="@style/AdminScreenCaption" android:layout_marginTop="11dp" android:text="@string/admin_screen_return_today" />
+</LinearLayout>
+                    </LinearLayout>
+                    <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal">
+                        <LinearLayout style="@style/AdminScreenKpiCard">
+    <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal" android:gravity="center_vertical">
+        <ImageView android:layout_width="22dp" android:layout_height="22dp" android:src="@drawable/ic_admin_refresh" android:tint="@color/admin_screen_orange" android:contentDescription="@null" />
+        <TextView android:id="@+id/textAdminTodayWaiting" style="@style/AdminScreenKpiNumber"
+            android:textColor="@color/admin_screen_orange" android:text="@string/admin_dash" />
+    </LinearLayout>
+    <TextView style="@style/AdminScreenCaption" android:layout_marginTop="11dp" android:text="@string/admin_screen_waiting" />
+</LinearLayout>
+                        <LinearLayout style="@style/AdminScreenKpiCard">
+    <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal" android:gravity="center_vertical">
+        <ImageView android:layout_width="22dp" android:layout_height="22dp" android:src="@drawable/ic_admin_check" android:tint="@color/admin_screen_red" android:contentDescription="@null" />
+        <TextView android:id="@+id/textAdminTodayOverdue" style="@style/AdminScreenKpiNumber"
+            android:textColor="@color/admin_screen_red" android:text="@string/admin_dash" />
+    </LinearLayout>
+    <TextView style="@style/AdminScreenCaption" android:layout_marginTop="11dp" android:text="@string/admin_screen_overdue" />
+</LinearLayout>
+                    </LinearLayout>
+                    <TextView android:id="@+id/textAdminLocalStatus" style="@style/AdminScreenCaption"
+                        android:layout_marginTop="7dp" android:accessibilityLiveRegion="polite"
+                        android:text="@string/admin_screen_local_note" />
+                    <TextView android:id="@+id/textAdminWork" style="@style/AdminScreenHeading"
+                        android:text="@string/admin_screen_pending" />
+                    <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
+                        android:padding="16dp" android:orientation="vertical" android:background="@drawable/bg_admin_screen_card">
+                        <TextView android:id="@+id/textAdminPendingSummary"
+                            android:layout_width="match_parent" android:layout_height="wrap_content"
+                            android:text="@string/admin_count_loading" android:textColor="@color/admin_screen_ink"
+                            android:textStyle="bold" android:textSize="14sp" />
+                        <TextView android:id="@+id/textAdminResetSummary" style="@style/AdminScreenCaption"
+                            android:layout_marginTop="8dp" android:text="@string/admin_count_loading" />
+                        <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal" android:layout_marginTop="8dp">
+                            <Button android:id="@+id/buttonAdminReview" android:layout_width="0dp" android:layout_height="46dp" android:layout_weight="1"
+                                android:backgroundTint="@color/admin_screen_primary" android:text="@string/admin_review" android:textAllCaps="false"
+                                android:textColor="@color/white" />
                         </LinearLayout>
                     </LinearLayout>
-                    <LinearLayout
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:orientation="horizontal">
-                        <LinearLayout
-                            android:layout_width="0dp"
-                            android:layout_weight="1"
-                            android:layout_height="wrap_content"
-                            android:minHeight="120dp"
-                            android:layout_margin="5dp"
-                            android:padding="16dp"
-                            android:orientation="vertical"
-                            android:background="@drawable/bg_admin_card">
-                            <TextView
-                                android:id="@+id/textAdminCopyCount"
-                                android:layout_width="match_parent"
-                                android:layout_height="wrap_content"
-                                android:minHeight="42dp"
-                                android:gravity="end|center_vertical"
-                                android:drawableStart="@drawable/ic_admin_copy"
-                                android:text="@string/admin_dash"
-                                android:textSize="28sp"
-                                android:textStyle="bold"
-                                android:textColor="@color/library_blue" />
-                            <TextView
-                                style="@style/AdminBody"
-                                android:layout_marginTop="10dp"
-                                android:text="@string/admin_copies" />
-                        </LinearLayout>
-                        <LinearLayout
-                            android:layout_width="0dp"
-                            android:layout_weight="1"
-                            android:layout_height="wrap_content"
-                            android:minHeight="120dp"
-                            android:layout_margin="5dp"
-                            android:padding="16dp"
-                            android:orientation="vertical"
-                            android:background="@drawable/bg_admin_card">
-                            <TextView
-                                android:id="@+id/textAdminRegistrationCount"
-                                android:layout_width="match_parent"
-                                android:layout_height="wrap_content"
-                                android:minHeight="42dp"
-                                android:gravity="end|center_vertical"
-                                android:drawableStart="@drawable/ic_admin_check"
-                                android:text="@string/admin_dash"
-                                android:textSize="28sp"
-                                android:textStyle="bold"
-                                android:textColor="@color/library_blue" />
-                            <TextView
-                                style="@style/AdminBody"
-                                android:layout_marginTop="10dp"
-                                android:text="@string/admin_pending" />
-                        </LinearLayout>
+                    <TextView android:id="@+id/textAdminShortcuts" style="@style/AdminScreenHeading" android:text="@string/admin_shortcuts" />
+                    <LinearLayout android:id="@+id/actionAdminRegistrations" style="@style/AdminScreenActionRow"
+    android:contentDescription="@string/admin_review">
+    <ImageView android:layout_width="24dp" android:layout_height="24dp" android:src="@drawable/ic_admin_people" android:tint="@color/admin_screen_primary" android:contentDescription="@null" />
+    <TextView style="@style/AdminScreenActionText" android:text="@string/admin_review" />
+    <ImageView android:layout_width="19dp" android:layout_height="19dp" android:src="@drawable/ic_admin_arrow" android:tint="@color/admin_screen_muted" android:contentDescription="@null" />
+</LinearLayout>
+                    <LinearLayout android:id="@+id/actionAdminReaders" style="@style/AdminScreenActionRow"
+    android:contentDescription="@string/admin_manage_readers">
+    <ImageView android:layout_width="24dp" android:layout_height="24dp" android:src="@drawable/ic_admin_account" android:tint="@color/admin_screen_primary" android:contentDescription="@null" />
+    <TextView style="@style/AdminScreenActionText" android:text="@string/admin_manage_readers" />
+    <ImageView android:layout_width="19dp" android:layout_height="19dp" android:src="@drawable/ic_admin_arrow" android:tint="@color/admin_screen_muted" android:contentDescription="@null" />
+</LinearLayout>
+                    <LinearLayout android:id="@+id/actionAdminReports" style="@style/AdminScreenActionRow"
+    android:contentDescription="@string/admin_screen_report">
+    <ImageView android:layout_width="24dp" android:layout_height="24dp" android:src="@drawable/ic_admin_book" android:tint="@color/admin_screen_primary" android:contentDescription="@null" />
+    <TextView style="@style/AdminScreenActionText" android:text="@string/admin_screen_report" />
+    <ImageView android:layout_width="19dp" android:layout_height="19dp" android:src="@drawable/ic_admin_arrow" android:tint="@color/admin_screen_muted" android:contentDescription="@null" />
+</LinearLayout>
+                    <LinearLayout android:id="@+id/actionAdminConfig" style="@style/AdminScreenActionRow"
+    android:contentDescription="@string/admin_system_config">
+    <ImageView android:layout_width="24dp" android:layout_height="24dp" android:src="@drawable/ic_admin_refresh" android:tint="@color/admin_screen_primary" android:contentDescription="@null" />
+    <TextView style="@style/AdminScreenActionText" android:text="@string/admin_system_config" />
+    <ImageView android:layout_width="19dp" android:layout_height="19dp" android:src="@drawable/ic_admin_arrow" android:tint="@color/admin_screen_muted" android:contentDescription="@null" />
+</LinearLayout>
+                    <TextView style="@style/AdminScreenHeading" android:text="@string/admin_screen_quick_actions" />
+                    <LinearLayout android:id="@+id/actionAdminBorrow" style="@style/AdminScreenActionRow"
+    android:contentDescription="@string/admin_screen_borrow">
+    <ImageView android:layout_width="24dp" android:layout_height="24dp" android:src="@drawable/ic_nav_scan" android:tint="@color/admin_screen_primary" android:contentDescription="@null" />
+    <TextView style="@style/AdminScreenActionText" android:text="@string/admin_screen_borrow" />
+    <ImageView android:layout_width="19dp" android:layout_height="19dp" android:src="@drawable/ic_admin_arrow" android:tint="@color/admin_screen_muted" android:contentDescription="@null" />
+</LinearLayout>
+                    <LinearLayout android:id="@+id/actionAdminReturn" style="@style/AdminScreenActionRow"
+    android:contentDescription="@string/admin_screen_return">
+    <ImageView android:layout_width="24dp" android:layout_height="24dp" android:src="@drawable/ic_admin_check" android:tint="@color/admin_screen_primary" android:contentDescription="@null" />
+    <TextView style="@style/AdminScreenActionText" android:text="@string/admin_screen_return" />
+    <ImageView android:layout_width="19dp" android:layout_height="19dp" android:src="@drawable/ic_admin_arrow" android:tint="@color/admin_screen_muted" android:contentDescription="@null" />
+</LinearLayout>
+                    <LinearLayout android:id="@+id/actionAdminInventory" style="@style/AdminScreenActionRow"
+    android:contentDescription="@string/admin_screen_add_book">
+    <ImageView android:layout_width="24dp" android:layout_height="24dp" android:src="@drawable/ic_admin_book" android:tint="@color/admin_screen_primary" android:contentDescription="@null" />
+    <TextView style="@style/AdminScreenActionText" android:text="@string/admin_screen_add_book" />
+    <ImageView android:layout_width="19dp" android:layout_height="19dp" android:src="@drawable/ic_admin_arrow" android:tint="@color/admin_screen_muted" android:contentDescription="@null" />
+</LinearLayout>
+                    <LinearLayout android:id="@+id/actionAdminOnline" style="@style/AdminScreenActionRow"
+    android:contentDescription="@string/admin_screen_online">
+    <ImageView android:layout_width="24dp" android:layout_height="24dp" android:src="@drawable/ic_admin_copy" android:tint="@color/admin_screen_primary" android:contentDescription="@null" />
+    <TextView style="@style/AdminScreenActionText" android:text="@string/admin_screen_online" />
+    <ImageView android:layout_width="19dp" android:layout_height="19dp" android:src="@drawable/ic_admin_arrow" android:tint="@color/admin_screen_muted" android:contentDescription="@null" />
+</LinearLayout>
+                    <LinearLayout android:id="@+id/actionAdminResets" android:layout_width="match_parent"
+                        android:layout_height="wrap_content" android:visibility="gone" />
+                    <LinearLayout android:id="@+id/actionAdminSync"
+                        android:layout_width="match_parent" android:layout_height="wrap_content"
+                        android:orientation="vertical">
+                        <Button android:id="@+id/buttonAdminSync" android:layout_width="match_parent"
+                            android:layout_height="48dp" android:layout_marginTop="6dp"
+                            android:backgroundTint="@color/admin_screen_primary"
+                            android:text="@string/admin_sync" android:textAllCaps="false"
+                            android:textColor="@color/white" />
                     </LinearLayout>
-                    <TextView
-                        android:id="@+id/textAdminDataStatus"
-                        style="@style/AdminBody"
-                        android:text="@string/admin_loading"
-                        android:layout_marginTop="10dp"
-                        android:accessibilityLiveRegion="polite" />
-                    <Button
-                        android:id="@+id/buttonAdminRefresh"
-                        style="?attr/borderlessButtonStyle"
-                        android:layout_width="wrap_content"
-                        android:layout_height="48dp"
-                        android:text="@string/admin_refresh"
-                        android:textColor="@color/library_blue" />
-                    <TextView
-                        android:id="@+id/textAdminWork"
-                        style="@style/AdminHeading"
-                        android:text="@string/admin_work" />
-                    <LinearLayout
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:orientation="vertical"
-                        android:padding="18dp"
-                        android:background="@drawable/bg_admin_soft">
-                        <TextView
-                            android:id="@+id/textAdminPendingSummary"
-                            style="@style/AdminBody"
-                            android:text="@string/admin_count_loading"
-                            android:textSize="16sp"
-                            android:textStyle="bold"
-                            android:textColor="@color/library_text" />
-                        <TextView
-                            android:id="@+id/textAdminResetSummary"
-                            style="@style/AdminBody"
-                            android:text="@string/admin_count_loading"
-                            android:layout_marginTop="8dp" />
-                        <Button
-                            android:id="@+id/buttonAdminReview"
-                            android:layout_width="match_parent"
-                            android:layout_height="wrap_content"
-                            android:layout_marginTop="12dp"
-                            android:text="@string/admin_processing"
-                            android:backgroundTint="@color/library_blue"
-                            android:textColor="@color/library_surface" />
-                    </LinearLayout>
-                    <TextView
-                        android:id="@+id/textAdminShortcuts"
-                        style="@style/AdminHeading"
-                        android:text="@string/admin_shortcuts" />
-                    <LinearLayout
-                        android:id="@+id/actionAdminReaders"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:minHeight="76dp"
-                        android:layout_marginBottom="10dp"
-                        android:orientation="horizontal"
-                        android:gravity="center_vertical"
-                        android:padding="16dp"
-                        android:background="@drawable/bg_admin_card"
-                        android:foreground="?attr/selectableItemBackground"
-                        android:clickable="true"
-                        android:focusable="true">
-                        <ImageView android:layout_width="24dp" android:layout_height="24dp" android:src="@drawable/ic_admin_people" android:importantForAccessibility="no" />
-                        <LinearLayout android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content" android:layout_marginStart="14dp" android:orientation="vertical">
-                            <TextView style="@style/AdminBody" android:text="@string/admin_manage_readers" android:textColor="@color/library_text" android:textSize="16sp" android:textStyle="bold" />
-                            <TextView style="@style/AdminBody" android:layout_marginTop="4dp" android:text="@string/admin_manage_readers_hint" android:textSize="12sp" />
-                        </LinearLayout>
-                        <ImageView android:layout_width="20dp" android:layout_height="20dp" android:src="@drawable/ic_admin_arrow" android:importantForAccessibility="no" />
-                    </LinearLayout>
-                    <LinearLayout
-                        android:id="@+id/actionAdminConfig"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:minHeight="76dp"
-                        android:layout_marginBottom="10dp"
-                        android:orientation="horizontal"
-                        android:gravity="center_vertical"
-                        android:padding="16dp"
-                        android:background="@drawable/bg_admin_card"
-                        android:foreground="?attr/selectableItemBackground"
-                        android:clickable="true"
-                        android:focusable="true">
-                        <ImageView android:layout_width="24dp" android:layout_height="24dp" android:src="@drawable/ic_admin_refresh" android:importantForAccessibility="no" />
-                        <LinearLayout android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content" android:layout_marginStart="14dp" android:orientation="vertical">
-                            <TextView style="@style/AdminBody" android:text="@string/admin_system_config" android:textColor="@color/library_text" android:textSize="16sp" android:textStyle="bold" />
-                            <TextView style="@style/AdminBody" android:layout_marginTop="4dp" android:text="@string/admin_system_config_hint" android:textSize="12sp" />
-                        </LinearLayout>
-                        <ImageView android:layout_width="20dp" android:layout_height="20dp" android:src="@drawable/ic_admin_arrow" android:importantForAccessibility="no" />
-                    </LinearLayout>
-                    <LinearLayout
-                        android:id="@+id/actionAdminReports"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:minHeight="76dp"
-                        android:layout_marginBottom="10dp"
-                        android:orientation="horizontal"
-                        android:gravity="center_vertical"
-                        android:padding="16dp"
-                        android:background="@drawable/bg_admin_card"
-                        android:foreground="?attr/selectableItemBackground"
-                        android:clickable="true"
-                        android:focusable="true">
-                        <ImageView android:layout_width="24dp" android:layout_height="24dp" android:src="@drawable/ic_admin_book" android:importantForAccessibility="no" />
-                        <LinearLayout android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content" android:layout_marginStart="14dp" android:orientation="vertical">
-                            <TextView style="@style/AdminBody" android:text="@string/admin_reports" android:textColor="@color/library_text" android:textSize="16sp" android:textStyle="bold" />
-                            <TextView style="@style/AdminBody" android:layout_marginTop="4dp" android:text="@string/admin_reports_hint" android:textSize="12sp" />
-                        </LinearLayout>
-                        <ImageView android:layout_width="20dp" android:layout_height="20dp" android:src="@drawable/ic_admin_arrow" android:importantForAccessibility="no" />
-                    </LinearLayout>
-                    <LinearLayout
-                        android:id="@+id/actionAdminRegistrations"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:minHeight="76dp"
-                        android:layout_marginBottom="10dp"
-                        android:orientation="horizontal"
-                        android:gravity="center_vertical"
-                        android:padding="16dp"
-                        android:background="@drawable/bg_admin_card"
-                        android:foreground="?attr/selectableItemBackground"
-                        android:clickable="true"
-                        android:focusable="true">
-                        <ImageView
-                            android:layout_width="24dp"
-                            android:layout_height="24dp"
-                            android:src="@drawable/ic_admin_check"
-                            android:importantForAccessibility="no" />
-                        <LinearLayout
-                            android:layout_width="0dp"
-                            android:layout_weight="1"
-                            android:layout_height="wrap_content"
-                            android:layout_marginStart="14dp"
-                            android:layout_marginEnd="8dp"
-                            android:orientation="vertical">
-                            <TextView
-                                style="@style/AdminBody"
-                                android:text="@string/admin_review"
-                                android:textColor="@color/library_text"
-                                android:textSize="16sp"
-                                android:textStyle="bold" />
-                            <TextView
-                                style="@style/AdminBody"
-                                android:layout_marginTop="4dp"
-                                android:text="@string/admin_review_hint"
-                                android:textSize="12sp" />
-                        </LinearLayout>
-                        <ImageView
-                            android:layout_width="20dp"
-                            android:layout_height="20dp"
-                            android:src="@drawable/ic_admin_arrow"
-                            android:importantForAccessibility="no" />
-                    </LinearLayout>
-                    <LinearLayout
-                        android:id="@+id/actionAdminResets"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:minHeight="76dp"
-                        android:layout_marginBottom="10dp"
-                        android:orientation="horizontal"
-                        android:gravity="center_vertical"
-                        android:padding="16dp"
-                        android:background="@drawable/bg_admin_card"
-                        android:foreground="?attr/selectableItemBackground"
-                        android:clickable="true"
-                        android:focusable="true">
-                        <ImageView
-                            android:layout_width="24dp"
-                            android:layout_height="24dp"
-                            android:src="@drawable/ic_admin_account"
-                            android:importantForAccessibility="no" />
-                        <LinearLayout
-                            android:layout_width="0dp"
-                            android:layout_weight="1"
-                            android:layout_height="wrap_content"
-                            android:layout_marginStart="14dp"
-                            android:layout_marginEnd="8dp"
-                            android:orientation="vertical">
-                            <TextView
-                                style="@style/AdminBody"
-                                android:text="@string/admin_reset"
-                                android:textColor="@color/library_text"
-                                android:textSize="16sp"
-                                android:textStyle="bold" />
-                            <TextView
-                                style="@style/AdminBody"
-                                android:layout_marginTop="4dp"
-                                android:text="@string/admin_reset_hint"
-                                android:textSize="12sp" />
-                        </LinearLayout>
-                        <ImageView
-                            android:layout_width="20dp"
-                            android:layout_height="20dp"
-                            android:src="@drawable/ic_admin_arrow"
-                            android:importantForAccessibility="no" />
-                    </LinearLayout>
-                    <Button
-                        android:id="@+id/actionAdminInventory"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:minHeight="56dp"
-                        android:text="@string/inventory_title"
-                        android:layout_marginBottom="10dp" />
-                    <LinearLayout
-                        android:id="@+id/actionAdminSync"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:minHeight="76dp"
-                        android:layout_marginBottom="10dp"
-                        android:orientation="horizontal"
-                        android:gravity="center_vertical"
-                        android:padding="16dp"
-                        android:background="@drawable/bg_admin_card"
-                        android:foreground="?attr/selectableItemBackground"
-                        android:clickable="true"
-                        android:focusable="true">
-                        <ImageView
-                            android:layout_width="24dp"
-                            android:layout_height="24dp"
-                            android:src="@drawable/ic_admin_refresh"
-                            android:importantForAccessibility="no" />
-                        <LinearLayout
-                            android:layout_width="0dp"
-                            android:layout_weight="1"
-                            android:layout_height="wrap_content"
-                            android:layout_marginStart="14dp"
-                            android:layout_marginEnd="8dp"
-                            android:orientation="vertical">
-                            <TextView
-                                style="@style/AdminBody"
-                                android:text="@string/admin_sync"
-                                android:textColor="@color/library_text"
-                                android:textSize="16sp"
-                                android:textStyle="bold" />
-                            <TextView
-                                style="@style/AdminBody"
-                                android:layout_marginTop="4dp"
-                                android:text="@string/admin_sync_hint"
-                                android:textSize="12sp" />
-                        </LinearLayout>
-                        <ImageView
-                            android:layout_width="20dp"
-                            android:layout_height="20dp"
-                            android:src="@drawable/ic_admin_arrow"
-                            android:importantForAccessibility="no" />
-                    </LinearLayout>
+                    <TextView style="@style/AdminScreenHeading" android:text="@string/admin_screen_recent" />
+                    <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:background="@drawable/bg_admin_screen_card" android:orientation="vertical" android:padding="16dp">
+    <TextView android:id="@+id/textAdminRecentActivity" android:layout_width="match_parent"
+        android:layout_height="wrap_content" android:lineSpacingExtra="7dp" android:textSize="14sp"
+        android:textColor="@color/admin_screen_ink" android:text="@string/admin_screen_data_loading" />
+</LinearLayout>
                 </LinearLayout>
                 <LinearLayout
                     android:id="@+id/adminRequests"
@@ -481,160 +278,89 @@
                         android:layout_height="wrap_content"
                         android:orientation="vertical" />
                 </LinearLayout>
-                <LinearLayout
-                    android:id="@+id/adminAccount"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:orientation="vertical"
-                    android:visibility="gone">
-                    <TextView
-                        android:id="@+id/textAdminAccountHeading"
-                        style="@style/AdminHeading"
-                        android:text="@string/admin_account" />
-                    <TextView
-                        style="@style/AdminBody"
-                        android:text="@string/admin_account_subtitle"
-                        android:layout_marginBottom="16dp" />
-                    <LinearLayout
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:orientation="vertical"
-                        android:padding="20dp"
-                        android:background="@drawable/bg_admin_card">
-                        <LinearLayout
-                            android:layout_width="match_parent"
-                            android:layout_height="wrap_content"
-                            android:gravity="center_vertical"
-                            android:orientation="horizontal">
-                            <TextView
-                                android:layout_width="56dp"
-                                android:layout_height="56dp"
-                                android:background="@drawable/bg_admin_avatar"
-                                android:gravity="center"
-                                android:text="AD"
-                                android:textColor="@color/library_blue"
-                                android:textSize="18sp"
-                                android:textStyle="bold"
-                                android:contentDescription="@string/admin_role" />
-                            <LinearLayout
-                                android:layout_width="0dp"
-                                android:layout_height="wrap_content"
-                                android:layout_weight="1"
-                                android:layout_marginStart="14dp"
-                                android:orientation="vertical">
-                                <TextView
-                                    android:id="@+id/textAdminProfileName"
-                                    android:layout_width="match_parent"
-                                    android:layout_height="wrap_content"
-                                    android:text="@string/admin_profile_loading"
-                                    android:textSize="20sp"
-                                    android:textStyle="bold"
-                                    android:textColor="@color/library_text" />
-                                <TextView
-                                    android:id="@+id/textAdminProfileRole"
-                                    android:layout_width="wrap_content"
-                                    android:layout_height="wrap_content"
-                                    android:layout_marginTop="6dp"
-                                    android:paddingStart="10dp"
-                                    android:paddingEnd="10dp"
-                                    android:paddingTop="4dp"
-                                    android:paddingBottom="4dp"
-                                    android:background="@drawable/bg_admin_soft"
-                                    android:text="@string/admin_role"
-                                    android:textSize="12sp"
-                                    android:textStyle="bold"
-                                    android:textColor="@color/library_blue" />
-                            </LinearLayout>
+                <LinearLayout android:id="@+id/adminAccount" android:layout_width="match_parent"
+                    android:layout_height="wrap_content" android:orientation="vertical" android:visibility="gone"
+                    android:paddingBottom="22dp">
+                    <LinearLayout android:layout_width="match_parent" android:layout_height="52dp"
+                        android:orientation="horizontal" android:gravity="center_vertical" android:paddingTop="5dp">
+                        <ImageView android:id="@+id/buttonAdminAccountBack" android:layout_width="48dp" android:layout_height="48dp"
+                            android:padding="12dp" android:src="@drawable/ic_inventory_back"
+                            android:background="?attr/selectableItemBackgroundBorderless" android:tint="@color/admin_screen_primary"
+                            android:contentDescription="@string/admin_back_home" />
+                        <TextView android:id="@+id/textAdminAccountHeading" android:layout_width="0dp" android:layout_height="wrap_content"
+                            android:layout_weight="1" android:fontFamily="serif" android:textStyle="bold"
+                            android:textSize="24sp" android:textColor="@color/admin_screen_ink"
+                            android:text="@string/admin_screen_account_title" />
+                    </LinearLayout>
+                    <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
+                        android:orientation="horizontal" android:gravity="center_vertical" android:layout_marginTop="26dp"
+                        android:layout_marginBottom="18dp">
+                        <TextView android:id="@+id/textAdminProfileAvatar" android:layout_width="58dp" android:layout_height="58dp"
+                            android:background="@drawable/bg_admin_avatar" android:gravity="center"
+                            android:text="AD" android:textSize="19sp" android:textColor="@color/admin_screen_primary" />
+                        <LinearLayout android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1"
+                            android:orientation="vertical" android:layout_marginStart="14dp">
+                            <TextView android:id="@+id/textAdminProfileName" android:layout_width="match_parent"
+                                android:layout_height="wrap_content" android:fontFamily="serif" android:textStyle="bold"
+                                android:textSize="23sp" android:textColor="@color/admin_screen_ink"
+                                android:text="@string/admin_profile_loading" />
+                            <TextView android:id="@+id/textAdminProfileRole" android:layout_width="wrap_content" android:layout_height="wrap_content"
+                                android:paddingStart="9dp" android:paddingEnd="9dp" android:paddingTop="4dp" android:paddingBottom="4dp"
+                                android:layout_marginTop="6dp" android:background="@drawable/bg_admin_soft"
+                                android:text="Admin" android:textSize="12sp" android:textStyle="bold"
+                                android:textColor="@color/admin_screen_primary" />
                         </LinearLayout>
-                        <View
-                            android:layout_width="match_parent"
-                            android:layout_height="1dp"
-                            android:layout_marginTop="20dp"
-                            android:layout_marginBottom="6dp"
-                            android:background="@color/library_border" />
-                        <TextView
-                            style="@style/AdminBody"
-                            android:text="@string/admin_profile_dob_label"
-                            android:layout_marginTop="12dp" />
-                        <TextView
-                            android:id="@+id/textAdminProfileDob"
-                            style="@style/AdminBody"
-                            android:text="@string/admin_profile_unavailable"
-                            android:textColor="@color/library_text"
-                            android:layout_marginTop="4dp" />
-                        <TextView
-                            style="@style/AdminBody"
-                            android:text="@string/admin_profile_phone_label"
-                            android:layout_marginTop="14dp" />
-                        <TextView
-                            android:id="@+id/textAdminProfilePhone"
-                            style="@style/AdminBody"
-                            android:text="@string/admin_profile_unavailable"
-                            android:textColor="@color/library_text"
-                            android:layout_marginTop="4dp" />
-                        <TextView
-                            style="@style/AdminBody"
-                            android:text="@string/admin_profile_email_label"
-                            android:layout_marginTop="14dp" />
-                        <TextView
-                            android:id="@+id/textAdminProfileEmail"
-                            style="@style/AdminBody"
-                            android:text="@string/admin_profile_unavailable"
-                            android:textColor="@color/library_text"
-                            android:layout_marginTop="4dp" />
-                        <Button
-                            android:id="@+id/buttonAdminEditProfile"
-                            android:layout_width="match_parent"
-                            android:layout_height="52dp"
-                            android:layout_marginTop="20dp"
-                            android:text="@string/admin_edit_contact"
-                            android:textAllCaps="false"
-                            android:backgroundTint="@color/library_blue"
-                            android:textColor="@color/library_surface" />
                     </LinearLayout>
-                    <TextView
-                        style="@style/AdminHeading"
-                        android:text="@string/admin_security_heading" />
-                    <LinearLayout
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:orientation="vertical"
-                        android:padding="16dp"
-                        android:background="@drawable/bg_admin_card">
-                        <TextView
-                            style="@style/AdminBody"
-                            android:text="@string/admin_security_hint" />
-                        <Button
-                            android:id="@+id/buttonAdminChangePassword"
-                            android:layout_width="match_parent"
-                            android:layout_height="52dp"
-                            android:layout_marginTop="12dp"
-                            android:text="@string/admin_change_password"
-                            android:textAllCaps="false" />
+                    <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
+                        android:padding="16dp" android:orientation="vertical" android:background="@drawable/bg_admin_screen_card">
+                        <TextView android:layout_width="match_parent" android:layout_height="wrap_content"
+                            android:fontFamily="serif" android:textSize="20sp" android:textStyle="bold"
+                            android:textColor="@color/admin_screen_ink" android:text="@string/admin_screen_identity" />
+                        <TextView style="@style/AdminScreenFieldLabel" android:text="@string/admin_screen_name_readonly" />
+                        <TextView android:id="@+id/textAdminProfileImmutableName" style="@style/AdminScreenField"
+                            android:background="@drawable/bg_admin_screen_readonly" android:drawableEnd="@drawable/ic_reader_lock"
+                            android:drawableTint="@color/admin_screen_muted" android:text="@string/admin_profile_unavailable" />
+                        <TextView style="@style/AdminScreenFieldLabel" android:text="@string/admin_screen_birth_readonly" />
+                        <TextView android:id="@+id/textAdminProfileDob" style="@style/AdminScreenField"
+                            android:background="@drawable/bg_admin_screen_readonly" android:drawableEnd="@drawable/ic_reader_lock"
+                            android:drawableTint="@color/admin_screen_muted" android:text="@string/admin_profile_unavailable" />
+                        <TextView style="@style/AdminScreenCaption" android:layout_marginTop="14dp" android:text="@string/admin_screen_identity_note" />
                     </LinearLayout>
-                    <TextView
-                        style="@style/AdminHeading"
-                        android:text="@string/admin_session_heading" />
-                    <Button
-                        android:id="@+id/buttonAdminSync"
-                        android:layout_width="match_parent"
-                        android:layout_height="52dp"
-                        android:text="@string/admin_sync"
-                        android:textAllCaps="false" />
-                    <TextView
-                        android:id="@+id/textAdminSessionNote"
-                        style="@style/AdminBody"
-                        android:text="@string/admin_session_note"
-                        android:layout_marginTop="12dp" />
-                    <Button
-                        android:id="@+id/buttonAdminLogout"
-                        style="?attr/borderlessButtonStyle"
-                        android:layout_width="match_parent"
-                        android:layout_height="52dp"
-                        android:layout_marginTop="16dp"
-                        android:text="@string/admin_logout"
-                        android:textAllCaps="false"
-                        android:textColor="@color/library_logout" />
+                    <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
+                        android:layout_marginTop="14dp" android:padding="16dp" android:orientation="vertical"
+                        android:background="@drawable/bg_admin_screen_card">
+                        <TextView android:layout_width="match_parent" android:layout_height="wrap_content"
+                            android:fontFamily="serif" android:textSize="20sp" android:textStyle="bold"
+                            android:textColor="@color/admin_screen_ink" android:text="@string/admin_screen_contact" />
+                        <TextView style="@style/AdminScreenFieldLabel" android:text="@string/admin_profile_email_label" />
+                        <EditText android:id="@+id/textAdminProfileEmail" style="@style/AdminScreenField"
+                            android:hint="@string/admin_email_hint" android:inputType="textEmailAddress"
+                            android:imeOptions="actionNext" android:singleLine="true" android:autofillHints="emailAddress"
+                            android:drawableEnd="@drawable/ic_inventory_edit" android:drawableTint="@color/admin_screen_primary" />
+                        <TextView style="@style/AdminScreenFieldLabel" android:text="@string/admin_profile_phone_label" />
+                        <EditText android:id="@+id/textAdminProfilePhone" style="@style/AdminScreenField"
+                            android:hint="@string/admin_phone_hint" android:inputType="phone" android:singleLine="true"
+                            android:imeOptions="actionDone" android:autofillHints="phone"
+                            android:drawableEnd="@drawable/ic_inventory_edit" android:drawableTint="@color/admin_screen_primary" />
+                    </LinearLayout>
+                    <Button android:id="@+id/buttonAdminEditProfile" android:layout_width="match_parent"
+                        android:layout_height="52dp" android:layout_marginTop="14dp"
+                        android:backgroundTint="@color/admin_screen_primary" android:text="@string/admin_screen_save_contact"
+                        android:textAllCaps="false" android:textColor="@color/white" android:textStyle="bold" />
+                    <TextView style="@style/AdminScreenHeading" android:text="@string/admin_screen_security" />
+                    <LinearLayout android:id="@+id/buttonAdminChangePassword" style="@style/AdminScreenActionRow"
+    android:contentDescription="@string/admin_change_password">
+    <ImageView android:layout_width="24dp" android:layout_height="24dp" android:src="@drawable/ic_reader_lock" android:tint="@color/admin_screen_primary" android:contentDescription="@null" />
+    <TextView style="@style/AdminScreenActionText" android:text="@string/admin_change_password" />
+    <ImageView android:layout_width="19dp" android:layout_height="19dp" android:src="@drawable/ic_admin_arrow" android:tint="@color/admin_screen_muted" android:contentDescription="@null" />
+</LinearLayout>
+                    <LinearLayout android:id="@+id/buttonAdminLogout" style="@style/AdminScreenActionRow"
+                        android:contentDescription="@string/admin_logout">
+                        <ImageView android:layout_width="23dp" android:layout_height="23dp"
+                            android:src="@drawable/ic_reader_logout" android:contentDescription="@null" />
+                        <TextView style="@style/AdminScreenActionText" android:text="@string/admin_logout"
+                            android:textColor="@color/admin_screen_red" />
+                    </LinearLayout>
                 </LinearLayout>
             </LinearLayout>
         </ScrollView>
