@@ -459,9 +459,8 @@ public class ReaderMainActivity extends com.example.libraryonline.ui.auth.Sessio
                             });
                         });
                     } else {
-                        markRead.setText("Đã đọc");
-                        markRead.setTextColor(androidx.core.content.ContextCompat.getColor(
-                                this, R.color.text_secondary));
+                        markRead.setVisibility(View.GONE);
+                        card.findViewById(R.id.readerLocalNotifDone).setVisibility(View.VISIBLE);
                     }
                 }
             });
