@@ -293,7 +293,8 @@ service cloud.firestore {
     }
 
     match /SystemConfigs/{configId} {
-      allow read: if isAdmin();
+      // Readers need the public loan limits to choose a valid online-borrow duration.
+      allow read: if isAdmin() || (signedIn() && configId == 'default');
       allow create, update: if isAdmin()
         && configId == 'default'
         && request.resource.data.keys().hasAll([
