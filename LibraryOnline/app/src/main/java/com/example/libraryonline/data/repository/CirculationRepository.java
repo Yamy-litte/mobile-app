@@ -108,6 +108,7 @@ public final class CirculationRepository implements AutoCloseable {
             copyUpdate.putNull("priorityUserId");
             copyUpdate.put("updatedAt", now);
             db.update("BookCopies", copyUpdate, "copyId=?", new String[]{copy.copyId});
+            refreshAvailableCopies(db, copy.bookTitleId, now);
 
             db.execSQL("UPDATE Reservations SET reservationStatus='Completed', cancelledAt=NULL " +
                     "WHERE userId=? AND copyId=? AND reservationType='Online' " +
@@ -173,6 +174,7 @@ public final class CirculationRepository implements AutoCloseable {
             copyUpdate.putNull("priorityUserId");
             copyUpdate.put("updatedAt", now);
             db.update("BookCopies", copyUpdate, "copyId=?", new String[]{copy.copyId});
+            refreshAvailableCopies(db, copy.bookTitleId, now);
 
             String penaltyId = null;
             if (fine > 0) {
@@ -323,6 +325,21 @@ public final class CirculationRepository implements AutoCloseable {
             while (c.moveToNext()) ids.add(c.getString(0));
         }
         return ids;
+    }
+
+    /**
+     * Keep the cached available count aligned with physical copies that can be checked out now.
+     * Held, borrowed, hidden, repair, lost, and retired copies are not available.
+     */
+    private static void refreshAvailableCopies(SQLiteDatabase db, String bookTitleId, String now) {
+        int available = scalarInt(db,
+                "SELECT COUNT(*) FROM BookCopies WHERE bookTitleId=? AND copyStatus='SanSang' " +
+                        "AND isHidden=0",
+                new String[]{bookTitleId});
+        ContentValues values = new ContentValues();
+        values.put("availableCopies", available);
+        values.put("updatedAt", now);
+        db.update("BookTitles", values, "bookTitleId=?", new String[]{bookTitleId});
     }
 
     private static int scalarInt(SQLiteDatabase db, String sql, String[] args) {
