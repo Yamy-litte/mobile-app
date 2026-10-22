@@ -329,5 +329,9 @@ test("expired online hold returns reserved copy once; unauthorized reader cannot
   release.set(notification,onlineNoticeFixture("Expired","Đã hết thời gian giữ sách."));
   await assertSucceeds(release.commit());
   require("node:assert/strict").equal((await getDoc(doc(d,"BookTitles/book"))).data().availableCopies,1);
-  await assertFails(release.commit());
+  const duplicate = writeBatch(d);
+  duplicate.update(request,{status:"Expired",notificationId:notification.id,updatedAt:serverTimestamp()});
+  duplicate.update(doc(d,"BookCopies/copy"),{copyStatus:"SanSang",priorityUserId:null,updatedAt:serverTimestamp()});
+  duplicate.update(doc(d,"BookTitles/book"),{availableCopies:2,updatedAt:serverTimestamp()});
+  await assertFails(duplicate.commit());
 });
