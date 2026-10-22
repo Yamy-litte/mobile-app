@@ -93,7 +93,7 @@ public final class OnlineLoanAlertCenter {
         }
         Intent intent = admin ? new Intent(activity, AdminMainActivity.class)
                 : new Intent(activity, ReaderMainActivity.class);
-        if (admin) intent.putExtra(AdminNavigation.EXTRA_TAB, AdminHomeView.REQUESTS);
+        if (admin) intent.putExtra(AdminNavigation.EXTRA_TAB, AdminHomeView.APPROVALS);
         else intent.putExtra(ReaderNavigation.EXTRA_TAB, ReaderHomeView.NOTIFICATIONS);
         intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_SINGLE_TOP);
         int id = hash(uid + "|" + eventId).hashCode() & 0x7fffffff;
