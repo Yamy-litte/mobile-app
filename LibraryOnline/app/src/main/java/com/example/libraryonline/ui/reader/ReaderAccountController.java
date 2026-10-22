@@ -14,6 +14,9 @@ import android.text.TextUtils;
 import android.util.Patterns;
 import android.widget.EditText;
 import android.widget.Toast;
+import android.view.View;
+import android.widget.ScrollView;
+import java.util.Locale;
 
 import com.example.libraryonline.R;
 import com.example.libraryonline.ui.auth.ChangePasswordActivity;
@@ -36,6 +39,8 @@ public final class ReaderAccountController {
     private final FirebaseFirestore firestore;
     private final EditText emailInput;
     private final EditText phoneInput;
+    private final View overview;
+    private final View editor;
     private String fullName = "Độc giả";
     private String dateOfBirth = "";
     private String email = "";
@@ -50,20 +55,51 @@ public final class ReaderAccountController {
         firestore = FirebaseFirestore.getInstance();
         emailInput = activity.findViewById(R.id.readerAccountEmailInput);
         phoneInput = activity.findViewById(R.id.readerAccountPhoneInput);
+        overview = activity.findViewById(R.id.readerAccountOverview);
+        editor = activity.findViewById(R.id.readerAccountEditor);
 
+        activity.findViewById(R.id.readerAccountPersonal).setOnClickListener(v -> showEditor());
+        activity.findViewById(R.id.readerAccountProfileBack).setOnClickListener(v -> closeEditor());
+        activity.findViewById(R.id.readerAccountBack).setOnClickListener(
+                v -> ((com.google.android.material.bottomnavigation.BottomNavigationView)
+                        activity.findViewById(R.id.readerBottomNavigation))
+                        .setSelectedItemId(R.id.navReaderHome));
         activity.findViewById(R.id.readerAccountSave).setOnClickListener(v -> saveContactDetails());
-        activity.findViewById(R.id.readerAccountDigitalCard).setOnClickListener(v -> showDigitalCard());
-        activity.findViewById(R.id.readerAccountChangePassword)
-                .setOnClickListener(v -> activity.startActivity(
-                        new Intent(activity, ChangePasswordActivity.class)));
+        for (int id : new int[] {R.id.readerAccountDigitalCard, R.id.readerAccountEditCard}) {
+            activity.findViewById(id).setOnClickListener(v -> showDigitalCard());
+        }
+        for (int id : new int[] {R.id.readerAccountChangePassword, R.id.readerAccountEditPassword}) {
+            activity.findViewById(id).setOnClickListener(v -> activity.startActivity(
+                    new Intent(activity, ChangePasswordActivity.class)));
+        }
+        activity.findViewById(R.id.readerAccountNotificationsSettings).setOnClickListener(
+                v -> toast("Cài đặt thông báo chưa được hỗ trợ ở phiên bản này."));
+        activity.findViewById(R.id.readerAccountLanguage).setOnClickListener(
+                v -> toast("Chức năng đổi ngôn ngữ chưa được hỗ trợ."));
+        activity.findViewById(R.id.readerAccountAbout).setOnClickListener(v ->
+                new AlertDialog.Builder(activity)
+                        .setTitle("Về MyLibrary")
+                        .setMessage("MyLibrary giúp độc giả tra cứu sách, quản lý thông tin tài khoản và thẻ thư viện.")
+                        .setPositiveButton("Đóng", null)
+                        .show());
+        activity.findViewById(R.id.readerAccountLoadStatus).setOnClickListener(v -> load());
     }
 
     public void load() {
         FirebaseUser firebaseUser = auth.getCurrentUser();
         if (firebaseUser == null) return;
+        TextView statusView = activity.findViewById(R.id.readerAccountLoadStatus);
+        statusView.setVisibility(View.VISIBLE);
+        statusView.setText("Đang tải hồ sơ...");
         firestore.collection("Users").document(firebaseUser.getUid()).get()
                 .addOnSuccessListener(doc -> {
-                    if (!isActive() || !doc.exists()) return;
+                    FirebaseUser current = auth.getCurrentUser();
+                    if (!isActive() || current == null || !firebaseUser.getUid().equals(current.getUid()))
+                        return;
+                    if (!doc.exists()) {
+                        statusView.setText("Không tìm thấy hồ sơ. Chạm để thử lại.");
+                        return;
+                    }
                     fullName = read(doc, "fullName", "Độc giả");
                     dateOfBirth = read(doc, "dateOfBirth", "");
                     email = read(doc, "email", firebaseUser.getEmail());
@@ -71,12 +107,30 @@ public final class ReaderAccountController {
                     barcode = read(doc, "barcode", "");
                     cardStatus = read(doc, "cardStatus", "Chưa cập nhật");
                     cardExpiryDate = read(doc, "cardExpiryDate", "Chưa cập nhật");
+                    ((TextView) activity.findViewById(R.id.readerAccountName)).setText(fullName);
+                    ((TextView) activity.findViewById(R.id.readerAccountAvatar)).setText(
+                            fullName.trim().isEmpty() ? "TV"
+                                    : fullName.trim().substring(0, 1).toUpperCase(Locale.ROOT));
+                    String details = (email == null ? "" : email.trim())
+                            + (phone == null || phone.trim().isEmpty() ? "" : " | " + phone.trim());
+                    ((TextView) activity.findViewById(R.id.readerAccountContactSummary))
+                            .setText(details.trim().isEmpty() ? "Chưa cập nhật thông tin liên hệ" : details);
+                    ((TextView) activity.findViewById(R.id.readerAccountFullName)).setText(fullName);
+                    ((TextView) activity.findViewById(R.id.readerAccountBirthDate)).setText(display(dateOfBirth));
+                    ((TextView) activity.findViewById(R.id.readerAccountStatus))
+                            .setText("Trạng thái: " + display(cardStatus));
+                    ((TextView) activity.findViewById(R.id.readerAccountBarcode))
+                            .setText("Mã thẻ: " + display(barcode));
                     ((TextView) activity.findViewById(R.id.readerAccountExpiry))
-                            .setText("Hạn dùng: " + cardExpiryDate);
+                            .setText("Hạn dùng: " + display(cardExpiryDate));
                     emailInput.setText(email);
                     phoneInput.setText(phone);
+                    statusView.setVisibility(View.GONE);
                 })
-                .addOnFailureListener(error -> toast("Không tải được hồ sơ độc giả. Hãy thử tải lại."));
+                .addOnFailureListener(error -> {
+                    if (!isActive()) return;
+                    statusView.setText("Không tải được hồ sơ. Kiểm tra mạng, chạm để thử lại.");
+                });
     }
 
     private void saveContactDetails() {
@@ -109,6 +163,7 @@ public final class ReaderAccountController {
                     email = newEmail;
                     toast("Đã lưu thông tin liên hệ.");
                     activity.findViewById(R.id.readerAccountSave).setEnabled(true);
+                    closeEditor();
                     load();
                 })
                 .addOnFailureListener(error -> {
@@ -130,6 +185,21 @@ public final class ReaderAccountController {
             updates.put("email", newEmail);
             savePhoneAndFinish.run();
         }
+    }
+
+    private void showEditor() {
+        overview.setVisibility(View.GONE);
+        editor.setVisibility(View.VISIBLE);
+        ((ScrollView) activity.findViewById(R.id.readerAccount)).scrollTo(0, 0);
+    }
+
+    /** Returns true when the account editor handled the back navigation. */
+    public boolean closeEditor() {
+        if (editor.getVisibility() != View.VISIBLE) return false;
+        editor.setVisibility(View.GONE);
+        overview.setVisibility(View.VISIBLE);
+        ((ScrollView) activity.findViewById(R.id.readerAccount)).scrollTo(0, 0);
+        return true;
     }
 
     private void showDigitalCard() {
