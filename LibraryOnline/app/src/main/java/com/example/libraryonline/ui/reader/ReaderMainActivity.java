@@ -117,7 +117,10 @@ public class ReaderMainActivity extends com.example.libraryonline.ui.auth.Sessio
     protected void onSessionAuthorized(
             com.example.libraryonline.data.session.SessionProfile profile) {
         homeView.bindProfile(profile);
-        if (accountController != null) accountController.load();
+        if (accountController != null) {
+            accountController.load();
+            accountController.applyCardBrightnessIfVisible();
+        }
         loadReaderProfile();
         if (databaseHelper == null) databaseHelper = new DatabaseHelper(getApplicationContext());
         loadBooksFromSqlite();
@@ -560,6 +563,12 @@ public class ReaderMainActivity extends com.example.libraryonline.ui.auth.Sessio
 
     private void showMessage(String message) {
         Toast.makeText(this, message, Toast.LENGTH_LONG).show();
+    }
+
+    @Override
+    protected void onResume() {
+        super.onResume();
+        if (accountController != null) accountController.applyCardBrightnessIfVisible();
     }
 
     @Override
