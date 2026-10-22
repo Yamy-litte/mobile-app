@@ -32,6 +32,37 @@ Nếu một dự án/giao diện chưa có màu gốc, bộ dự phòng được
 - `colors.xml` chứa các tên màu ngữ nghĩa `background`, `surface`, `input_background`, `border`, `text_primary`, `text_secondary`, đều tham chiếu **bảng màu gốc** `library_*` nêu ở trên; không thay bảng màu gốc bằng bộ dự phòng.
 - Nền `activity_admin_main.xml`, `activity_admin_management.xml`, `activity_reader_online_borrow.xml` và `view_auth_session_gate.xml` đều dùng `@color/background`. Các layout dùng `@color/library_background` từ trước vẫn đồng nhất vì hai resource trỏ tới cùng màu.
 - Các alias `admin_screen_bg`, `admin_screen_ink`, `admin_screen_muted`, `admin_screen_border`, `admin_screen_readonly` và `online_canvas` trỏ đến resource ngữ nghĩa chung để giữ tương thích nơi còn sử dụng tên cũ.
-- Di chuyển bảng màu Admin/Online vào `colors.xml` thay vì định nghĩa màu ở nhiều file `values`. Giữ nguyên các accent và màu hành động (`admin_screen_primary`, `online_forest`, `library_blue`) cũng như các màu trạng thái.
+- Di chuyển bảng màu Admin/Online vào `colors.xml` thay vì định nghĩa màu ở nhiều file `values`. Từ chuẩn Login, `admin_screen_primary` và `online_forest` là alias của `library_blue`; vẫn giữ các màu trạng thái chuyên biệt.
 - `Theme.LibraryOnline` ánh xạ nền, chữ, viền và các surface-container Material3 về palette chung cho cả chế độ sáng/tối, không dùng nền kem Figma khác với bảng màu đã chuẩn hóa cho Login/Reader.
 - Có kiểm thử hồi quy `SharedPaletteTest` cho alias màu và nền các màn hình Auth/Reader/Admin/Online ở chế độ `notnight` và `night`. Cần chạy `./gradlew :app:testDebugUnitTest :app:assembleDebug` và kiểm tra thực tế trên thiết bị sau khi áp dụng.
+
+## Quyết định giao diện: lấy Login làm chuẩn (23/10/2026)
+
+Bản Figma chỉ dùng tham khảo **bố cục form, thứ tự thông tin, khoảng cách và luồng thao tác**, không phải nguồn màu thương hiệu. Mọi màn hình Reader, Admin, xác thực và mượn Online phải dùng cùng bảng màu Login:
+
+- Nền `#F5F7FC`: `@color/background` / `@color/library_background`.
+- Thẻ, dialog, input `#FFFFFF`: `@color/surface` / `@color/input_background`.
+- Viền `#DCE3EF`: `@color/border`.
+- Chữ chính `#182230`: `@color/text_primary`.
+- Chữ phụ `#68758A`: `@color/text_secondary`.
+- Nút, biểu tượng hành động, lựa chọn hiện hành `#315EFB`: `@color/library_blue`.
+
+Màu lỗi/thành công/cảnh báo là **màu trạng thái**, không dùng thay màu nhận diện. `admin_screen_primary`, `online_forest` nay tham chiếu `library_blue`, các nền nhấn dùng `library_accent_background` đã có từ Login. Không thêm bảng màu theo từng trang.
+
+### Quy ước mã nguồn
+
+- **`res/layout/`**: toàn bộ bố cục tĩnh; khai báo `Button`, `TextView`, `EditText`, `LinearLayout` cho màn hình và thẻ danh sách ở XML. Ví dụ: `view_admin_reader_list.xml`, `view_admin_config_panel.xml`, `view_admin_reports_panel.xml`, `item_admin_online_request.xml`, `item_reader_online_request.xml`, `item_reader_local_notification.xml`.
+- **`res/drawable/`**, **`res/color/`**, **`res/values/`**: hình dạng viền, state-list của filter, typography/màu dùng chung; tránh dùng `setTextColor`, `setPadding`, `setBackgroundTint` để định dạng các view cố định trong Java.
+- **`ui/` Java**: chỉ gọi `setContentView` / `inflate(R.layout...)`, `findViewById` rồi xử lý dữ liệu, sự kiện, trạng thái và điều hướng. Danh sách động được phép thêm/bớt **các layout item đã inflate** theo kết quả Firestore/SQLite; không tạo widget mới bằng `new TextView/Button/EditText/LinearLayout`.
+- **View đồ họa đặc thù** (đồ thị và mã vạch sinh từ dữ liệu) vẫn cần logic vẽ; `AdminWeeklyTrendView` đặt tại package `view/` và được khai báo bằng custom-view tag trong layout thay vì tạo trực tiếp trong Activity.
+- Chế độ sáng/tối cùng dùng `Theme.LibraryOnline` nền sáng. Kiểm tra `XmlPresentationTest`, `SharedPaletteTest` và các luồng điều hướng, cập nhật, duyệt, gửi Online trước khi merge.
+
+### Cách kiểm tra
+
+Chạy trong thư mục `LibraryOnline`:
+
+```sh
+./gradlew :app:testDebugUnitTest :app:assembleDebug :app:lintDebug
+```
+
+Và smoke test trên thiết bị: Login, Reader Home/Loans/Notifications/Online, Admin Home/Reader Management/Config/Reports/Online requests; xác nhận theme sáng cả khi điện thoại ở dark mode.
