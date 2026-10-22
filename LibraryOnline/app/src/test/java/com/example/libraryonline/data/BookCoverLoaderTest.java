@@ -31,6 +31,7 @@ public class BookCoverLoaderTest {
     private Activity activity;
     private ImageView image;
     private TextView fallback;
+    private final java.util.List<File> temporaryImages = new java.util.ArrayList<>();
 
     @Before public void setUp() {
         controller = Robolectric.buildActivity(Activity.class).setup();
@@ -49,9 +50,15 @@ public class BookCoverLoaderTest {
         Glide.with(activity).clear(image);
         controller.pause().stop().destroy();
         Glide.tearDown();
+        for (File file : temporaryImages) {
+            if (file.exists() && !file.delete()) file.deleteOnExit();
+        }
     }
     private File createImageFile() throws Exception {
-        File file = new File(activity.getCacheDir(), "book-cover-test.png");
+        // Use a real host temporary file: Robolectric's app cache path can be virtual,
+        // while Glide's File model opens files through the host JVM filesystem.
+        File file = File.createTempFile("book-cover-test-", ".png");
+        temporaryImages.add(file);
         Bitmap bitmap = Bitmap.createBitmap(32, 48, Bitmap.Config.ARGB_8888);
         try (FileOutputStream out = new FileOutputStream(file)) {
             assertTrue(bitmap.compress(Bitmap.CompressFormat.PNG, 100, out));
