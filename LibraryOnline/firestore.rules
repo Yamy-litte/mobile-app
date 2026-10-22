@@ -322,7 +322,7 @@ service cloud.firestore {
     }
 
     match /SystemConfigs/{configId} {
-      allow read: if isAdmin();
+      allow read: if isAdmin() || (signedIn() && configId == 'default');
       allow create, update: if isAdmin()
         && configId == 'default'
         && request.resource.data.keys().hasAll([
@@ -354,6 +354,224 @@ service cloud.firestore {
         && request.resource.data.lostBookMultiplier <= 10
         && request.resource.data.updatedBy == request.auth.uid
         && request.resource.data.updatedAt == request.time;
+      allow delete: if false;
+    }
+
+    // Online borrowing only. Do NOT reintroduce DatTruoc/queue records.
+    // One deterministic request document per reader + book title prevents concurrent
+    // duplicate requests for the same title. Rejection/expiry allows a new attempt.
+    function activeOnlineReader(userId) {
+      return signedIn()
+        && exists(/databases/$(database)/documents/Users/$(userId))
+        && get(/databases/$(database)/documents/Users/$(userId)).data.role == 'Reader'
+        && get(/databases/$(database)/documents/Users/$(userId)).data.cardStatus == 'HoatDong';
+    }
+
+    function validOnlineLoanDays(days) {
+      return days is int && days >= 1
+        && exists(/databases/$(database)/documents/SystemConfigs/default)
+        && days <= get(/databases/$(database)/documents/SystemConfigs/default).data.maxLoanDays;
+    }
+
+    function validNewOnlineRequest(id) {
+      let value = request.resource.data;
+      let titlePath = /databases/$(database)/documents/BookTitles/$(value.bookTitleId);
+      return signedIn()
+        && value.keys().hasAll([
+          'requestId', 'userId', 'bookTitleId', 'bookTitle',
+          'loanDays', 'status', 'attempt', 'createdAt', 'updatedAt'
+        ])
+        && value.keys().hasOnly([
+          'requestId', 'userId', 'bookTitleId', 'bookTitle',
+          'loanDays', 'status', 'attempt', 'createdAt', 'updatedAt'
+        ])
+        && value.userId == request.auth.uid
+        && value.bookTitleId is string
+        && value.bookTitleId.size() > 0
+        && id == request.auth.uid + '_' + value.bookTitleId
+        && value.requestId == id
+        && activeOnlineReader(request.auth.uid)
+        && exists(titlePath)
+        && get(titlePath).data.isHidden == false
+        && get(titlePath).data.availableCopies > 0
+        && value.bookTitle == get(titlePath).data.title
+        && validOnlineLoanDays(value.loanDays)
+        && value.status == 'Pending'
+        && value.attempt == 1
+        && value.createdAt == request.time
+        && value.updatedAt == request.time;
+    }
+
+    function onlineDecisionNotice() {
+      let notificationPath =
+          /databases/$(database)/documents/OnlineLoanNotifications/$(request.resource.data.notificationId);
+      return request.resource.data.notificationId is string
+        && existsAfter(notificationPath)
+        && getAfter(notificationPath).data.requestId == resource.data.requestId
+        && getAfter(notificationPath).data.userId == resource.data.userId
+        && getAfter(notificationPath).data.status == request.resource.data.status
+        && getAfter(notificationPath).data.attempt == resource.data.attempt
+        && getAfter(notificationPath).data.createdAt == request.time
+        && getAfter(notificationPath).data.readAt == null;
+    }
+
+    function validOnlineApproval() {
+      let next = request.resource.data;
+      let copyPath = /databases/$(database)/documents/BookCopies/$(next.copyId);
+      let titlePath = /databases/$(database)/documents/BookTitles/$(resource.data.bookTitleId);
+      return next.status == 'Approved'
+        && next.diff(resource.data).affectedKeys().hasOnly([
+          'status', 'copyId', 'holdUntil', 'reviewedBy', 'reviewedAt',
+          'notificationId', 'updatedAt'
+        ])
+        && next.copyId is string
+        && next.copyId.size() > 0
+        && next.holdUntil is timestamp
+        && next.holdUntil > request.time
+        && next.holdUntil <= request.time + duration.value(25, 'h')
+        && exists(copyPath)
+        && get(copyPath).data.bookTitleId == resource.data.bookTitleId
+        && get(copyPath).data.copyStatus == 'SanSang'
+        && get(copyPath).data.isHidden == false
+        && get(copyPath).data.priorityUserId == null
+        && getAfter(copyPath).data.copyStatus == 'ChoLay'
+        && getAfter(copyPath).data.isHidden == false
+        && getAfter(copyPath).data.priorityUserId == resource.data.userId
+        && getAfter(copyPath).data.diff(get(copyPath).data).affectedKeys()
+            .hasOnly(['copyStatus', 'priorityUserId', 'updatedAt'])
+        && getAfter(copyPath).data.updatedAt == request.time
+        && get(titlePath).data.isHidden == false
+        && get(titlePath).data.availableCopies > 0
+        && getAfter(titlePath).data.availableCopies == get(titlePath).data.availableCopies - 1
+        && getAfter(titlePath).data.totalCopies == get(titlePath).data.totalCopies
+        && getAfter(titlePath).data.updatedAt == request.time
+        && activeOnlineReader(resource.data.userId)
+        && onlineDecisionNotice();
+    }
+
+    function validOnlineRejection() {
+      let next = request.resource.data;
+      return next.status == 'Rejected'
+        && next.diff(resource.data).affectedKeys().hasOnly([
+          'status', 'rejectionReason', 'reviewedBy', 'reviewedAt',
+          'notificationId', 'updatedAt'
+        ])
+        && next.rejectionReason is string
+        && next.rejectionReason.size() >= 5
+        && next.rejectionReason.size() <= 500
+        && onlineDecisionNotice();
+    }
+
+    function validOnlineExpiry() {
+      let next = request.resource.data;
+      let copyPath = /databases/$(database)/documents/BookCopies/$(resource.data.copyId);
+      let titlePath = /databases/$(database)/documents/BookTitles/$(resource.data.bookTitleId);
+      return resource.data.status == 'Approved'
+        && next.status == 'Expired'
+        && resource.data.holdUntil is timestamp
+        && request.time >= resource.data.holdUntil
+        && next.diff(resource.data).affectedKeys().hasOnly([
+          'status', 'notificationId', 'updatedAt'
+        ])
+        && exists(copyPath)
+        && get(copyPath).data.copyStatus == 'ChoLay'
+        && get(copyPath).data.priorityUserId == resource.data.userId
+        && get(copyPath).data.isHidden == false
+        && getAfter(copyPath).data.copyStatus == 'SanSang'
+        && getAfter(copyPath).data.priorityUserId == null
+        && getAfter(copyPath).data.isHidden == false
+        && getAfter(copyPath).data.diff(get(copyPath).data).affectedKeys()
+            .hasOnly(['copyStatus', 'priorityUserId', 'updatedAt'])
+        && getAfter(copyPath).data.updatedAt == request.time
+        && getAfter(titlePath).data.availableCopies == get(titlePath).data.availableCopies + 1
+        && getAfter(titlePath).data.totalCopies == get(titlePath).data.totalCopies
+        && getAfter(titlePath).data.updatedAt == request.time
+        && onlineDecisionNotice();
+    }
+
+    match /OnlineLoanRequests/{requestId} {
+      allow read: if isAdmin()
+        || (signedIn() && resource.data.userId == request.auth.uid);
+      allow create: if validNewOnlineRequest(requestId);
+      allow update: if (
+        // Reader re-submits a rejected/expired request; previous decision metadata
+        // must be cleared, and attempt must increase, preserving the same title.
+        signedIn()
+        && request.auth.uid == resource.data.userId
+        && resource.data.status in ['Rejected', 'Expired']
+        && request.resource.data.keys().hasOnly([
+          'requestId', 'userId', 'bookTitleId', 'bookTitle',
+          'loanDays', 'status', 'attempt', 'createdAt', 'updatedAt'
+        ])
+        && request.resource.data.requestId == resource.data.requestId
+        && request.resource.data.userId == resource.data.userId
+        && request.resource.data.bookTitleId == resource.data.bookTitleId
+        && request.resource.data.bookTitle == resource.data.bookTitle
+        && request.resource.data.attempt == resource.data.attempt + 1
+        && request.resource.data.status == 'Pending'
+        && validOnlineLoanDays(request.resource.data.loanDays)
+        && activeOnlineReader(request.auth.uid)
+        && request.resource.data.createdAt == request.time
+        && request.resource.data.updatedAt == request.time
+        && get(/databases/$(database)/documents/BookTitles/$(resource.data.bookTitleId)).data.isHidden == false
+        && get(/databases/$(database)/documents/BookTitles/$(resource.data.bookTitleId)).data.availableCopies > 0
+      ) || (
+        isAdmin()
+        && resource.data.status == 'Pending'
+        && request.resource.data.userId == resource.data.userId
+        && request.resource.data.bookTitleId == resource.data.bookTitleId
+        && request.resource.data.requestId == resource.data.requestId
+        && request.resource.data.attempt == resource.data.attempt
+        && request.resource.data.loanDays == resource.data.loanDays
+        && request.resource.data.createdAt == resource.data.createdAt
+        && request.resource.data.reviewedBy == request.auth.uid
+        && request.resource.data.reviewedAt == request.time
+        && request.resource.data.updatedAt == request.time
+        && (validOnlineApproval() || validOnlineRejection())
+      ) || (
+        isAdmin()
+        && request.resource.data.userId == resource.data.userId
+        && request.resource.data.bookTitleId == resource.data.bookTitleId
+        && request.resource.data.requestId == resource.data.requestId
+        && request.resource.data.attempt == resource.data.attempt
+        && request.resource.data.loanDays == resource.data.loanDays
+        && request.resource.data.createdAt == resource.data.createdAt
+        && request.resource.data.updatedAt == request.time
+        && validOnlineExpiry()
+      );
+      allow delete: if false;
+    }
+
+    match /OnlineLoanNotifications/{notificationId} {
+      allow read: if isAdmin()
+        || (signedIn() && resource.data.userId == request.auth.uid);
+      allow create: if isAdmin()
+        && request.resource.data.keys().hasAll([
+          'requestId', 'userId', 'status', 'attempt', 'title',
+          'message', 'createdAt', 'readAt'
+        ])
+        && request.resource.data.keys().hasOnly([
+          'requestId', 'userId', 'status', 'attempt', 'title',
+          'message', 'createdAt', 'readAt'
+        ])
+        && request.resource.data.status in ['Approved', 'Rejected', 'Expired']
+        && request.resource.data.attempt is int
+        && request.resource.data.title is string
+        && request.resource.data.message is string
+        && request.resource.data.message.size() > 0
+        && request.resource.data.message.size() <= 500
+        && request.resource.data.createdAt == request.time
+        && request.resource.data.readAt == null
+        && exists(/databases/$(database)/documents/OnlineLoanRequests/$(request.resource.data.requestId))
+        && getAfter(/databases/$(database)/documents/OnlineLoanRequests/$(request.resource.data.requestId)).data.notificationId == notificationId
+        && getAfter(/databases/$(database)/documents/OnlineLoanRequests/$(request.resource.data.requestId)).data.userId == request.resource.data.userId
+        && getAfter(/databases/$(database)/documents/OnlineLoanRequests/$(request.resource.data.requestId)).data.status == request.resource.data.status
+        && getAfter(/databases/$(database)/documents/OnlineLoanRequests/$(request.resource.data.requestId)).data.attempt == request.resource.data.attempt;
+      allow update: if signedIn()
+        && resource.data.userId == request.auth.uid
+        && resource.data.readAt == null
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['readAt'])
+        && request.resource.data.readAt == request.time;
       allow delete: if false;
     }
 
