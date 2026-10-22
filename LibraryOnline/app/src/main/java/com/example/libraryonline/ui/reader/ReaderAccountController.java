@@ -72,6 +72,8 @@ public final class ReaderAccountController {
                     barcode = read(doc, "barcode", "");
                     cardStatus = read(doc, "cardStatus", "Chưa cập nhật");
                     cardExpiryDate = read(doc, "cardExpiryDate", "Chưa cập nhật");
+                    ((TextView) activity.findViewById(R.id.readerAccountExpiry))
+                            .setText("Hạn dùng: " + cardExpiryDate);
                     emailInput.setText(email);
                     phoneInput.setText(phone);
                 })
