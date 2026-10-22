@@ -311,8 +311,8 @@ public final class AdminManagementActivity extends SessionActivity {
         clearContent("Tài khoản Admin", "Email đăng nhập được quản lý bởi Firebase Authentication.");
         EditText name = new EditText(this); name.setHint("Họ và tên"); name.setSingleLine(true);
         EditText phone = new EditText(this); phone.setHint("Số điện thoại"); phone.setSingleLine(true);
-        TextView email = text(FirebaseAuth.getInstance().getCurrentUser() == null ? "" :
-                FirebaseAuth.getInstance().getCurrentUser().getEmail(), 14, false);
+        EditText email = new EditText(this); email.setHint("Email công vụ"); email.setSingleLine(true);
+        email.setInputType(InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_VARIATION_EMAIL_ADDRESS);
         content.addView(text("Email công vụ", 13, true), matchWrap());
         content.addView(email, matchWrap()); content.addView(name, matchWrap()); content.addView(phone, matchWrap());
         firestore.collection("Admins").document(adminUid).get().addOnSuccessListener(doc -> {
@@ -321,18 +321,43 @@ public final class AdminManagementActivity extends SessionActivity {
             if (storedName.isEmpty()) storedName = value(doc, "name");
             name.setText(storedName);
             phone.setText(value(doc, "phone"));
+            FirebaseAuth auth = FirebaseAuth.getInstance();
+            String authEmail = auth.getCurrentUser() == null ? "" : auth.getCurrentUser().getEmail();
+            email.setText(authEmail.isEmpty() ? value(doc, "email") : authEmail);
         }).addOnFailureListener(e -> toast("Không tải được hồ sơ Admin: " + safe(e.getMessage())));
         Button save = button("Lưu thông tin liên hệ");
         save.setOnClickListener(v -> {
             String n = name.getText().toString().trim(), p = phone.getText().toString().trim();
+            String nextEmail = email.getText().toString().trim();
+            FirebaseUser currentUser = FirebaseAuth.getInstance().getCurrentUser();
             if (n.length() < 2 || n.length() > 120) { name.setError("Tên phải từ 2 đến 120 ký tự"); return; }
             if (!p.isEmpty() && !p.matches("^0(3|5|7|8|9)[0-9]{8}$")) { phone.setError("Số điện thoại không hợp lệ"); return; }
-            Map<String,Object> update = new HashMap<>();
-            update.put("fullName", n); update.put("phone", p); update.put("updatedAt", FieldValue.serverTimestamp());
+            if (nextEmail.isEmpty() || !android.util.Patterns.EMAIL_ADDRESS.matcher(nextEmail).matches()) { email.setError("Email không hợp lệ"); return; }
+            if (currentUser == null) { logoutSession(); return; }
             save.setEnabled(false);
-            firestore.collection("Admins").document(adminUid).update(update)
-                    .addOnSuccessListener(x -> { save.setEnabled(true); toast("Đã cập nhật hồ sơ Admin."); })
-                    .addOnFailureListener(e -> { save.setEnabled(true); toast("Không lưu được hồ sơ: " + safe(e.getMessage())); });
+            Runnable writeProfile = () -> {
+                Map<String,Object> update = new HashMap<>();
+                update.put("fullName", n); update.put("phone", p); update.put("email", nextEmail);
+                update.put("updatedAt", FieldValue.serverTimestamp());
+                firestore.collection("Admins").document(adminUid).update(update)
+                        .addOnSuccessListener(x -> { save.setEnabled(true); toast("Đã cập nhật hồ sơ Admin."); })
+                        .addOnFailureListener(e -> {
+                            save.setEnabled(true);
+                            toast("Không đồng bộ được hồ sơ Admin: " + safe(e.getMessage()) + ". Hãy đăng nhập lại sau khi kiểm tra kết nối.");
+                            logoutSession();
+                        });
+            };
+            String oldEmail = currentUser.getEmail() == null ? "" : currentUser.getEmail();
+            if (oldEmail.equalsIgnoreCase(nextEmail)) {
+                writeProfile.run();
+            } else {
+                currentUser.updateEmail(nextEmail)
+                        .addOnSuccessListener(unused -> writeProfile.run())
+                        .addOnFailureListener(e -> {
+                            save.setEnabled(true);
+                            toast("Không đổi được email xác thực. Có thể cần đăng nhập lại để xác minh bảo mật.");
+                        });
+            }
         });
         content.addView(save, matchWrap());
         Button password = button("Đổi mật khẩu quản trị");
