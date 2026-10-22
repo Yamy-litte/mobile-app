@@ -14,6 +14,7 @@ import android.widget.Toast;
 import androidx.core.content.ContextCompat;
 
 import com.example.libraryonline.R;
+import com.example.libraryonline.ui.notifications.OnlineLoanAlertCenter;
 import com.example.libraryonline.data.remote.firebase.OnlineLoanRequestRepository;
 import com.google.firebase.firestore.DocumentSnapshot;
 import com.google.firebase.firestore.FirebaseFirestore;
@@ -48,6 +49,8 @@ final class AdminOnlineLoanController {
         stop();
         if (uid == null || uid.isEmpty()) return;
         adminUid = uid;
+        activity.findViewById(R.id.buttonAdminEnableOnlineAlerts)
+                .setOnClickListener(v -> OnlineLoanAlertCenter.requestOptIn(activity));
         ((TextView) activity.findViewById(R.id.textAdminOnlineCount))
                 .setText(R.string.online_borrow_loading);
         listener = db.collection(OnlineLoanRequestRepository.REQUESTS)
@@ -132,6 +135,20 @@ final class AdminOnlineLoanController {
         for (DocumentSnapshot doc : docs) {
             if (OnlineLoanRequestRepository.PENDING.equals(doc.getString("status"))) pending++;
             if (OnlineLoanRequestRepository.APPROVED.equals(doc.getString("status"))) approved++;
+        }
+        if (!snapshot.getMetadata().isFromCache()) {
+            java.util.List<String> ids = new java.util.ArrayList<>();
+            for (DocumentSnapshot d : docs)
+                if (OnlineLoanRequestRepository.PENDING.equals(d.getString("status")))
+                    ids.add(d.getId() + "_v" + d.getLong("attempt"));
+            OnlineLoanAlertCenter.registerSnapshot(activity, adminUid, true, ids);
+            for (DocumentSnapshot d : docs)
+                if (OnlineLoanRequestRepository.PENDING.equals(d.getString("status")))
+                    OnlineLoanAlertCenter.notifyNew(activity, adminUid, true,
+                            d.getId() + "_v" + d.getLong("attempt"),
+                            "Yêu cầu mượn Online cần duyệt",
+                            (d.getString("bookTitle") == null ? "Một đầu sách" : d.getString("bookTitle"))
+                                    + " · Chờ Admin xem xét.");
         }
         final int count = pending;
         ((TextView) activity.findViewById(R.id.textAdminOnlineCount))

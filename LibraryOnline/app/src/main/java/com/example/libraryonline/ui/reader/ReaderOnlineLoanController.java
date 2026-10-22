@@ -9,6 +9,7 @@ import android.widget.Toast;
 import androidx.core.content.ContextCompat;
 
 import com.example.libraryonline.R;
+import com.example.libraryonline.ui.notifications.OnlineLoanAlertCenter;
 import com.example.libraryonline.data.remote.firebase.OnlineLoanRequestRepository;
 import com.google.firebase.firestore.DocumentSnapshot;
 import com.google.firebase.firestore.FirebaseFirestore;
@@ -37,6 +38,8 @@ final class ReaderOnlineLoanController {
         stop();
         if (uid == null || uid.isEmpty()) return;
         authorizedUid = uid;
+        activity.findViewById(R.id.buttonReaderEnableOnlineAlerts)
+                .setOnClickListener(v -> OnlineLoanAlertCenter.requestOptIn(activity));
         ((TextView) activity.findViewById(R.id.textReaderOnlineSummary))
                 .setText(R.string.online_borrow_loading);
         ((TextView) activity.findViewById(R.id.textReaderOnlineNotificationsSummary))
@@ -158,6 +161,15 @@ final class ReaderOnlineLoanController {
         LinearLayout container = activity.findViewById(R.id.containerReaderOnlineNotifications);
         container.removeAllViews();
         List<DocumentSnapshot> notifications = recent(snapshot);
+        if (!snapshot.getMetadata().isFromCache()) {
+            java.util.List<String> ids = new java.util.ArrayList<>();
+            for (DocumentSnapshot d : notifications) ids.add(d.getId());
+            OnlineLoanAlertCenter.registerSnapshot(activity, authorizedUid, false, ids);
+            for (DocumentSnapshot d : notifications)
+                if (d.get("readAt") == null)
+                    OnlineLoanAlertCenter.notifyNew(activity, authorizedUid, false,
+                            d.getId(), d.getString("title"), d.getString("message"));
+        }
         int unread = 0;
         for (DocumentSnapshot doc : notifications)
             if (doc.get("readAt") == null) unread++;

@@ -249,6 +249,14 @@
                         style="@style/AdminBody" android:layout_marginTop="6dp"
                         android:accessibilityLiveRegion="polite"
                         android:text="@string/online_borrow_loading"/>
+                    <Button android:id="@+id/buttonAdminEnableOnlineAlerts"
+                        android:layout_width="match_parent" android:layout_height="48dp"
+                        android:layout_marginTop="10dp" android:layout_marginBottom="8dp"
+                        android:textAllCaps="false" android:backgroundTint="@color/admin_screen_primary"
+                        android:textColor="@color/white" android:text="@string/online_borrow_enable_alerts"/>
+                    <TextView android:layout_width="match_parent" android:layout_height="wrap_content"
+                        android:layout_marginBottom="8dp" android:textSize="12sp"
+                        android:textColor="@color/admin_screen_muted" android:text="@string/online_borrow_alert_note"/>
                     <LinearLayout android:id="@+id/containerAdminOnlineRequests"
                         android:layout_width="match_parent" android:layout_height="wrap_content"
                         android:orientation="vertical" android:layout_marginBottom="16dp"/>

@@ -11,6 +11,8 @@
     <string name="online_borrow_loading">Đang đồng bộ dữ liệu từ thư viện…</string>
     <string name="online_borrow_empty">Chưa có yêu cầu nào.</string>
     <string name="online_borrow_mark_read">Đánh dấu đã đọc</string>
+    <string name="online_borrow_enable_alerts">Bật thông báo trên thiết bị</string>
+    <string name="online_borrow_alert_note">Thông báo hệ thống hoạt động khi ứng dụng đang mở. Kết quả vẫn được lưu trong tab Thông báo.</string>
     <string name="online_borrow_review_approve">Duyệt và giữ sách</string>
     <string name="online_borrow_review_reject">Từ chối</string>
 </resources>
