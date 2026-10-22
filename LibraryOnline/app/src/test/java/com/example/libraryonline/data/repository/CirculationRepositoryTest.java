@@ -96,9 +96,26 @@ public class CirculationRepositoryTest {
             CirculationRepository.OperationResult result =
                     repository.borrow("CARD-1", "BOOK-1", 7, "admin-auth-1");
             assertNotNull(result);
+            assertAvailableCopies(context, 0);
+
+            CirculationRepository.OperationResult returned =
+                    repository.returnCopy("CARD-1", "BOOK-1", "admin-auth-1");
+            assertNotNull(returned);
+            assertAvailableCopies(context, 1);
         } finally {
             repository.close();
             context.deleteDatabase(DatabaseHelper.DATABASE_NAME);
+        }
+    }
+
+    private static void assertAvailableCopies(Context context, int expected) {
+        DatabaseHelper helper = new DatabaseHelper(context);
+        try (android.database.Cursor cursor = helper.getReadableDatabase().rawQuery(
+                "SELECT availableCopies FROM BookTitles WHERE bookTitleId='title-1'", null)) {
+            if (!cursor.moveToFirst()) throw new AssertionError("Book title was not persisted");
+            org.junit.Assert.assertEquals(expected, cursor.getInt(0));
+        } finally {
+            helper.close();
         }
     }
 }
