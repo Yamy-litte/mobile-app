@@ -291,15 +291,19 @@ public final class CirculationRepository implements AutoCloseable {
 
     private static BookCopy findCopyByBarcode(SQLiteDatabase db, String barcode) {
         if (barcode == null || barcode.trim().isEmpty()) return null;
-        try (Cursor c = db.query("BookCopies", null, "barcode=?", new String[]{barcode.trim()}, null, null, null, "1")) {
+        try (Cursor c = db.rawQuery(
+                "SELECT c.copyId,c.bookTitleId,c.barcode,c.copyStatus,c.priorityUserId,c.isHidden,t.isHidden " +
+                "FROM BookCopies c JOIN BookTitles t ON t.bookTitleId=c.bookTitleId WHERE c.barcode=? LIMIT 1",
+                new String[]{barcode.trim()})) {
             if (!c.moveToFirst()) return null;
             BookCopy copy = new BookCopy();
-            copy.copyId = c.getString(c.getColumnIndexOrThrow("copyId"));
-            copy.bookTitleId = c.getString(c.getColumnIndexOrThrow("bookTitleId"));
-            copy.barcode = c.getString(c.getColumnIndexOrThrow("barcode"));
-            copy.copyStatus = c.getString(c.getColumnIndexOrThrow("copyStatus"));
-            copy.priorityUserId = c.getString(c.getColumnIndexOrThrow("priorityUserId"));
-            copy.isHidden = c.getInt(c.getColumnIndexOrThrow("isHidden")) == 1;
+            copy.copyId = c.getString(0);
+            copy.bookTitleId = c.getString(1);
+            copy.barcode = c.getString(2);
+            copy.copyStatus = c.getString(3);
+            copy.priorityUserId = c.getString(4);
+            copy.isHidden = c.getInt(5) == 1;
+            copy.parentTitleHidden = c.getInt(6) == 1;
             return copy;
         }
     }
