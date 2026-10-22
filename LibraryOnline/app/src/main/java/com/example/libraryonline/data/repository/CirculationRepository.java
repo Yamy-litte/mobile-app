@@ -111,8 +111,7 @@ public final class CirculationRepository implements AutoCloseable {
             refreshAvailableCopies(db, copy.bookTitleId, now);
 
             db.execSQL("UPDATE Reservations SET reservationStatus='Completed', cancelledAt=NULL " +
-                    "WHERE userId=? AND copyId=? AND reservationType='Online' " +
-                    "AND reservationStatus NOT IN ('Cancelled','Expired','Completed')",
+                    "WHERE userId=? AND copyId=? AND reservationStatus NOT IN ('Cancelled','Expired','Completed')",
                     new Object[]{reader.userId, copy.copyId});
 
             db.setTransactionSuccessful();
@@ -169,11 +168,23 @@ public final class CirculationRepository implements AutoCloseable {
                 db.update("LoanReceipts", receiptUpdate, "loanReceiptId=?", new String[]{receiptId});
             }
 
-            ContentValues copyUpdate = new ContentValues();
-            copyUpdate.put("copyStatus", copy.isHidden ? "DangSuaChua" : "SanSang");
-            copyUpdate.putNull("priorityUserId");
-            copyUpdate.put("updatedAt", now);
-            db.update("BookCopies", copyUpdate, "copyId=?", new String[]{copy.copyId});
+            String reservationMessage = null;
+            if (copy.isHidden || copy.parentTitleHidden) {
+                ContentValues copyUpdate = new ContentValues();
+                copyUpdate.put("copyStatus", "DangSuaChua");
+                copyUpdate.putNull("priorityUserId");
+                copyUpdate.put("updatedAt", now);
+                db.update("BookCopies", copyUpdate, "copyId=?", new String[]{copy.copyId});
+            } else {
+                reservationMessage = assignNextWaitingReservation(db, copy, now);
+                if (reservationMessage == null) {
+                    ContentValues copyUpdate = new ContentValues();
+                    copyUpdate.put("copyStatus", "SanSang");
+                    copyUpdate.putNull("priorityUserId");
+                    copyUpdate.put("updatedAt", now);
+                    db.update("BookCopies", copyUpdate, "copyId=?", new String[]{copy.copyId});
+                }
+            }
             refreshAvailableCopies(db, copy.bookTitleId, now);
 
             String penaltyId = null;
@@ -203,6 +214,7 @@ public final class CirculationRepository implements AutoCloseable {
             String message = fine > 0
                     ? "Đã nhận trả sách. Trễ " + lateDays + " ngày, tiền phạt " + fine + " đồng. Mã khoản phạt: " + penaltyId + ". Thẻ đã bị khóa."
                     : "Đã nhận trả sách đúng hạn.";
+            if (reservationMessage != null) message += " " + reservationMessage;
             return new OperationResult(message, penaltyId, null, fine);
         } finally {
             db.endTransaction();
@@ -325,6 +337,75 @@ public final class CirculationRepository implements AutoCloseable {
             while (c.moveToNext()) ids.add(c.getString(0));
         }
         return ids;
+    }
+
+    /**
+     * Assign a returned physical copy to the oldest waiting DatTruoc reservation.
+     * All writes are performed inside the caller's circulation transaction.
+     */
+    private static String assignNextWaitingReservation(SQLiteDatabase db, BookCopy copy, String now) {
+        String reservationId = null, userId = null;
+        try (Cursor c = db.rawQuery(
+                "SELECT reservationId,userId FROM Reservations " +
+                "WHERE bookTitleId=? AND reservationType='DatTruoc' AND reservationStatus='Pending' " +
+                "ORDER BY CASE WHEN queuePosition IS NULL THEN 1 ELSE 0 END, queuePosition ASC, createdAt ASC LIMIT 1",
+                new String[]{copy.bookTitleId})) {
+            if (c.moveToFirst()) {
+                reservationId = c.getString(0);
+                userId = c.getString(1);
+            }
+        }
+        if (reservationId == null) return null;
+
+        int holdHours = scalarInt(db,
+                "SELECT reservationHoldHours FROM SystemConfigs ORDER BY updatedAt DESC LIMIT 1", null);
+        if (holdHours < 1) holdHours = 48;
+        String priorityUntil = addHours(now, holdHours);
+
+        ContentValues reservation = new ContentValues();
+        reservation.put("copyId", copy.copyId);
+        reservation.put("reservationStatus", "Ready");
+        reservation.put("priorityUntil", priorityUntil);
+        reservation.put("notifiedAt", now);
+        db.update("Reservations", reservation, "reservationId=? AND reservationStatus='Pending'",
+                new String[]{reservationId});
+
+        ContentValues copyUpdate = new ContentValues();
+        copyUpdate.put("copyStatus", "DaDatTruoc");
+        copyUpdate.put("priorityUserId", userId);
+        copyUpdate.put("updatedAt", now);
+        db.update("BookCopies", copyUpdate, "copyId=?", new String[]{copy.copyId});
+
+        ContentValues notification = new ContentValues();
+        notification.put("notificationId", UUID.randomUUID().toString());
+        notification.put("userId", userId);
+        notification.put("notificationType", "ReservationReady");
+        notification.put("title", "Sách đặt trước đã sẵn sàng");
+        notification.put("message", "Cuốn sách bạn đặt trước đã sẵn sàng. Vui lòng nhận trong " +
+                holdHours + " giờ, trước " + priorityUntil + ".");
+        notification.put("relatedEntityType", "Reservation");
+        notification.put("relatedEntityId", reservationId);
+        notification.put("scheduledAt", now);
+        notification.putNull("sentAt");
+        notification.putNull("readAt");
+        notification.put("deliveryStatus", "Pending");
+        db.insertOrThrow("Notifications", null, notification);
+        return "Đã ưu tiên cuốn sách cho độc giả đang chờ đến " + priorityUntil + ".";
+    }
+
+    private static String addHours(String timestamp, int hours) {
+        SimpleDateFormat f = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss", Locale.ROOT);
+        f.setLenient(false);
+        f.setTimeZone(TimeZone.getDefault());
+        try {
+            Date parsed = f.parse(timestamp);
+            java.util.Calendar cal = java.util.Calendar.getInstance();
+            cal.setTime(parsed);
+            cal.add(java.util.Calendar.HOUR_OF_DAY, hours);
+            return f.format(cal.getTime());
+        } catch (java.text.ParseException ex) {
+            throw new IllegalArgumentException("Không thể tính thời hạn nhận sách đặt trước.", ex);
+        }
     }
 
     /**
