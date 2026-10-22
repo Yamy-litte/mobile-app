@@ -10,6 +10,9 @@ import android.widget.TextView;
 import android.widget.Toast;
 
 import com.example.libraryonline.R;
+import com.example.libraryonline.data.local.dao.AdminDashboardStatsDao;
+import com.example.libraryonline.data.local.db.DatabaseHelper;
+import com.example.libraryonline.utils.PasswordVisibilityToggle;
 import com.example.libraryonline.data.remote.firebase.BookCatalogueSyncManager;
 import com.example.libraryonline.ui.admin.inventory.InventoryActivity;
 import com.example.libraryonline.utils.EmailSender;
@@ -50,6 +53,8 @@ public class AdminMainActivity extends com.example.libraryonline.ui.auth.Session
     private AdminHomeView homeView;
     private CirculationPanelController circulationController;
     private long dashboardGeneration, requestsGeneration;
+    private final java.util.concurrent.ExecutorService dashboardLocalWorker =
+            java.util.concurrent.Executors.newSingleThreadExecutor();
     private String adminUid, adminPhone = "", adminBirthDate = "", adminDisplayName = "";
     private Integer registrationCount, resetCount;
     private boolean registrationCached, resetCached, registrationError, resetError;
@@ -111,6 +116,16 @@ public class AdminMainActivity extends com.example.libraryonline.ui.auth.Session
                             }
                         });
         findViewById(R.id.actionAdminInventory).setOnClickListener(v -> openInventory());
+        findViewById(R.id.actionAdminBorrow).setOnClickListener(v -> openCounter());
+        findViewById(R.id.actionAdminReturn).setOnClickListener(v -> openCounter());
+        findViewById(R.id.actionAdminOnline).setOnClickListener(v -> {
+            if (isSessionReady())
+                Toast.makeText(this,
+                        "Giao Online / Đặt trước chưa được hỗ trợ tại quầy. Không tạo giao dịch giả.",
+                        Toast.LENGTH_LONG).show();
+        });
+        findViewById(R.id.buttonAdminAccountBack).setOnClickListener(
+                v -> homeView.show(AdminHomeView.HOME));
         bindCatalogueSyncButton();
         findViewById(R.id.actionAdminSync)
                 .setOnClickListener(
@@ -168,6 +183,12 @@ public class AdminMainActivity extends com.example.libraryonline.ui.auth.Session
                     adminPhone = phone == null ? "" : phone.trim();
                     adminBirthDate = dob == null ? "" : dob.trim();
                     ((TextView) findViewById(R.id.textAdminProfileName)).setText(adminDisplayName);
+                    ((TextView) findViewById(R.id.textAdminProfileImmutableName)).setText(adminDisplayName);
+                    ((TextView) findViewById(R.id.textAdminSession)).setText("Admin " + adminDisplayName);
+                    String initial = adminDisplayName.trim().isEmpty()
+                            ? "AD" : adminDisplayName.trim().substring(0, 1).toUpperCase(Locale.ROOT);
+                    ((TextView) findViewById(R.id.textAdminProfileAvatar)).setText(initial);
+                    ((TextView) findViewById(R.id.buttonAdminAccount)).setText(initial);
                     ((TextView) findViewById(R.id.textAdminProfilePhone)).setText(
                             adminPhone.isEmpty() ? getString(R.string.admin_profile_unavailable) : adminPhone);
                     ((TextView) findViewById(R.id.textAdminProfileDob)).setText(
@@ -188,41 +209,59 @@ public class AdminMainActivity extends com.example.libraryonline.ui.auth.Session
                 });
     }
 
+    /** Inline contact fields match Admin Account Figma; email changes require reauthentication. */
     private void showEditAdminContact() {
         if (!isSessionReady()) return;
-        LinearLayout form = new LinearLayout(this);
-        form.setOrientation(LinearLayout.VERTICAL);
-        int pad = (int) (16 * getResources().getDisplayMetrics().density);
-        form.setPadding(pad, pad / 2, pad, 0);
-        EditText phone = new EditText(this);
-        phone.setSingleLine(true);
-        phone.setInputType(android.text.InputType.TYPE_CLASS_PHONE);
-        phone.setHint(getString(R.string.admin_phone_hint));
-        phone.setText(adminPhone);
-        form.addView(phone, new LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT));
-        EditText email = new EditText(this);
-        email.setSingleLine(true);
-        email.setInputType(android.text.InputType.TYPE_CLASS_TEXT
-                | android.text.InputType.TYPE_TEXT_VARIATION_EMAIL_ADDRESS);
-        email.setHint(getString(R.string.admin_email_hint));
-        email.setText(auth.getCurrentUser() == null ? "" : auth.getCurrentUser().getEmail());
-        form.addView(email, new LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT));
+        EditText phoneField = findViewById(R.id.textAdminProfilePhone);
+        EditText emailField = findViewById(R.id.textAdminProfileEmail);
+        String phone = phoneField.getText().toString().trim();
+        String email = emailField.getText().toString().trim();
+        if (!phone.isEmpty() && !phone.matches("^0(3|5|7|8|9)[0-9]{8}$")) {
+            phoneField.setError("Số điện thoại phải có 10 số hợp lệ");
+            phoneField.requestFocus();
+            return;
+        }
+        if (email.isEmpty() || !android.util.Patterns.EMAIL_ADDRESS.matcher(email).matches()) {
+            emailField.setError("Email công vụ không hợp lệ");
+            emailField.requestFocus();
+            return;
+        }
+        FirebaseUser user = auth.getCurrentUser();
+        if (user == null) { logoutSession(); return; }
+        String oldEmail = user.getEmail() == null ? "" : user.getEmail().trim();
+        if (email.equalsIgnoreCase(oldEmail)) {
+            saveAdminContact(phone, email, "");
+            return;
+        }
+        if (oldEmail.isEmpty()) {
+            Toast.makeText(this, "Tài khoản không có email xác minh. Hãy đăng nhập lại.",
+                    Toast.LENGTH_LONG).show();
+            return;
+        }
         EditText password = new EditText(this);
-        password.setSingleLine(true);
+        password.setHint(R.string.admin_current_password_hint);
         password.setInputType(android.text.InputType.TYPE_CLASS_TEXT
                 | android.text.InputType.TYPE_TEXT_VARIATION_PASSWORD);
-        password.setHint(getString(R.string.admin_current_password_hint));
+        password.setSingleLine(true);
         password.setSaveEnabled(false);
-        form.addView(password, new LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT));
-        privateDialog().setTitle(R.string.admin_edit_contact_title).setView(form)
+        PasswordVisibilityToggle.attach(password);
+        int pad = (int) (20 * getResources().getDisplayMetrics().density);
+        password.setPadding(pad, pad / 2, pad, pad / 2);
+        privateDialog()
+                .setTitle("Xác minh để đổi email")
+                .setMessage("Nhập mật khẩu hiện tại trước khi cập nhật email công vụ.")
+                .setView(password)
                 .setNegativeButton("Hủy", null)
-                .setPositiveButton("Lưu", (dialog, which) -> saveAdminContact(
-                        phone.getText().toString().trim(),
-                        email.getText().toString().trim(),
-                        password.getText().toString()))
+                .setPositiveButton("Xác minh và lưu", (dialog, which) -> {
+                    String currentPassword = password.getText().toString();
+                    password.setText("");
+                    if (currentPassword.isEmpty()) {
+                        Toast.makeText(this, "Cần nhập mật khẩu hiện tại để đổi email.",
+                                Toast.LENGTH_LONG).show();
+                        return;
+                    }
+                    saveAdminContact(phone, email, currentPassword);
+                })
                 .show();
     }
 
@@ -306,6 +345,12 @@ public class AdminMainActivity extends com.example.libraryonline.ui.auth.Session
         });
     }
 
+    private void openCounter() {
+        if (!isSessionReady()) return;
+        homeView.show(AdminHomeView.CIRCULATION);
+        findViewById(R.id.inputCirculationReaderBarcode).requestFocus();
+    }
+
     private void openInventory() {
         if (!isSessionReady() || inventoryOpening) return;
         inventoryOpening = true;
@@ -338,6 +383,8 @@ public class AdminMainActivity extends com.example.libraryonline.ui.auth.Session
         adminDisplayName = profile.displayName == null ? "Quản trị viên" : profile.displayName;
         ((TextView) findViewById(R.id.textAdminSession)).setText("Admin " + adminDisplayName);
         ((TextView) findViewById(R.id.textAdminProfileName)).setText(adminDisplayName);
+        ((TextView) findViewById(R.id.textAdminProfileImmutableName)).setText(adminDisplayName);
+        ((TextView) findViewById(R.id.textAdminProfileAvatar)).setText("AD");
         loadAdminProfile(profile);
         if (circulationController != null) circulationController.close();
         circulationController = new CirculationPanelController(this);
@@ -430,10 +477,12 @@ public class AdminMainActivity extends com.example.libraryonline.ui.auth.Session
 
     private void loadDashboard() {
         final long request = ++dashboardGeneration;
+        loadLocalDashboard(request);
         Button refresh = findViewById(R.id.buttonAdminRefresh);
         refresh.setEnabled(false);
         TextView status = findViewById(R.id.textAdminDataStatus);
         status.setText(R.string.admin_loading);
+        ((TextView) findViewById(R.id.textAdminBrand)).setText("Đang cập nhật số liệu...");
         int[] ids = {R.id.textAdminBookCount, R.id.textAdminReaderCount, R.id.textAdminCopyCount};
         for (int id : ids) ((TextView) findViewById(id)).setText(R.string.admin_dash);
         java.util.List<
@@ -480,7 +529,63 @@ public class AdminMainActivity extends com.example.libraryonline.ui.auth.Session
                                                     new java.text.SimpleDateFormat(
                                                                     "HH:mm", Locale.getDefault())
                                                             .format(new Date())));
+                            ((TextView) findViewById(R.id.textAdminBrand)).setText(
+                                    failed ? "Một số số liệu chưa đồng bộ" : "Trực tuyến · Đã cập nhật tổng quan");
                         });
+    }
+
+    /** Refresh local stats off the UI thread. Cloud counts remain in loadDashboard(). */
+    private void loadLocalDashboard(long request) {
+        ((TextView) findViewById(R.id.textAdminLocalStatus))
+                .setText(R.string.admin_screen_data_loading);
+        int[] ids = { R.id.textAdminTodayBorrow, R.id.textAdminTodayReturn,
+                R.id.textAdminTodayWaiting, R.id.textAdminTodayOverdue };
+        for (int id : ids)
+            ((TextView) findViewById(id)).setText(R.string.admin_dash);
+        ((TextView) findViewById(R.id.textAdminRecentActivity))
+                .setText(R.string.admin_screen_data_loading);
+        dashboardLocalWorker.execute(() -> {
+            AdminDashboardStatsDao.Summary summary = null;
+            String failure = null;
+            DatabaseHelper helper = null;
+            try {
+                helper = new DatabaseHelper(getApplicationContext());
+                summary = new AdminDashboardStatsDao(helper.getReadableDatabase())
+                        .load(java.util.Calendar.getInstance());
+            } catch (Exception error) {
+                failure = error.getClass().getSimpleName();
+            } finally {
+                if (helper != null) helper.close();
+            }
+            final AdminDashboardStatsDao.Summary value = summary;
+            final String failedReason = failure;
+            runOnUiThread(() -> {
+                if (!isSessionReady() || request != dashboardGeneration
+                        || isFinishing() || isDestroyed()) return;
+                if (value == null) {
+                    ((TextView) findViewById(R.id.textAdminLocalStatus))
+                            .setText(getString(R.string.admin_screen_data_error)
+                                    + (failedReason == null ? "" : " (" + failedReason + ")"));
+                    ((TextView) findViewById(R.id.textAdminRecentActivity))
+                            .setText(R.string.admin_screen_recent_empty);
+                    return;
+                }
+                int[] counts = {value.borrowedToday, value.returnedToday,
+                        value.awaitingPickup, value.overdue};
+                for (int i = 0; i < ids.length; i++)
+                    ((TextView) findViewById(ids[i])).setText(
+                            java.text.NumberFormat.getIntegerInstance(new Locale("vi", "VN"))
+                                    .format(counts[i]));
+                ((AdminWeeklyTrendView) findViewById(R.id.adminWeeklyTrend))
+                        .setCounts(value.dailyBorrowed);
+                ((TextView) findViewById(R.id.textAdminLocalStatus))
+                        .setText(R.string.admin_screen_local_note);
+                ((TextView) findViewById(R.id.textAdminRecentActivity))
+                        .setText(value.recentActivities.isEmpty()
+                                ? getString(R.string.admin_screen_recent_empty)
+                                : android.text.TextUtils.join("\n", value.recentActivities));
+            });
+        });
     }
 
     private void bindCatalogueSyncButton() {
@@ -1298,6 +1403,7 @@ public class AdminMainActivity extends com.example.libraryonline.ui.auth.Session
         if (requestsListener != null) requestsListener.remove();
         if (resetRequestsListener != null) resetRequestsListener.remove();
         if (catalogueSyncManager != null) catalogueSyncManager.close();
+        dashboardLocalWorker.shutdownNow();
         super.onDestroy();
     }
 }

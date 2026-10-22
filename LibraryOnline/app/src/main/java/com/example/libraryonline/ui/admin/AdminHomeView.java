@@ -92,6 +92,8 @@ public final class AdminHomeView {
         }
         activity.findViewById(R.id.adminScroll)
                 .setVisibility(selected == CIRCULATION ? View.GONE : View.VISIBLE);
+        activity.findViewById(R.id.adminHomeHeader)
+                .setVisibility(selected == HOME ? View.VISIBLE : View.GONE);
         activity.findViewById(R.id.adminCirculation)
                 .setVisibility(selected == CIRCULATION ? View.VISIBLE : View.GONE);
         navigation.getMenu().findItem(tabs[selected]).setChecked(true);
