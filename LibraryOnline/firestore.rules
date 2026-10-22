@@ -369,8 +369,11 @@ service cloud.firestore {
 
     function validOnlineLoanDays(days) {
       return days is int && days >= 1
-        && exists(/databases/$(database)/documents/SystemConfigs/default)
-        && days <= get(/databases/$(database)/documents/SystemConfigs/default).data.maxLoanDays;
+        && (
+          (!exists(/databases/$(database)/documents/SystemConfigs/default) && days <= 14)
+          || (exists(/databases/$(database)/documents/SystemConfigs/default)
+              && days <= get(/databases/$(database)/documents/SystemConfigs/default).data.maxLoanDays)
+        );
     }
 
     function validNewOnlineRequest(id) {
