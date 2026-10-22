@@ -1,7 +1,9 @@
 package com.example.libraryonline.session;
 
 import com.example.libraryonline.data.remote.firebase.BookCatalogueSyncManager;
-import com.google.android.gms.tasks.Tasks;
+import com.google.android.gms.tasks.Task;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
 import com.google.firebase.FirebaseApp;
 import com.google.firebase.FirebaseOptions;
 import com.google.firebase.firestore.FirebaseFirestore;
@@ -29,7 +31,16 @@ public class CatalogueSyncLifecycleTest {
             if (sync != null) sync.close();
             // Firestore owns a background AsyncQueue. Stop it before deleting the FirebaseApp
             // so it cannot race later Robolectric tests while closing its SQLite persistence.
-            Tasks.await(firestore.terminate());
+            // Robolectric runs this test on the main looper: Tasks.await() throws there.
+            // terminate() can also lazily initialize the Firestore client, so do not let
+            // Robolectric reset its database directory until the shutdown task completes.
+            Task<Void> termination = firestore.terminate();
+            CountDownLatch terminated = new CountDownLatch(1);
+            termination.addOnCompleteListener(Runnable::run, task -> terminated.countDown());
+            assertTrue("Firestore termination timed out", terminated.await(10, TimeUnit.SECONDS));
+            if (!termination.isSuccessful()) {
+                throw new AssertionError("Firestore termination failed", termination.getException());
+            }
             app.delete();
         }
     }
