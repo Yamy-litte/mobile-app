@@ -47,23 +47,25 @@ public final class CirculationRepository implements AutoCloseable {
                 maxDays = c.getInt(1);
             }
 
+            BookCopy copy = findCopyByBarcode(db, copyBarcode);
+            if (copy == null) throw new IllegalArgumentException("Không tìm thấy mã cuốn sách.");
+
             int activeCount = scalarInt(db,
                     "SELECT COUNT(*) FROM LoanDetails d JOIN LoanReceipts r ON r.loanReceiptId=d.loanReceiptId " +
                     "WHERE r.userId=? AND d.returnDate IS NULL AND d.detailStatus IN ('DangMuon','QuaHan')",
                     new String[]{reader.userId});
             activeCount += scalarInt(db,
                     "SELECT COUNT(*) FROM Reservations WHERE userId=? AND reservationType='Online' " +
-                    "AND reservationStatus NOT IN ('Cancelled','Expired','Completed','Received')",
-                    new String[]{reader.userId});
+                    "AND reservationStatus NOT IN ('Cancelled','Expired','Completed','Received') " +
+                    "AND (copyId IS NULL OR copyId<>?)",
+                    new String[]{reader.userId, copy.copyId});
 
             boolean hasOverdue = scalarInt(db,
                     "SELECT COUNT(*) FROM LoanDetails d JOIN LoanReceipts r ON r.loanReceiptId=d.loanReceiptId " +
                     "WHERE r.userId=? AND d.returnDate IS NULL AND d.dueDate < ?",
                     new String[]{reader.userId, today()}) > 0;
 
-            BookCopy copy = findCopyByBarcode(db, copyBarcode);
-            if (copy == null) throw new IllegalArgumentException("Không tìm thấy mã cuốn sách.");
-            ArrayList<String> activeTitles = activeTitleIds(db, reader.userId);
+            ArrayList<String> activeTitles = activeTitleIds(db, reader.userId, copy.copyId);
             String reason = LoanValidator.validateBorrow(reader, activeCount, maxCopies, requestedDays,
                     maxDays, hasOverdue, activeTitles, copy.bookTitleId);
             if (reason != null) throw new IllegalArgumentException(reason);
@@ -272,6 +274,7 @@ public final class CirculationRepository implements AutoCloseable {
             user.userId = c.getString(c.getColumnIndexOrThrow("userId"));
             user.fullName = c.getString(c.getColumnIndexOrThrow("fullName"));
             user.cardStatus = c.getString(c.getColumnIndexOrThrow("cardStatus"));
+            user.role = c.getString(c.getColumnIndexOrThrow("role"));
             user.isDeleted = c.getInt(c.getColumnIndexOrThrow("isDeleted")) == 1;
             user.cardExpiryDate = c.getString(c.getColumnIndexOrThrow("cardExpiryDate"));
             return user;
@@ -301,7 +304,7 @@ public final class CirculationRepository implements AutoCloseable {
         }
     }
 
-    private static ArrayList<String> activeTitleIds(SQLiteDatabase db, String userId) {
+    private static ArrayList<String> activeTitleIds(SQLiteDatabase db, String userId, String excludedReservationCopyId) {
         ArrayList<String> ids = new ArrayList<>();
         try (Cursor c = db.rawQuery(
                 "SELECT DISTINCT b.bookTitleId FROM LoanDetails d " +
@@ -309,8 +312,9 @@ public final class CirculationRepository implements AutoCloseable {
                 "JOIN BookCopies b ON b.copyId=d.copyId " +
                 "WHERE r.userId=? AND d.returnDate IS NULL AND d.detailStatus IN ('DangMuon','QuaHan') " +
                 "UNION SELECT DISTINCT bookTitleId FROM Reservations WHERE userId=? " +
-                "AND reservationStatus NOT IN ('Cancelled','Expired','Completed')",
-                new String[]{userId, userId})) {
+                "AND reservationStatus NOT IN ('Cancelled','Expired','Completed') " +
+                "AND (copyId IS NULL OR copyId<>?)",
+                new String[]{userId, userId, excludedReservationCopyId})) {
             while (c.moveToNext()) ids.add(c.getString(0));
         }
         return ids;
