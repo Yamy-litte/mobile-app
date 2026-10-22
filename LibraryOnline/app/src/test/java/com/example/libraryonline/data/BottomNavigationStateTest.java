@@ -103,7 +103,8 @@ public class BottomNavigationStateTest {
             screen.setContentView(R.layout.activity_admin_main);
             AdminHomeView home = new AdminHomeView(screen, AdminHomeView.HOME);
             screen.findViewById(R.id.navAdminRequests).performClick();
-            assertEquals(View.VISIBLE, screen.findViewById(R.id.adminRequests).getVisibility());
+            assertEquals(View.VISIBLE, screen.findViewById(R.id.adminManagementHub).getVisibility());
+            assertEquals(View.GONE, screen.findViewById(R.id.adminRequests).getVisibility());
             screen.findViewById(R.id.navAdminCirculation).performClick();
             assertEquals(View.VISIBLE, screen.findViewById(R.id.adminCirculation).getVisibility());
             assertEquals(View.GONE, screen.findViewById(R.id.adminScroll).getVisibility());

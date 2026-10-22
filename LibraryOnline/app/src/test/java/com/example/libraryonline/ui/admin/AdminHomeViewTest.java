@@ -81,7 +81,7 @@ public class AdminHomeViewTest {
     @Test public void shortcutsAndTabsOpenRealPanelsAndKeepSelectionConsistent() {
         AdminHomeView home=new AdminHomeView(screen,AdminHomeView.HOME);
         screen.findViewById(R.id.actionAdminRegistrations).performClick();
-        assertEquals(AdminHomeView.REQUESTS,home.selectedTab());assertTrue(screen.findViewById(R.id.navAdminRequests).isSelected());
+        assertEquals(AdminHomeView.APPROVALS,home.selectedTab());assertTrue(screen.findViewById(R.id.navAdminRequests).isSelected());
         assertEquals(View.VISIBLE,screen.findViewById(R.id.adminRequests).getVisibility());
         screen.findViewById(R.id.buttonAdminAccount).performClick();
         assertEquals(AdminHomeView.ACCOUNT,home.selectedTab());assertEquals(View.VISIBLE,screen.findViewById(R.id.buttonAdminLogout).getVisibility());
@@ -93,6 +93,27 @@ public class AdminHomeViewTest {
         screen.findViewById(R.id.navAdminHome).performClick();assertEquals(AdminHomeView.HOME,home.selectedTab());
         assertFalse(screen.findViewById(R.id.navAdminAccount).isSelected());
     }
+    @Test public void manageHubAndDedicatedAccountFieldsRemainIndependent() {
+        AdminHomeView home = new AdminHomeView(screen, AdminHomeView.HOME);
+        screen.findViewById(R.id.navAdminRequests).performClick();
+        assertEquals(AdminHomeView.REQUESTS, home.selectedTab());
+        assertEquals(View.VISIBLE, screen.findViewById(R.id.adminManagementHub).getVisibility());
+        assertEquals(View.GONE, screen.findViewById(R.id.adminRequests).getVisibility());
+        assertNotNull(screen.findViewById(R.id.adminHubReaders));
+        assertNotNull(screen.findViewById(R.id.adminHubConfig));
+        assertNotNull(screen.findViewById(R.id.adminHubReports));
+        assertNotNull(screen.findViewById(R.id.adminHubApprovals));
+        home.show(AdminHomeView.APPROVALS);
+        assertEquals(View.VISIBLE, screen.findViewById(R.id.adminRequests).getVisibility());
+        assertEquals(View.GONE, screen.findViewById(R.id.adminManagementHub).getVisibility());
+        home.show(AdminHomeView.ACCOUNT);
+        assertTrue(screen.findViewById(R.id.textAdminProfileImmutableName) instanceof android.widget.EditText);
+        assertTrue(screen.findViewById(R.id.textAdminProfileDob) instanceof android.widget.EditText);
+        assertTrue(screen.findViewById(R.id.textAdminProfilePhone) instanceof android.widget.EditText);
+        assertTrue(screen.findViewById(R.id.textAdminProfileEmail) instanceof TextView);
+        assertFalse(screen.findViewById(R.id.textAdminProfileEmail) instanceof android.widget.EditText);
+    }
+
     @Test public void selectedPanelCanBeRestoredAndInvalidStateFallsBackToHome() {
         AdminHomeView home=new AdminHomeView(screen,AdminHomeView.ACCOUNT);
         assertEquals(View.VISIBLE,screen.findViewById(R.id.adminAccount).getVisibility());
