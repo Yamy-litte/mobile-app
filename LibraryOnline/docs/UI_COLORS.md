@@ -26,3 +26,12 @@ Các màu trạng thái hiện có được giữ nguyên: `library_success`, `l
 - Kiểm tra Admin/Login/Reader cùng theme, bao gồm loading, thẻ nội dung, ô nhập và cấu hình night/notnight. Ảnh Robolectric là kiểm tra layout/theme; không thay thế smoke test trên thiết bị thật.
 
 Nếu một dự án/giao diện chưa có màu gốc, bộ dự phòng được người dùng đưa ra là background `#F7F8FA`, surface/input `#FFFFFF`, border `#E5E7EB`, text_primary `#1F2937`, text_secondary `#6B7280`. Không áp dụng bộ dự phòng để ghi đè bảng màu gốc hiện có của Library Online.
+
+## Đồng bộ resource ngày 23/10/2026
+
+- `colors.xml` chứa các tên màu ngữ nghĩa `background`, `surface`, `input_background`, `border`, `text_primary`, `text_secondary`, đều tham chiếu **bảng màu gốc** `library_*` nêu ở trên; không thay bảng màu gốc bằng bộ dự phòng.
+- Nền `activity_admin_main.xml`, `activity_admin_management.xml`, `activity_reader_online_borrow.xml` và `view_auth_session_gate.xml` đều dùng `@color/background`. Các layout dùng `@color/library_background` từ trước vẫn đồng nhất vì hai resource trỏ tới cùng màu.
+- Các alias `admin_screen_bg`, `admin_screen_ink`, `admin_screen_muted`, `admin_screen_border`, `admin_screen_readonly` và `online_canvas` trỏ đến resource ngữ nghĩa chung để giữ tương thích nơi còn sử dụng tên cũ.
+- Di chuyển bảng màu Admin/Online vào `colors.xml` thay vì định nghĩa màu ở nhiều file `values`. Giữ nguyên các accent và màu hành động (`admin_screen_primary`, `online_forest`, `library_blue`) cũng như các màu trạng thái.
+- `Theme.LibraryOnline` ánh xạ nền, chữ, viền và các surface-container Material3 về palette chung cho cả chế độ sáng/tối, không dùng nền kem Figma khác với bảng màu đã chuẩn hóa cho Login/Reader.
+- Có kiểm thử hồi quy `SharedPaletteTest` cho alias màu và nền các màn hình Auth/Reader/Admin/Online ở chế độ `notnight` và `night`. Cần chạy `./gradlew :app:testDebugUnitTest :app:assembleDebug` và kiểm tra thực tế trên thiết bị sau khi áp dụng.
