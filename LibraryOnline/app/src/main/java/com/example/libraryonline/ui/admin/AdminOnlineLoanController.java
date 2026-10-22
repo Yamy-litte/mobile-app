@@ -3,6 +3,8 @@ package com.example.libraryonline.ui.admin;
 import android.app.AlertDialog;
 import android.content.DialogInterface;
 import android.graphics.Typeface;
+import android.os.Handler;
+import android.os.Looper;
 import android.text.InputType;
 import android.view.View;
 import android.widget.Button;
@@ -40,6 +42,20 @@ final class AdminOnlineLoanController {
     private ListenerRegistration listener;
     private final List<AlertDialog> dialogs = new ArrayList<>();
     private final Set<String> expiryAttempted = new HashSet<>();
+    // The Firestore listener may stay open without receiving a new snapshot at holdUntil.
+    // Check held copies again while this Admin screen is active; this is not a
+    // background/closed-app scheduler.
+    private final Handler expiryHandler = new Handler(Looper.getMainLooper());
+    private final List<DocumentSnapshot> knownApprovedHolds = new ArrayList<>();
+    private final Runnable expiryPulse = new Runnable() {
+        @Override public void run() {
+            String uid = adminUid;
+            if (!current(uid) || knownApprovedHolds.isEmpty()) return;
+            for (DocumentSnapshot hold : new ArrayList<>(knownApprovedHolds))
+                checkExpiry(hold, uid);
+            expiryHandler.postDelayed(this, 60_000L);
+        }
+    };
     private String adminUid;
     private int previousPending = -1;
 
@@ -69,6 +85,8 @@ final class AdminOnlineLoanController {
         adminUid = null;
         previousPending = -1;
         expiryAttempted.clear();
+        expiryHandler.removeCallbacks(expiryPulse);
+        knownApprovedHolds.clear();
         if (listener != null) { listener.remove(); listener = null; }
         for (AlertDialog dialog : new ArrayList<>(dialogs)) dialog.dismiss();
         dialogs.clear();
@@ -131,6 +149,19 @@ final class AdminOnlineLoanController {
             Timestamp stamp = doc.getTimestamp("createdAt");
             return stamp == null ? 0L : stamp.toDate().getTime();
         }).reversed());
+        // Never schedule expiry from cached-only snapshots: a server decision
+        // may already have delivered or released the book.
+        if (!snapshot.getMetadata().isFromCache()) {
+            expiryHandler.removeCallbacks(expiryPulse);
+            knownApprovedHolds.clear();
+            for (DocumentSnapshot doc : docs) {
+                if (OnlineLoanRequestRepository.APPROVED.equals(doc.getString("status"))
+                        && doc.getTimestamp("holdUntil") != null)
+                    knownApprovedHolds.add(doc);
+            }
+            if (!knownApprovedHolds.isEmpty())
+                expiryHandler.postDelayed(expiryPulse, 60_000L);
+        }
         int pending = 0, approved = 0;
         for (DocumentSnapshot doc : docs) {
             if (OnlineLoanRequestRepository.PENDING.equals(doc.getString("status"))) pending++;
@@ -304,13 +335,16 @@ final class AdminOnlineLoanController {
         repository.expire(doc.getId()).addOnCompleteListener(activity, task -> {
             if (!current(uid)) return;
             if (!task.isSuccessful()) {
+                // Retry on the next minute tick after a transient network/rules error.
+                // The repository transaction still guards against double release.
+                expiryAttempted.remove(doc.getId());
                 Exception error = task.getException();
                 Toast.makeText(activity,
                         "Chưa giải phóng được yêu cầu hết hạn: "
                                 + (error == null ? "Cần đối soát." : error.getMessage()),
                         Toast.LENGTH_LONG).show();
             }
-            // Avoid repeated retries/stock mutations during the same session.
+            // Successful expiry remains idempotent and is reflected by the listener.
         });
     }
 }
