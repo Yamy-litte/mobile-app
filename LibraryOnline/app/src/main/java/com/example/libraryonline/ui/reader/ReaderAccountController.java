@@ -6,20 +6,24 @@ import android.graphics.Bitmap;
 import android.view.Window;
 import android.view.WindowManager;
 import android.view.View;
+import android.widget.Button;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.TextView;
-import android.content.Intent;
 import android.text.TextUtils;
 import android.util.Patterns;
 import android.widget.EditText;
 import android.widget.Toast;
-import android.view.View;
 import android.widget.ScrollView;
 import java.util.Locale;
 
 import com.example.libraryonline.R;
-import com.example.libraryonline.ui.auth.ChangePasswordActivity;
+import com.example.libraryonline.utils.PasswordVisibilityToggle;
+import androidx.core.content.ContextCompat;
+import com.google.firebase.auth.EmailAuthProvider;
+import com.google.firebase.auth.AuthCredential;
+import com.google.firebase.auth.FirebaseAuthInvalidCredentialsException;
+import com.google.firebase.FirebaseNetworkException;
 import com.google.zxing.BarcodeFormat;
 import com.google.zxing.common.BitMatrix;
 import com.google.zxing.oned.Code128Writer;
@@ -41,6 +45,16 @@ public final class ReaderAccountController {
     private final EditText phoneInput;
     private final View overview;
     private final View editor;
+    private final View passwordPanel;
+    private final View cardPanel;
+    private final EditText oldPasswordInput;
+    private final EditText newPasswordInput;
+    private final EditText confirmPasswordInput;
+    private final Button changePasswordButton;
+    private boolean cardBrightnessApplied;
+    private float originalBrightness;
+    private boolean originallyKeepScreenOn;
+    private int passwordGeneration;
     private String fullName = "Độc giả";
     private String dateOfBirth = "";
     private String email = "";
@@ -57,6 +71,15 @@ public final class ReaderAccountController {
         phoneInput = activity.findViewById(R.id.readerAccountPhoneInput);
         overview = activity.findViewById(R.id.readerAccountOverview);
         editor = activity.findViewById(R.id.readerAccountEditor);
+        passwordPanel = activity.findViewById(R.id.readerAccountPassword);
+        cardPanel = activity.findViewById(R.id.readerAccountCard);
+        oldPasswordInput = activity.findViewById(R.id.readerPasswordOld);
+        newPasswordInput = activity.findViewById(R.id.readerPasswordNew);
+        confirmPasswordInput = activity.findViewById(R.id.readerPasswordConfirm);
+        changePasswordButton = activity.findViewById(R.id.readerPasswordSave);
+        PasswordVisibilityToggle.attach(oldPasswordInput);
+        PasswordVisibilityToggle.attach(newPasswordInput);
+        PasswordVisibilityToggle.attach(confirmPasswordInput);
 
         activity.findViewById(R.id.readerAccountPersonal).setOnClickListener(v -> showEditor());
         activity.findViewById(R.id.readerAccountProfileBack).setOnClickListener(v -> closeEditor());
@@ -69,13 +92,13 @@ public final class ReaderAccountController {
             activity.findViewById(id).setOnClickListener(v -> showDigitalCard());
         }
         for (int id : new int[] {R.id.readerAccountChangePassword, R.id.readerAccountEditPassword}) {
-            activity.findViewById(id).setOnClickListener(v -> activity.startActivity(
-                    new Intent(activity, ChangePasswordActivity.class)));
+            activity.findViewById(id).setOnClickListener(v -> showPassword());
         }
+        activity.findViewById(R.id.readerPasswordBack).setOnClickListener(v -> closePassword());
+        activity.findViewById(R.id.readerCardBack).setOnClickListener(v -> closeCard());
+        changePasswordButton.setOnClickListener(v -> changePassword());
         activity.findViewById(R.id.readerAccountNotificationsSettings).setOnClickListener(
                 v -> toast("Cài đặt thông báo chưa được hỗ trợ ở phiên bản này."));
-        activity.findViewById(R.id.readerAccountLanguage).setOnClickListener(
-                v -> toast("Chức năng đổi ngôn ngữ chưa được hỗ trợ."));
         activity.findViewById(R.id.readerAccountAbout).setOnClickListener(v ->
                 new AlertDialog.Builder(activity)
                         .setTitle("Về MyLibrary")
@@ -187,114 +210,217 @@ public final class ReaderAccountController {
         }
     }
 
-    private void showEditor() {
-        overview.setVisibility(View.GONE);
-        editor.setVisibility(View.VISIBLE);
+    private void showPanel(View panel) {
+        if (panel != cardPanel) restoreCardBrightness();
+        overview.setVisibility(panel == overview ? View.VISIBLE : View.GONE);
+        editor.setVisibility(panel == editor ? View.VISIBLE : View.GONE);
+        passwordPanel.setVisibility(panel == passwordPanel ? View.VISIBLE : View.GONE);
+        cardPanel.setVisibility(panel == cardPanel ? View.VISIBLE : View.GONE);
         ((ScrollView) activity.findViewById(R.id.readerAccount)).scrollTo(0, 0);
     }
 
-    /** Returns true when the account editor handled the back navigation. */
+    private void showEditor() {
+        showPanel(editor);
+    }
+
     public boolean closeEditor() {
         if (editor.getVisibility() != View.VISIBLE) return false;
-        editor.setVisibility(View.GONE);
-        overview.setVisibility(View.VISIBLE);
-        ((ScrollView) activity.findViewById(R.id.readerAccount)).scrollTo(0, 0);
+        showPanel(overview);
         return true;
     }
 
-    private void showDigitalCard() {
+    private void showPassword() {
+        clearPasswordInputs();
+        showPanel(passwordPanel);
+    }
+
+    private boolean closePassword() {
+        if (passwordPanel.getVisibility() != View.VISIBLE) return false;
+        ++passwordGeneration;
+        clearPasswordInputs();
+        showPanel(overview);
+        return true;
+    }
+
+    public boolean closeAccountSubscreen() {
+        if (cardPanel.getVisibility() == View.VISIBLE) return closeCard();
+        if (passwordPanel.getVisibility() == View.VISIBLE) return closePassword();
+        return closeEditor();
+    }
+
+    public void onLeaveAccount() {
+        ++passwordGeneration;
+        clearPasswordInputs();
+        restoreCardBrightness();
+        showPanel(overview);
+    }
+
+    private void clearPasswordInputs() {
+        oldPasswordInput.setText("");
+        newPasswordInput.setText("");
+        confirmPasswordInput.setText("");
+        changePasswordButton.setEnabled(true);
+        changePasswordButton.setText("Cập nhật mật khẩu");
+        ((TextView) activity.findViewById(R.id.readerPasswordStatus)).setVisibility(View.GONE);
+    }
+
+    private void showPasswordError(String message) {
+        TextView status = activity.findViewById(R.id.readerPasswordStatus);
+        status.setText(message);
+        status.setVisibility(View.VISIBLE);
+    }
+
+    private boolean sameAuthenticatedReader(String uid, int request) {
+        FirebaseUser current = auth.getCurrentUser();
+        return request == passwordGeneration
+                && isActive()
+                && current != null
+                && uid.equals(current.getUid())
+                && ((ReaderMainActivity) activity).isSessionReady();
+    }
+
+    private void setPasswordBusy(boolean busy) {
+        changePasswordButton.setEnabled(!busy);
+        changePasswordButton.setText(busy ? "Đang cập nhật..." : "Cập nhật mật khẩu");
+    }
+
+    private void changePassword() {
+        if (!changePasswordButton.isEnabled()
+                || !((ReaderMainActivity) activity).isSessionReady()) return;
+        String oldPassword = oldPasswordInput.getText().toString();
+        String newPassword = newPasswordInput.getText().toString();
+        String confirmation = confirmPasswordInput.getText().toString();
+        if (oldPassword.isEmpty()) {
+            oldPasswordInput.setError("Vui lòng nhập mật khẩu hiện tại");
+            oldPasswordInput.requestFocus();
+            return;
+        }
+        if (newPassword.length() < 8) {
+            newPasswordInput.setError("Mật khẩu mới phải có ít nhất 8 ký tự");
+            newPasswordInput.requestFocus();
+            return;
+        }
+        if (newPassword.equals(oldPassword)) {
+            newPasswordInput.setError("Mật khẩu mới phải khác mật khẩu hiện tại");
+            newPasswordInput.requestFocus();
+            return;
+        }
+        if (!newPassword.equals(confirmation)) {
+            confirmPasswordInput.setError("Mật khẩu nhập lại không khớp");
+            confirmPasswordInput.requestFocus();
+            return;
+        }
         FirebaseUser user = auth.getCurrentUser();
-        if (user == null) {
+        if (user == null || user.getEmail() == null || user.getEmail().trim().isEmpty()) {
+            showPasswordError("Không xác định được email đăng nhập. Vui lòng đăng nhập lại.");
+            return;
+        }
+        ((TextView) activity.findViewById(R.id.readerPasswordStatus)).setVisibility(View.GONE);
+        setPasswordBusy(true);
+        final int request = ++passwordGeneration;
+        final String uid = user.getUid();
+        AuthCredential credential = EmailAuthProvider.getCredential(user.getEmail(), oldPassword);
+        // Reauthenticate against Firebase; never compare or store password in Firestore/SQLite.
+        user.reauthenticate(credential).addOnCompleteListener(task -> {
+            if (!sameAuthenticatedReader(uid, request)) return;
+            oldPasswordInput.setText("");
+            if (!task.isSuccessful()) {
+                setPasswordBusy(false);
+                Exception error = task.getException();
+                if (error instanceof FirebaseAuthInvalidCredentialsException) {
+                    oldPasswordInput.setError("Mật khẩu hiện tại không đúng");
+                    showPasswordError("Mật khẩu hiện tại không đúng. Vui lòng thử lại.");
+                } else if (error instanceof FirebaseNetworkException) {
+                    showPasswordError("Không có kết nối mạng. Hãy kết nối Internet rồi thử lại.");
+                } else {
+                    showPasswordError("Không xác thực được mật khẩu hiện tại. Vui lòng thử lại.");
+                }
+                return;
+            }
+            user.updatePassword(newPassword).addOnCompleteListener(update -> {
+                if (!sameAuthenticatedReader(uid, request)) return;
+                setPasswordBusy(false);
+                if (!update.isSuccessful()) {
+                    if (update.getException() instanceof FirebaseNetworkException)
+                        showPasswordError("Không có kết nối mạng. Mật khẩu chưa được cập nhật.");
+                    else
+                        showPasswordError("Không cập nhật được mật khẩu. Vui lòng thử lại.");
+                    return;
+                }
+                clearPasswordInputs();
+                showPanel(overview);
+                toast("Đổi mật khẩu thành công.");
+            });
+        });
+    }
+
+    private void showDigitalCard() {
+        if (!((ReaderMainActivity) activity).isSessionReady() || auth.getCurrentUser() == null) {
             toast("Phiên đăng nhập đã hết. Hãy đăng nhập lại.");
             return;
         }
-        if (barcode.trim().isEmpty()) {
+        if (barcode == null || barcode.trim().isEmpty()) {
             toast("Thẻ chưa có mã barcode. Vui lòng liên hệ thủ thư.");
             return;
         }
-
-        LinearLayout card = new LinearLayout(activity);
-        card.setOrientation(LinearLayout.VERTICAL);
-        int pad = dp(22);
-        card.setPadding(pad, pad, pad, pad);
-        card.setBackgroundColor(android.graphics.Color.WHITE);
-
-        TextView name = cardText(fullName, 22, true);
-        name.setGravity(android.view.Gravity.CENTER);
-        card.addView(name);
-        TextView subtitle = cardText("THẺ THƯ VIỆN MYLIBRARY", 12, true);
-        subtitle.setGravity(android.view.Gravity.CENTER);
-        card.addView(subtitle);
-
-        ImageView barcodeImage = new ImageView(activity);
-        barcodeImage.setContentDescription("Mã barcode thẻ độc giả");
-        barcodeImage.setAdjustViewBounds(true);
-        barcodeImage.setScaleType(ImageView.ScaleType.FIT_CENTER);
         try {
-            BitMatrix matrix = new Code128Writer().encode(barcode, BarcodeFormat.CODE_128, 900, 220);
-            Bitmap bitmap = Bitmap.createBitmap(matrix.getWidth(), matrix.getHeight(), Bitmap.Config.ARGB_8888);
-            for (int x = 0; x < matrix.getWidth(); x++) {
-                for (int y = 0; y < matrix.getHeight(); y++) {
-                    bitmap.setPixel(x, y, matrix.get(x, y)
-                            ? android.graphics.Color.BLACK : android.graphics.Color.WHITE);
+            BitMatrix matrix = new Code128Writer().encode(barcode, BarcodeFormat.CODE_128, 900, 240);
+            Bitmap bitmap = Bitmap.createBitmap(
+                    matrix.getWidth(), matrix.getHeight(), Bitmap.Config.ARGB_8888);
+            int dark = ContextCompat.getColor(activity, R.color.black);
+            int light = ContextCompat.getColor(activity, R.color.white);
+            int[] pixels = new int[matrix.getWidth() * matrix.getHeight()];
+            for (int y = 0; y < matrix.getHeight(); y++) {
+                for (int x = 0; x < matrix.getWidth(); x++) {
+                    pixels[y * matrix.getWidth() + x] = matrix.get(x, y) ? dark : light;
                 }
             }
-            barcodeImage.setImageBitmap(bitmap);
-            LinearLayout.LayoutParams barcodeParams = new LinearLayout.LayoutParams(
-                    LinearLayout.LayoutParams.MATCH_PARENT, dp(92));
-            barcodeParams.topMargin = dp(12);
-            card.addView(barcodeImage, barcodeParams);
+            bitmap.setPixels(pixels, 0, matrix.getWidth(), 0, 0,
+                    matrix.getWidth(), matrix.getHeight());
+            ((ImageView) activity.findViewById(R.id.readerCardBarcodeImage)).setImageBitmap(bitmap);
         } catch (IllegalArgumentException error) {
             toast("Không tạo được barcode thẻ độc giả.");
             return;
         }
-
-        TextView number = cardText(barcode, 17, true);
-        number.setGravity(android.view.Gravity.CENTER);
-        card.addView(number);
-        card.addView(cardText("Ngày sinh: " + display(dateOfBirth), 14, false));
-        card.addView(cardText("Điện thoại: " + display(phone), 14, false));
-        card.addView(cardText("Hạn dùng: " + display(cardExpiryDate), 14, false));
-        card.addView(cardText("Trạng thái: " + display(cardStatus), 14, true));
-
-        AlertDialog dialog = new AlertDialog.Builder(activity)
-                .setTitle("Thẻ thư viện số")
-                .setView(card)
-                .setPositiveButton("Đóng", null)
-                .create();
-        dialog.setOnShowListener(ignored -> {
-            Window window = dialog.getWindow();
-            if (window != null) {
-                WindowManager.LayoutParams params = window.getAttributes();
-                params.screenBrightness = 1.0f;
-                window.setAttributes(params);
-                window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
-            }
-        });
-        dialog.setOnDismissListener(ignored -> {
-            Window window = dialog.getWindow();
-            if (window != null) {
-                WindowManager.LayoutParams params = window.getAttributes();
-                params.screenBrightness = WindowManager.LayoutParams.BRIGHTNESS_OVERRIDE_NONE;
-                window.setAttributes(params);
-                window.clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
-            }
-        });
-        dialog.show();
+        ((TextView) activity.findViewById(R.id.readerCardName))
+                .setText(display(fullName).toUpperCase(Locale.ROOT));
+        ((TextView) activity.findViewById(R.id.readerCardBirthDate)).setText(display(dateOfBirth));
+        ((TextView) activity.findViewById(R.id.readerCardPhone)).setText(display(phone));
+        ((TextView) activity.findViewById(R.id.readerCardExpiryDate)).setText(display(cardExpiryDate));
+        ((TextView) activity.findViewById(R.id.readerCardBarcodeNumber)).setText(barcode);
+        showPanel(cardPanel);
+        applyCardBrightness();
     }
 
-    private TextView cardText(String value, int sizeSp, boolean strong) {
-        TextView text = new TextView(activity);
-        text.setText(value);
-        text.setTextColor(android.graphics.Color.BLACK);
-        text.setTextSize(sizeSp);
-        if (strong) text.setTypeface(null, android.graphics.Typeface.BOLD);
-        text.setPadding(0, dp(7), 0, dp(7));
-        return text;
+    private boolean closeCard() {
+        if (cardPanel.getVisibility() != View.VISIBLE) return false;
+        restoreCardBrightness();
+        showPanel(overview);
+        return true;
     }
 
-    private int dp(int value) {
-        return Math.round(value * activity.getResources().getDisplayMetrics().density);
+    private void applyCardBrightness() {
+        if (cardBrightnessApplied) return;
+        Window window = activity.getWindow();
+        WindowManager.LayoutParams params = window.getAttributes();
+        originalBrightness = params.screenBrightness;
+        originallyKeepScreenOn =
+                (params.flags & WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON) != 0;
+        params.screenBrightness = 1.0f;
+        window.setAttributes(params);
+        window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
+        cardBrightnessApplied = true;
+    }
+
+    public void restoreCardBrightness() {
+        if (!cardBrightnessApplied) return;
+        Window window = activity.getWindow();
+        WindowManager.LayoutParams params = window.getAttributes();
+        params.screenBrightness = originalBrightness;
+        window.setAttributes(params);
+        if (!originallyKeepScreenOn)
+            window.clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
+        cardBrightnessApplied = false;
     }
 
     private boolean isActive() {
