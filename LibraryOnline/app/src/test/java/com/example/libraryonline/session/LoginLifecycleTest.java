@@ -22,6 +22,10 @@ public class LoginLifecycleTest {
     ActivityController<TestLogin> controller;
     public static class TestLogin extends LoginActivity {
         @Override protected SessionGateway createSessionGateway(){return gateway;}
+        @Override protected void scheduleReservationExpiryWork() {
+            // Background scheduling is covered independently; this lifecycle test
+            // runs with manifest processing disabled and no WorkManager initializer.
+        }
         @Override protected void onCreate(Bundle state){setTheme(R.style.Theme_LibraryOnline);super.onCreate(state);}
     }
     @Before public void setup(){
