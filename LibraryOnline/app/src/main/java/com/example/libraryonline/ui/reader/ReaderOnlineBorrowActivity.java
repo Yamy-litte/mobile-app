@@ -45,6 +45,11 @@ public final class ReaderOnlineBorrowActivity extends SessionActivity {
                     view.setPadding(bars.left, bars.top, bars.right, bars.bottom);
                     return androidx.core.view.WindowInsetsCompat.CONSUMED;
                 });
+        com.google.android.material.bottomnavigation.BottomNavigationView navigation =
+                findViewById(R.id.readerBottomNavigation);
+        navigation.getMenu().findItem(R.id.navReaderLoans).setChecked(true);
+        navigation.setOnItemSelectedListener(item -> navigate(item.getItemId()));
+        navigation.setOnItemReselectedListener(item -> navigate(item.getItemId()));
         bookId = getIntent().getStringExtra(BookDetailActivity.EXTRA_BOOK_ID);
         if (savedInstanceState != null)
             selectedDays = savedInstanceState.getInt("selectedDays", 7);
@@ -77,6 +82,16 @@ public final class ReaderOnlineBorrowActivity extends SessionActivity {
         });
         confirm.setOnClickListener(v -> submit());
         refresh();
+    }
+
+    private boolean navigate(int itemId) {
+        if (!isSessionReady()) return false;
+        int tab = ReaderHomeView.LOANS;
+        if (itemId == R.id.navReaderHome) tab = ReaderHomeView.HOME;
+        else if (itemId == R.id.navReaderNotifications) tab = ReaderHomeView.NOTIFICATIONS;
+        else if (itemId == R.id.navReaderAccount) tab = ReaderHomeView.ACCOUNT;
+        ReaderNavigation.returnToMain(this, tab);
+        return false;
     }
 
     @Override protected SessionProfile.Role expectedRole() {
@@ -284,6 +299,7 @@ public final class ReaderOnlineBorrowActivity extends SessionActivity {
         requestVerified = false;
         configVerified = false;
         cardActive = false;
+        submitting = false;
         refresh();
     }
 
