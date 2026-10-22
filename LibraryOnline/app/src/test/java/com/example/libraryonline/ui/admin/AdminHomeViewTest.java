@@ -57,6 +57,20 @@ public class AdminHomeViewTest {
             }
         }
     }
+    @Test public void adminAccountUsesInlineContactFieldsAndHidesHomeHeader() {
+        AdminHomeView home = new AdminHomeView(screen, AdminHomeView.HOME);
+        assertEquals(View.VISIBLE, screen.findViewById(R.id.adminHomeHeader).getVisibility());
+        home.show(AdminHomeView.ACCOUNT);
+        assertEquals(View.GONE, screen.findViewById(R.id.adminHomeHeader).getVisibility());
+        assertEquals(View.VISIBLE, screen.findViewById(R.id.adminAccount).getVisibility());
+        assertTrue(screen.findViewById(R.id.textAdminProfileEmail) instanceof android.widget.EditText);
+        assertTrue(screen.findViewById(R.id.textAdminProfilePhone) instanceof android.widget.EditText);
+        assertNotNull(screen.findViewById(R.id.buttonAdminChangePassword));
+        assertNotNull(screen.findViewById(R.id.buttonAdminAccountBack));
+        home.show(AdminHomeView.HOME);
+        assertEquals(View.VISIBLE, screen.findViewById(R.id.adminHomeHeader).getVisibility());
+    }
+
     private void writePreview(View root,String path) throws Exception {
         root.measure(View.MeasureSpec.makeMeasureSpec(320,View.MeasureSpec.EXACTLY),View.MeasureSpec.makeMeasureSpec(800,View.MeasureSpec.EXACTLY));
         root.layout(0,0,320,800);
