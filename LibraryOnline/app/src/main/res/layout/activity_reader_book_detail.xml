@@ -101,6 +101,13 @@
                     android:layout_marginTop="16dp"
                     android:background="@drawable/bg_reader_book_card"
                     android:textStyle="bold" />
+                <Button
+                    android:id="@+id/detailBorrowOnline"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:minHeight="52dp"
+                    android:layout_marginTop="12dp"
+                    android:text="Mượn sách online" />
                 <TextView
                     style="@style/CatalogueHeading"
                     android:text="@string/book_about" />
