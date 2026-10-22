@@ -17,6 +17,7 @@ import com.example.libraryonline.R;
 import com.example.libraryonline.data.local.dao.SystemConfigDao;
 import com.example.libraryonline.data.local.db.DatabaseHelper;
 import com.example.libraryonline.data.model.SystemConfig;
+import com.example.libraryonline.data.model.User;
 import com.example.libraryonline.ui.auth.SessionActivity;
 import com.example.libraryonline.data.session.SessionProfile;
 import com.google.firebase.auth.FirebaseAuth;
@@ -25,6 +26,7 @@ import com.google.firebase.firestore.DocumentSnapshot;
 import com.google.firebase.firestore.FieldValue;
 import com.google.firebase.firestore.FirebaseFirestore;
 import com.google.firebase.firestore.ListenerRegistration;
+import com.google.firebase.Timestamp;
 
 import java.text.NumberFormat;
 import java.text.SimpleDateFormat;
@@ -101,8 +103,58 @@ public final class AdminManagementActivity extends SessionActivity {
                     }
                     if (snapshot == null) return;
                     users = snapshot.getDocuments();
+                    cacheReaderProfiles(users);
                     renderUsers();
                 });
+    }
+
+    private void cacheReaderProfiles(java.util.List<DocumentSnapshot> documents) {
+        java.util.List<User> profiles = new java.util.ArrayList<>();
+        for (DocumentSnapshot doc : documents) {
+            User user = new User();
+            user.userId = doc.getId();
+            user.fullName = value(doc, "fullName");
+            user.email = value(doc, "email");
+            user.dateOfBirth = value(doc, "dateOfBirth");
+            user.phone = value(doc, "phone");
+            user.barcode = value(doc, "barcode");
+            user.role = value(doc, "role");
+            user.cardStatus = value(doc, "cardStatus");
+            user.cardExpiryDate = value(doc, "cardExpiryDate");
+            Object deleted = doc.get("isDeleted");
+            user.isDeleted = Boolean.TRUE.equals(deleted) || (deleted instanceof Number && ((Number) deleted).intValue() == 1);
+            user.createdAt = timestampText(doc.get("createdAt"));
+            user.updatedAt = timestampText(doc.get("updatedAt"));
+            // The local schema requires identity, email and audit timestamps; skip incomplete legacy rows.
+            if (!user.fullName.isEmpty() && !user.email.isEmpty()
+                    && !user.createdAt.isEmpty() && !user.updatedAt.isEmpty()) profiles.add(user);
+        }
+        io.execute(() -> {
+            try (DatabaseHelper helper = new DatabaseHelper(getApplicationContext())) {
+                android.database.sqlite.SQLiteDatabase db = helper.getWritableDatabase();
+                db.beginTransaction();
+                try {
+                    com.example.libraryonline.data.local.dao.UserDao dao =
+                            new com.example.libraryonline.data.local.dao.UserDao(db);
+                    for (User user : profiles) {
+                        try { dao.upsertFromCloud(user); } catch (RuntimeException ignored) {
+                            // Keep other readers cacheable if a legacy email collision exists.
+                        }
+                    }
+                    db.setTransactionSuccessful();
+                } finally { db.endTransaction(); }
+            } catch (RuntimeException ignored) {
+                // A cache failure must not hide cloud-backed account management.
+            }
+        });
+    }
+
+    private String timestampText(Object value) {
+        if (value instanceof Timestamp) {
+            return new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss", Locale.ROOT)
+                    .format(((Timestamp) value).toDate());
+        }
+        return value instanceof String ? ((String) value).trim() : "";
     }
 
     private void renderUsers() {
