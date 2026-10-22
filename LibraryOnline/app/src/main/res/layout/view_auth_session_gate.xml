@@ -7,7 +7,7 @@
     android:orientation="vertical"
     android:gravity="center"
     android:padding="24dp"
-    android:background="#F5F7FF"
+    android:background="@color/background"
     android:clickable="true"
     android:focusable="true">
     <ProgressBar
@@ -16,6 +16,7 @@
         android:layout_height="48dp" />
     <TextView
         android:id="@+id/textSessionStatus"
+        android:textColor="@color/text_secondary"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:gravity="center"
