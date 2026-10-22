@@ -11,7 +11,7 @@
     <string name="admin_screen_borrow">Mượn trực tiếp</string>
     <string name="admin_screen_return">Nhận trả sách</string>
     <string name="admin_screen_add_book">Quản lý / thêm sách</string>
-    <string name="admin_screen_online">Giao sách Online / Đặt trước</string>
+    <string name="admin_screen_online">Giao sách Online</string>
     <string name="admin_screen_borrow_today">Phiếu mượn hôm nay</string>
     <string name="admin_screen_return_today">Sách trả hôm nay</string>
     <string name="admin_screen_waiting">Chờ giao sách</string>

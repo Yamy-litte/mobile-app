@@ -123,7 +123,7 @@ public class AdminMainActivity extends com.example.libraryonline.ui.auth.Session
         findViewById(R.id.actionAdminOnline).setOnClickListener(v -> {
             if (isSessionReady())
                 Toast.makeText(this,
-                        "Giao Online / Đặt trước chưa được hỗ trợ tại quầy. Không tạo giao dịch giả.",
+                        "Giao sách Online chưa được hỗ trợ tại quầy. Không tạo giao dịch giả.",
                         Toast.LENGTH_LONG).show();
         });
         findViewById(R.id.buttonAdminAccountBack).setOnClickListener(

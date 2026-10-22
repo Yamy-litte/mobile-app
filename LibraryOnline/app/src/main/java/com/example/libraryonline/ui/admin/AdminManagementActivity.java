@@ -450,7 +450,10 @@ public class AdminManagementActivity extends SessionActivity {
         TextView holdReservation = text("", 14, false);
         TextView lateFee = text("", 14, false);
         TextView multiplier = text("", 14, false);
-        for (TextView v : new TextView[]{holdOnline, holdReservation, lateFee, multiplier})
+        // Reservation priority and the old automatic lost-book multiplier are
+        // intentionally not exposed in the revised UI. Keep the corresponding
+        // legacy config fields intact so existing Firestore/SQLite data survives.
+        for (TextView v : new TextView[]{holdOnline, lateFee})
             fixed.addView(v, matchWrap());
         content.addView(fixed, matchWrap());
 
