@@ -160,10 +160,7 @@ public class AdminManagementActivity extends SessionActivity {
     private void styleReaderFilterChips(java.util.List<Button> chips, String[] keys) {
         for (int i = 0; i < keys.length; i++) {
             boolean selected = keys[i].equals(readerFilter);
-            chips.get(i).setBackgroundTintList(android.content.res.ColorStateList.valueOf(
-                    getColor(selected ? R.color.admin_screen_primary : R.color.library_surface)));
-            chips.get(i).setTextColor(getColor(
-                    selected ? R.color.white : R.color.admin_screen_ink));
+            chips.get(i).setSelected(selected);
         }
     }
 
@@ -574,11 +571,7 @@ public class AdminManagementActivity extends SessionActivity {
             final int request = ++reportGeneration;
             for (int i = 0; i < choices.length; i++) {
                 boolean selected = i == requestedPeriod;
-                choices[i].setBackgroundTintList(
-                        android.content.res.ColorStateList.valueOf(
-                                getColor(selected ? R.color.admin_screen_primary
-                                        : R.color.library_surface)));
-                choices[i].setTextColor(getColor(selected ? R.color.white : R.color.admin_screen_ink));
+                choices[i].setSelected(selected);
             }
             status.setText("Đang tổng hợp các giao dịch trên thiết bị...");
             io.execute(() -> {
