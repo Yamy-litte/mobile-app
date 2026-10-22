@@ -126,6 +126,7 @@ public final class CirculationRepository implements AutoCloseable {
         SQLiteDatabase db = helper.getWritableDatabase();
         db.beginTransaction();
         try {
+            expireTimedOutReservations(db, timestamp());
             User reader = findReaderByBarcode(db, readerBarcode);
             if (reader == null) throw new IllegalArgumentException("Không tìm thấy thẻ độc giả.");
             String adminId = findActiveAdminId(db, adminAuthUid);
