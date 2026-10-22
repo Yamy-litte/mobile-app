@@ -70,6 +70,36 @@ public final class InventoryChanges {
         return writes;
     }
 
+    /** Restore one repaired copy and its parent available counter atomically. */
+    public static Map<String, Map<String, Object>> restore(
+            BookTitle title, List<BookCopy> copies, String copyId) {
+        BookCopy selected = null;
+        for (BookCopy copy : copies)
+            if (copyId.equals(copy.copyId)) selected = copy;
+        if (selected == null)
+            throw new IllegalArgumentException("Không tìm thấy cuốn sách cần hiện lại.");
+        // An acknowledged retry must not increase the counter twice.
+        if ("SanSang".equals(selected.copyStatus) && !selected.isHidden)
+            return Collections.emptyMap();
+        if (title.isHidden)
+            throw new IllegalArgumentException(
+                    "Đầu sách đang ẩn. Hãy hiện lại đầu sách trước khi hiện cuốn sách.");
+        InventoryPolicy.requireRestorable(selected);
+        InventoryPolicy.audit(title, copies);
+        if (title.availableCopies >= title.totalCopies)
+            throw new IllegalArgumentException("Số cuốn sẵn sàng không hợp lệ. Cần đối soát kho.");
+
+        Map<String, Map<String, Object>> writes = new LinkedHashMap<>();
+        Map<String, Object> changedCopy = new HashMap<>();
+        changedCopy.put("copyStatus", "SanSang");
+        changedCopy.put("isHidden", false);
+        writes.put("BookCopies/" + copyId, changedCopy);
+        Map<String, Object> changedTitle = new HashMap<>();
+        changedTitle.put("availableCopies", title.availableCopies + 1);
+        writes.put("BookTitles/" + title.bookTitleId, changedTitle);
+        return writes;
+    }
+
     public static Map<String, Map<String, Object>> transition(
             BookTitle b, List<BookCopy> copies, String copyId, String target) {
         if (!"ThanhLy".equals(target) && !"DangSuaChua".equals(target))

@@ -47,6 +47,10 @@ public final class InventoryRepository {
         return changeCopy(id, "ThanhLy");
     }
 
+    public Task<Void> restoreCopy(String id) {
+        return changeCopy(id, "SanSang");
+    }
+
     private Task<Void> changeCopy(String id, String state) {
         return db.collection("BookCopies")
                 .document(id)
@@ -197,12 +201,11 @@ public final class InventoryRepository {
                                                                                                         book,
                                                                                                         copies,
                                                                                                         intake)
-                                                                                        : InventoryChanges
-                                                                                                .transition(
-                                                                                                        book,
-                                                                                                        copies,
-                                                                                                        copyId,
-                                                                                                        target);
+                                                                                        : "SanSang".equals(target)
+                                                                                         ? InventoryChanges.restore(
+                                                                                                 book, copies, copyId)
+                                                                                         : InventoryChanges.transition(
+                                                                                                 book, copies, copyId, target);
                                                                 for (Map.Entry<
                                                                                 String,
                                                                                 Map<String, Object>>
@@ -311,6 +314,21 @@ public final class InventoryRepository {
                     Map<String, Object> changes = new HashMap<>(metadata);
                     changes.put("updatedAt", FieldValue.serverTimestamp());
                     tx.update(ref, changes);
+                    return null;
+                });
+    }
+
+    /** Unhide the title without touching copy identities or inventory counters. */
+    public Task<Void> restoreTitle(String id) {
+        return db.runTransaction(
+                tx -> {
+                    DocumentReference ref = titleRef(id);
+                    DocumentSnapshot old = tx.get(ref);
+                    if (!old.exists())
+                        throw new IllegalArgumentException("Không tìm thấy đầu sách.");
+                    if (!Boolean.TRUE.equals(old.getBoolean("isHidden")))
+                        return null; // A repeated acknowledged restore is idempotent.
+                    tx.update(ref, "isHidden", false, "updatedAt", FieldValue.serverTimestamp());
                     return null;
                 });
     }

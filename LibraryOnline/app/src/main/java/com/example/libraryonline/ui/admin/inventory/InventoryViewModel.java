@@ -145,8 +145,14 @@ public final class InventoryViewModel extends ViewModel {
                 case "retire":
                     task = repo.retireCopy(id);
                     break;
+                case "restore":
+                    task = repo.restoreCopy(id);
+                    break;
                 case "hideTitle":
                     task = repo.hideTitle(id);
+                    break;
+                case "restoreTitle":
+                    task = repo.restoreTitle(id);
                     break;
                 default:
                     throw new IllegalArgumentException("Thao tác không hợp lệ.");

@@ -58,6 +58,21 @@ public final class InventoryPolicy {
                         + " tiên.");
     }
 
+    /** Only a copy hidden for repair can be returned to circulation. Retired/lost copies stay retired. */
+    public static boolean canRestore(BookCopy copy) {
+        return copy != null
+                && copy.isHidden
+                && "DangSuaChua".equals(copy.copyStatus)
+                && copy.priorityUserId == null;
+    }
+
+    public static void requireRestorable(BookCopy copy) {
+        if (!canRestore(copy))
+            throw new IllegalArgumentException(
+                    "Chỉ được hiện lại cuốn đang ẩn để sửa chữa và không có người giữ. "
+                            + "Cuốn thanh lý hoặc mất không thể phục hồi.");
+    }
+
     public static void audit(BookTitle title, List<BookCopy> copies) {
         long available = 0;
         for (BookCopy copy : copies) if (isAvailable(copy)) available++;
