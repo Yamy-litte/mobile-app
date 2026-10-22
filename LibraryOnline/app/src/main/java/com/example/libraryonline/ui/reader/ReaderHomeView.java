@@ -21,7 +21,11 @@ public final class ReaderHomeView {
         R.id.navReaderHome, R.id.navReaderLoans, R.id.navReaderNotifications, R.id.navReaderAccount
     };
     private int selected;
-    private java.util.function.IntConsumer tabChangedListener;
+    public interface TabChangedListener {
+        void onTabChanged(int tab);
+    }
+
+    private TabChangedListener tabChangedListener;
 
     public ReaderHomeView(Activity activity, int restoredTab) {
         this.activity = activity;
@@ -43,7 +47,7 @@ public final class ReaderHomeView {
         show(restoredTab);
     }
 
-    public void setOnTabChangedListener(java.util.function.IntConsumer listener) {
+    public void setOnTabChangedListener(TabChangedListener listener) {
         tabChangedListener = listener;
     }
 
@@ -57,7 +61,7 @@ public final class ReaderHomeView {
             activity.findViewById(panels[i])
                     .setVisibility(i == selected ? View.VISIBLE : View.GONE);
         navigation.getMenu().findItem(tabs[selected]).setChecked(true);
-        if (tabChangedListener != null) tabChangedListener.accept(selected);
+        if (tabChangedListener != null) tabChangedListener.onTabChanged(selected);
     }
 
     public boolean onBack() {
