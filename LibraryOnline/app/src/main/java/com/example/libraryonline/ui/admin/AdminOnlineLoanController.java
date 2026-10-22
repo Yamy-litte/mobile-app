@@ -24,7 +24,7 @@ import com.google.firebase.Timestamp;
 
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
-import java.util.Comparator;
+import java.util.Collections;
 import java.util.Date;
 import java.util.HashSet;
 import java.util.List;
@@ -106,10 +106,14 @@ final class AdminOnlineLoanController {
         LinearLayout container = activity.findViewById(R.id.containerAdminOnlineRequests);
         container.removeAllViews();
         List<DocumentSnapshot> docs = new ArrayList<>(snapshot.getDocuments());
-        docs.sort(Comparator.comparing((DocumentSnapshot doc) -> {
-            Timestamp stamp = doc.getTimestamp("createdAt");
-            return stamp == null ? 0L : stamp.toDate().getTime();
-        }).reversed());
+        // Compatible with Android API 23 (List.sort and Comparator.comparing need API 24).
+        Collections.sort(docs, (left, right) -> {
+            Timestamp leftCreated = left.getTimestamp("createdAt");
+            Timestamp rightCreated = right.getTimestamp("createdAt");
+            long leftTime = leftCreated == null ? 0L : leftCreated.toDate().getTime();
+            long rightTime = rightCreated == null ? 0L : rightCreated.toDate().getTime();
+            return Long.compare(rightTime, leftTime);
+        });
         // Never schedule expiry from cached-only snapshots: a server decision
         // may already have delivered or released the book.
         if (!snapshot.getMetadata().isFromCache()) {
