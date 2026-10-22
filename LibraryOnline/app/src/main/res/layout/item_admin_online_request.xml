@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginBottom="12dp" android:padding="16dp" android:orientation="vertical" android:background="@drawable/bg_admin_screen_card">
+<TextView android:id="@+id/adminOnlineItemTitle" android:layout_width="match_parent" android:layout_height="wrap_content" android:paddingBottom="6dp" android:textSize="16sp" android:textColor="@color/text_primary" android:textStyle="bold"/>
+<TextView android:id="@+id/adminOnlineItemReader" android:layout_width="match_parent" android:layout_height="wrap_content" android:paddingBottom="6dp" android:textSize="13sp" android:textColor="@color/text_secondary"/>
+<TextView android:id="@+id/adminOnlineItemDays" android:layout_width="match_parent" android:layout_height="wrap_content" android:paddingBottom="6dp" android:textSize="13sp" android:textColor="@color/text_secondary"/>
+<TextView android:id="@+id/adminOnlineItemApproved" android:layout_width="match_parent" android:layout_height="wrap_content" android:paddingBottom="6dp" android:textSize="16sp" android:textColor="@color/text_primary" android:textStyle="bold" android:visibility="gone"/>
+<Button android:id="@+id/adminOnlineItemRelease" android:layout_width="match_parent" android:layout_height="48dp" android:layout_marginTop="8dp" android:backgroundTint="@color/library_blue" android:textColor="@color/white" android:textAllCaps="false" android:text="Hết 24 giờ · Kiểm tra và trả kho" android:visibility="gone"/>
+<TextView android:id="@+id/adminOnlineItemSent" android:layout_width="match_parent" android:layout_height="wrap_content" android:paddingBottom="6dp" android:textSize="13sp" android:textColor="@color/text_secondary" android:visibility="gone"/>
+<LinearLayout android:id="@+id/adminOnlineItemActions" android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal" android:visibility="gone">
+<Button android:id="@+id/adminOnlineItemApprove" android:layout_width="0dp" android:layout_height="50dp" android:layout_weight="1" android:text="@string/online_borrow_review_approve" android:backgroundTint="@color/library_blue" android:textColor="@color/white" android:textAllCaps="false"/>
+<Button android:id="@+id/adminOnlineItemReject" android:layout_width="0dp" android:layout_height="50dp" android:layout_weight="1" android:text="@string/online_borrow_review_reject" android:backgroundTint="@color/library_blue" android:textColor="@color/white" android:textAllCaps="false"/>
+</LinearLayout>
+</LinearLayout>
