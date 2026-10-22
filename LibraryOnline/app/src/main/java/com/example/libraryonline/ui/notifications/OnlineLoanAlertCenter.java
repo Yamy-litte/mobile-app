@@ -37,7 +37,8 @@ public final class OnlineLoanAlertCenter {
     public static boolean enabled(Context context) {
         NotificationManager manager = (NotificationManager)
                 context.getSystemService(Context.NOTIFICATION_SERVICE);
-        return manager != null && manager.areNotificationsEnabled()
+        return manager != null
+                && androidx.core.app.NotificationManagerCompat.from(context).areNotificationsEnabled()
                 && (Build.VERSION.SDK_INT < 33
                     || context.checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS)
                             == PackageManager.PERMISSION_GRANTED);
