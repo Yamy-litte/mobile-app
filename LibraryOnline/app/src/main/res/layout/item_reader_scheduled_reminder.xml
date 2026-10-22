@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent" android:layout_height="wrap_content"
+    android:layout_marginTop="10dp" android:background="@drawable/bg_admin_card"
+    android:padding="16dp" android:orientation="vertical">
+    <TextView android:id="@+id/readerScheduledTitle" android:layout_width="match_parent"
+        android:layout_height="wrap_content" android:textColor="@color/library_text"
+        android:textSize="15sp" android:textStyle="bold"/>
+    <TextView android:id="@+id/readerScheduledTime" android:layout_width="match_parent"
+        android:layout_height="wrap_content" android:layout_marginTop="5dp"
+        android:textColor="@color/library_blue" android:textSize="12sp"/>
+    <TextView android:id="@+id/readerScheduledMessage" android:layout_width="match_parent"
+        android:layout_height="wrap_content" android:layout_marginTop="7dp"
+        android:textColor="@color/library_muted" android:textSize="13sp"/>
+</LinearLayout>

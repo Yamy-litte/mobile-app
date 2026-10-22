@@ -1,43 +1,67 @@
 <?xml version="1.0" encoding="utf-8"?>
 <ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
-    android:id="@+id/readerNotifications"
-    android:layout_width="match_parent"
-    android:layout_height="match_parent"
-    android:fillViewport="true"
-    android:visibility="gone">
-    <LinearLayout
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:orientation="vertical"
-        android:padding="20dp">
-        <TextView style="@style/CatalogueHeading"
-            android:text="@string/online_borrow_notifications"/>
-        <Button android:id="@+id/buttonReaderEnableOnlineAlerts" android:layout_width="match_parent"
-            android:layout_height="48dp" android:layout_marginTop="12dp"
-            android:textAllCaps="false" android:backgroundTint="@color/library_blue"
-            android:textColor="@color/white" android:text="@string/online_borrow_enable_alerts"/>
-        <TextView style="@style/CatalogueCaption" android:layout_marginTop="6dp"
-            android:text="@string/online_borrow_alert_note"/>
+    android:id="@+id/readerNotifications" android:layout_width="match_parent"
+    android:layout_height="match_parent" android:fillViewport="true"
+    android:background="@color/library_background" android:visibility="gone">
+    <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
+        android:padding="16dp" android:paddingBottom="30dp" android:orientation="vertical">
+        <TextView android:layout_width="match_parent" android:layout_height="wrap_content"
+            android:text="Thông báo" android:textColor="@color/library_navy"
+            android:textSize="23sp" android:textStyle="bold"/>
+        <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
+            android:layout_marginTop="18dp" android:background="@drawable/bg_admin_card"
+            android:padding="16dp" android:orientation="vertical">
+            <TextView android:layout_width="match_parent" android:layout_height="wrap_content"
+                android:text="Tùy chọn nhắc nhở" android:textColor="@color/library_text"
+                android:textStyle="bold" android:textSize="17sp"/>
+            <androidx.appcompat.widget.SwitchCompat android:id="@+id/readerAlertsEnabled"
+                android:layout_width="match_parent" android:layout_height="wrap_content"
+                android:layout_marginTop="12dp" android:minHeight="48dp" android:checked="true"
+                android:text="Nhận thông báo" android:textColor="@color/library_text"/>
+            <androidx.appcompat.widget.SwitchCompat android:id="@+id/readerAlertsOffline"
+                android:layout_width="match_parent" android:layout_height="wrap_content"
+                android:layout_marginTop="8dp" android:minHeight="48dp" android:checked="true"
+                android:text="Nhắc cục bộ khi mất mạng" android:textColor="@color/library_text"/>
+            <TextView android:layout_width="match_parent" android:layout_height="wrap_content"
+                android:layout_marginTop="10dp" android:text="Nhắc theo lịch đã lưu trên thiết bị; thông báo mới sẽ cập nhật khi có mạng."
+                android:textColor="@color/library_muted" android:textSize="13sp"/>
+            <TextView android:id="@+id/readerAlertsPermissionStatus"
+                android:layout_width="match_parent" android:layout_height="wrap_content"
+                android:layout_marginTop="10dp" android:textColor="@color/library_muted" android:textSize="13sp"/>
+            <TextView android:id="@+id/readerAlertsSystemPermission"
+                android:layout_width="match_parent" android:layout_height="wrap_content"
+                android:layout_marginTop="8dp" android:text="Mở cài đặt thông báo Android"
+                android:textColor="@color/library_blue" android:textStyle="bold" android:visibility="gone"/>
+        </LinearLayout>
+        <TextView android:layout_width="match_parent" android:layout_height="wrap_content"
+            android:layout_marginTop="22dp" android:text="Nhắc đã lên lịch"
+            android:textColor="@color/library_text" android:textSize="17sp" android:textStyle="bold"/>
+        <TextView android:id="@+id/readerAlertsScheduledSummary"
+            android:layout_width="match_parent" android:layout_height="wrap_content"
+            android:layout_marginTop="6dp" android:text="Đang tải lịch nhắc..."
+            android:textColor="@color/library_muted" android:textSize="13sp"/>
+        <LinearLayout android:id="@+id/readerAlertsScheduled"
+            android:layout_width="match_parent" android:layout_height="wrap_content"
+            android:orientation="vertical"/>
+        <TextView android:layout_width="match_parent" android:layout_height="wrap_content"
+            android:layout_marginTop="22dp" android:text="Gần đây · Mượn Online"
+            android:textColor="@color/library_text" android:textSize="17sp" android:textStyle="bold"/>
         <TextView android:id="@+id/textReaderOnlineNotificationsSummary"
-            style="@style/CatalogueBody" android:layout_marginTop="6dp"
-            android:text="@string/online_borrow_loading"/>
+            android:layout_width="match_parent" android:layout_height="wrap_content"
+            android:layout_marginTop="6dp" android:text="@string/online_borrow_loading"
+            android:textColor="@color/library_muted" android:textSize="13sp"/>
         <LinearLayout android:id="@+id/containerReaderOnlineNotifications"
             android:layout_width="match_parent" android:layout_height="wrap_content"
-            android:layout_marginTop="12dp" android:layout_marginBottom="20dp"
-            android:orientation="vertical"/>
-        <TextView style="@style/CatalogueHeading"
-            android:text="@string/online_borrow_local_notifications"/>
-
-        <TextView
-            android:id="@+id/textReaderNotificationsSummary"
-            style="@style/CatalogueBody"
-            android:layout_marginTop="6dp"
-            android:text="Đang tải thông báo..." />
-        <LinearLayout
-            android:id="@+id/containerReaderNotifications"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="16dp"
-            android:orientation="vertical" />
+            android:layout_marginTop="10dp" android:orientation="vertical"/>
+        <TextView android:layout_width="match_parent" android:layout_height="wrap_content"
+            android:layout_marginTop="22dp" android:text="Lịch sử · Trên thiết bị"
+            android:textColor="@color/library_text" android:textSize="17sp" android:textStyle="bold"/>
+        <TextView android:id="@+id/textReaderNotificationsSummary"
+            android:layout_width="match_parent" android:layout_height="wrap_content"
+            android:layout_marginTop="6dp" android:text="Đang tải thông báo..."
+            android:textColor="@color/library_muted" android:textSize="13sp"/>
+        <LinearLayout android:id="@+id/containerReaderNotifications"
+            android:layout_width="match_parent" android:layout_height="wrap_content"
+            android:layout_marginTop="10dp" android:orientation="vertical"/>
     </LinearLayout>
 </ScrollView>

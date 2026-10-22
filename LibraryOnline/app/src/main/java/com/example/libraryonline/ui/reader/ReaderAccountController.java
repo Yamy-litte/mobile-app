@@ -46,6 +46,7 @@ public final class ReaderAccountController {
     private final View editor;
     private final View passwordPanel;
     private final View cardPanel;
+    private final View settingsPanel;
     private final EditText oldPasswordInput;
     private final EditText newPasswordInput;
     private final EditText confirmPasswordInput;
@@ -72,6 +73,7 @@ public final class ReaderAccountController {
         editor = activity.findViewById(R.id.readerAccountEditor);
         passwordPanel = activity.findViewById(R.id.readerAccountPassword);
         cardPanel = activity.findViewById(R.id.readerAccountCard);
+        settingsPanel = activity.findViewById(R.id.readerAccountNotificationSettings);
         oldPasswordInput = activity.findViewById(R.id.readerPasswordOld);
         newPasswordInput = activity.findViewById(R.id.readerPasswordNew);
         confirmPasswordInput = activity.findViewById(R.id.readerPasswordConfirm);
@@ -96,8 +98,8 @@ public final class ReaderAccountController {
         activity.findViewById(R.id.readerPasswordBack).setOnClickListener(v -> closePassword());
         activity.findViewById(R.id.readerCardBack).setOnClickListener(v -> closeCard());
         changePasswordButton.setOnClickListener(v -> changePassword());
-        activity.findViewById(R.id.readerAccountNotificationsSettings).setOnClickListener(
-                v -> toast("Cài đặt thông báo chưa được hỗ trợ ở phiên bản này."));
+        activity.findViewById(R.id.readerAccountNotificationsSettings).setOnClickListener(v -> showPanel(settingsPanel));
+        activity.findViewById(R.id.readerNotificationSettingsBack).setOnClickListener(v -> showPanel(overview));
         activity.findViewById(R.id.readerAccountAbout).setOnClickListener(v ->
                 new AlertDialog.Builder(activity)
                         .setTitle("Về MyLibrary")
@@ -215,6 +217,7 @@ public final class ReaderAccountController {
         editor.setVisibility(panel == editor ? View.VISIBLE : View.GONE);
         passwordPanel.setVisibility(panel == passwordPanel ? View.VISIBLE : View.GONE);
         cardPanel.setVisibility(panel == cardPanel ? View.VISIBLE : View.GONE);
+        settingsPanel.setVisibility(panel == settingsPanel ? View.VISIBLE : View.GONE);
         ((ScrollView) activity.findViewById(R.id.readerAccount)).scrollTo(0, 0);
     }
 
@@ -242,6 +245,7 @@ public final class ReaderAccountController {
     }
 
     public boolean closeAccountSubscreen() {
+        if (settingsPanel.getVisibility() == View.VISIBLE) { showPanel(overview); return true; }
         if (cardPanel.getVisibility() == View.VISIBLE) return closeCard();
         if (passwordPanel.getVisibility() == View.VISIBLE) return closePassword();
         return closeEditor();

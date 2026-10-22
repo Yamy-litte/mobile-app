@@ -20,6 +20,7 @@ import com.example.libraryonline.ui.admin.AdminNavigation;
 import com.example.libraryonline.ui.reader.ReaderHomeView;
 import com.example.libraryonline.ui.reader.ReaderMainActivity;
 import com.example.libraryonline.ui.reader.ReaderNavigation;
+import com.example.libraryonline.ui.reader.ReaderNotificationSettingsController;
 
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
@@ -82,7 +83,7 @@ public final class OnlineLoanAlertCenter {
         if (prefs.getBoolean(key, false)) return;
         // Persist first: repeat snapshots or changed lifecycle states cannot alert twice.
         prefs.edit().putBoolean(key, true).apply();
-        if (!enabled(activity)) return;
+        if (!enabled(activity) || (!admin && !ReaderNotificationSettingsController.alertsAllowed(activity, uid))) return;
         NotificationManager manager = (NotificationManager)
                 activity.getSystemService(Context.NOTIFICATION_SERVICE);
         if (manager == null) return;

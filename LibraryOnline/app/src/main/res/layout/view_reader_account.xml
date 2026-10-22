@@ -344,6 +344,7 @@
                 android:text="›" />
         </LinearLayout>
         </LinearLayout>
+        <include layout="@layout/view_reader_notification_settings" />
         <include layout="@layout/view_reader_password_change" />
         <include layout="@layout/view_reader_digital_card" />
     </LinearLayout>

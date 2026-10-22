@@ -41,6 +41,7 @@ public class ReaderMainActivity extends com.example.libraryonline.ui.auth.Sessio
     private ReaderHomeView homeView;
     private ReaderAccountController accountController;
     private ReaderOnlineLoanController onlineLoanController;
+    private ReaderNotificationSettingsController notificationSettings;
 
     private FirebaseFirestore firestore;
     private FirebaseAuth auth;
@@ -102,6 +103,7 @@ public class ReaderMainActivity extends com.example.libraryonline.ui.auth.Sessio
                         });
         bindViews();
         bindActions();
+        notificationSettings = new ReaderNotificationSettingsController(this);
         accountController = new ReaderAccountController(this);
         onlineLoanController = new ReaderOnlineLoanController(this);
         homeView.setOnTabChangedListener(tab -> {
@@ -124,6 +126,7 @@ public class ReaderMainActivity extends com.example.libraryonline.ui.auth.Sessio
             accountController.applyCardBrightnessIfVisible();
         }
         loadReaderProfile();
+        if (notificationSettings != null) notificationSettings.start(profile.uid);
         if (databaseHelper == null) databaseHelper = new DatabaseHelper(getApplicationContext());
         loadBooksFromSqlite();
         loadReaderLoans(profile.user == null ? null : profile.user.userId);
@@ -378,6 +381,7 @@ public class ReaderMainActivity extends com.example.libraryonline.ui.auth.Sessio
                 summary.setText(active.isEmpty()
                         ? "Bạn hiện không có sách đang mượn hoặc quá hạn."
                         : "Bạn đang mượn " + active.size() + " cuốn sách.");
+                if (notificationSettings != null) notificationSettings.updateLoans(active);
                 for (LoanDetail loan : active) {
                     View card = getLayoutInflater().inflate(
                             R.layout.item_reader_loan_record, container, false);
@@ -422,6 +426,7 @@ public class ReaderMainActivity extends com.example.libraryonline.ui.auth.Sessio
                 summary.setText(notifications.isEmpty()
                         ? "Bạn chưa có thông báo nào."
                         : notifications.size() + " thông báo · " + unread + " chưa đọc");
+                if (notificationSettings != null) notificationSettings.setLocalUnread(unread);
                 for (LibraryNotification notification : notifications) {
                     View card = getLayoutInflater().inflate(
                             R.layout.item_reader_local_notification, container, false);
@@ -532,6 +537,7 @@ public class ReaderMainActivity extends com.example.libraryonline.ui.auth.Sessio
     @Override
     protected void onSessionStopped() {
         if (onlineLoanController != null) onlineLoanController.stop();
+        if (notificationSettings != null) notificationSettings.stop();
         if (accountController != null) accountController.onLeaveAccount();
         if (homeView != null) homeView.clearProfile();
         if (catalogueSyncManager != null) {
@@ -553,6 +559,8 @@ public class ReaderMainActivity extends com.example.libraryonline.ui.auth.Sessio
         return value == null || value.trim().isEmpty() ? fallback : value.trim();
     }
 
+    ReaderNotificationSettingsController notificationSettings() { return notificationSettings; }
+
     private void showMessage(String message) {
         Toast.makeText(this, message, Toast.LENGTH_LONG).show();
     }
@@ -561,12 +569,19 @@ public class ReaderMainActivity extends com.example.libraryonline.ui.auth.Sessio
     protected void onResume() {
         super.onResume();
         if (accountController != null) accountController.applyCardBrightnessIfVisible();
+        if (notificationSettings != null) notificationSettings.refresh();
     }
 
     @Override
     protected void onPause() {
         if (accountController != null) accountController.restoreCardBrightness();
         super.onPause();
+    }
+
+    @Override
+    public void onRequestPermissionsResult(int requestCode, String[] permissions, int[] results) {
+        super.onRequestPermissionsResult(requestCode, permissions, results);
+        if (notificationSettings != null) notificationSettings.refresh();
     }
 
     @Override

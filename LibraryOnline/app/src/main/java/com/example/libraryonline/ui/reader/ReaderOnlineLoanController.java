@@ -50,8 +50,6 @@ final class ReaderOnlineLoanController {
         stop();
         if (uid == null || uid.isEmpty()) return;
         authorizedUid = uid;
-        activity.findViewById(R.id.buttonReaderEnableOnlineAlerts)
-                .setOnClickListener(v -> OnlineLoanAlertCenter.requestOptIn(activity));
         ((TextView) activity.findViewById(R.id.textReaderOnlineSummary))
                 .setText(R.string.online_borrow_loading);
         ((TextView) activity.findViewById(R.id.textReaderOnlineNotificationsSummary))
@@ -176,6 +174,8 @@ final class ReaderOnlineLoanController {
             ((TextView) item.findViewById(R.id.readerOnlineItemSent))
                     .setText("Gửi: " + time(doc.getTimestamp("createdAt")));
         }
+        if (activity.notificationSettings() != null)
+            activity.notificationSettings().updateOnlineRequests(records);
         if (!activeCountdowns.isEmpty() && current(authorizedUid))
             clockHandler.postDelayed(countdownPulse, 60_000L);
     }
@@ -196,6 +196,8 @@ final class ReaderOnlineLoanController {
         int unread = 0;
         for (DocumentSnapshot doc : notifications)
             if (doc.get("readAt") == null) unread++;
+        if (activity.notificationSettings() != null)
+            activity.notificationSettings().setOnlineUnread(unread);
         message(R.id.textReaderOnlineNotificationsSummary,
                 notifications.isEmpty() ? "Chưa có thông báo mượn Online."
                 : notifications.size() + " thông báo · " + unread + " chưa đọc"
@@ -212,6 +214,7 @@ final class ReaderOnlineLoanController {
                             ? "" : notification.getString("message"));
             ((TextView) item.findViewById(R.id.readerOnlineNotDate)).setText(
                     time(notification.getTimestamp("createdAt")));
+            item.setAlpha(notification.get("readAt") == null ? 1f : 0.75f);
             if (notification.get("readAt") == null) {
                 TextView mark = item.findViewById(R.id.readerOnlineNotRead);
                 mark.setVisibility(View.VISIBLE);
