@@ -14,6 +14,7 @@ import org.robolectric.annotation.Config;
 
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
 
 @RunWith(RobolectricTestRunner.class)
 @Config(sdk = 28, manifest = Config.NONE)
@@ -217,10 +218,7 @@ public class CirculationRepositoryTest {
                     repository.returnCopy("CARD-1", "BOOK-1", "admin-auth-1");
             assertNotNull(returned);
             assertAvailableCopies(context, 0);
-            assertEquals("Đã ưu tiên cuốn sách cho độc giả đang chờ đến", 
-                    returned.message.contains("Đã ưu tiên cuốn sách cho độc giả đang chờ đến")
-                            ? "Đã ưu tiên cuốn sách cho độc giả đang chờ đến"
-                            : "Không có thông báo ưu tiên trong kết quả trả sách");
+            assertTrue(returned.message.contains("Đã ưu tiên cuốn sách cho độc giả đang chờ đến"));
             assertDatabaseValue(context,
                     "SELECT copyStatus FROM BookCopies WHERE copyId='copy-1'", "DaDatTruoc");
             assertDatabaseValue(context,
