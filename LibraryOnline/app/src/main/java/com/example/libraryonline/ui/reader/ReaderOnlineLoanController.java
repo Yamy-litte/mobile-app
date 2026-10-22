@@ -20,7 +20,7 @@ import com.google.firebase.Timestamp;
 
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
-import java.util.Comparator;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.List;
@@ -119,10 +119,14 @@ final class ReaderOnlineLoanController {
 
     private List<DocumentSnapshot> recent(QuerySnapshot snap) {
         List<DocumentSnapshot> sorted = new ArrayList<>(snap.getDocuments());
-        sorted.sort(Comparator.comparing((DocumentSnapshot doc) -> {
-            Timestamp ts = doc.getTimestamp("createdAt");
-            return ts == null ? 0L : ts.toDate().getTime();
-        }).reversed());
+        // Keep descending chronological order without Java 8 collection APIs added in Android 24.
+        Collections.sort(sorted, (left, right) -> {
+            Timestamp leftCreated = left.getTimestamp("createdAt");
+            Timestamp rightCreated = right.getTimestamp("createdAt");
+            long leftTime = leftCreated == null ? 0L : leftCreated.toDate().getTime();
+            long rightTime = rightCreated == null ? 0L : rightCreated.toDate().getTime();
+            return Long.compare(rightTime, leftTime);
+        });
         return sorted;
     }
 
