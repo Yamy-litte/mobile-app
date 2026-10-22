@@ -10,7 +10,7 @@
             android:layout_width="56dp" android:layout_height="48dp"
             android:text="←" android:textSize="24sp" android:textAllCaps="false"
             android:contentDescription="Quay lại chi tiết sách"
-            android:backgroundTint="@color/online_back_button_background"
+            android:backgroundTint="@color/background"
             android:textColor="@color/online_forest"/>
         <TextView android:layout_width="0dp" android:layout_height="wrap_content"
             android:layout_weight="1" android:gravity="center_vertical"
