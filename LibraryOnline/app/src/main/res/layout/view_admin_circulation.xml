@@ -13,9 +13,100 @@
         android:padding="24dp">
         <TextView
             style="@style/CatalogueHeading"
-            android:text="@string/nav_circulation" />
+            android:text="@string/circulation_heading" />
         <TextView
             style="@style/CatalogueBody"
-            android:text="@string/nav_circulation_pending" />
+            android:layout_marginTop="8dp"
+            android:text="@string/circulation_manual_notice" />
+
+        <TextView
+            style="@style/CatalogueHeading"
+            android:layout_marginTop="24dp"
+            android:text="@string/circulation_reader_barcode_label" />
+        <EditText
+            android:id="@+id/inputCirculationReaderBarcode"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:singleLine="true"
+            android:inputType="text"
+            android:hint="@string/circulation_reader_barcode_hint"
+            android:autofillHints="none" />
+
+        <TextView
+            style="@style/CatalogueHeading"
+            android:layout_marginTop="16dp"
+            android:text="@string/circulation_copy_barcode_label" />
+        <EditText
+            android:id="@+id/inputCirculationCopyBarcode"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:singleLine="true"
+            android:inputType="text"
+            android:hint="@string/circulation_copy_barcode_hint"
+            android:autofillHints="none" />
+
+        <TextView
+            style="@style/CatalogueHeading"
+            android:layout_marginTop="16dp"
+            android:text="@string/circulation_loan_days_label" />
+        <EditText
+            android:id="@+id/inputCirculationLoanDays"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:singleLine="true"
+            android:inputType="number"
+            android:text="@string/circulation_default_days"
+            android:hint="@string/circulation_loan_days_hint"
+            android:autofillHints="none" />
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="16dp"
+            android:orientation="horizontal">
+            <Button
+                android:id="@+id/buttonCirculationBorrow"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="@string/circulation_borrow" />
+            <Button
+                android:id="@+id/buttonCirculationReturn"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="12dp"
+                android:layout_weight="1"
+                android:text="@string/circulation_return" />
+        </LinearLayout>
+
+
+        <TextView
+            style="@style/CatalogueHeading"
+            android:layout_marginTop="24dp"
+            android:text="@string/circulation_penalty_id_label" />
+        <EditText
+            android:id="@+id/inputCirculationPenaltyId"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:singleLine="true"
+            android:inputType="text"
+            android:hint="@string/circulation_penalty_id_hint"
+            android:autofillHints="none" />
+        <Button
+            android:id="@+id/buttonCirculationCollectFine"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="12dp"
+            android:text="@string/circulation_collect_fine" />
+        <TextView
+            android:id="@+id/textCirculationResult"
+            style="@style/CatalogueBody"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="20dp"
+            android:padding="16dp"
+            android:background="@drawable/bg_admin_card"
+            android:text="@string/circulation_idle"
+            android:textIsSelectable="true" />
     </LinearLayout>
 </ScrollView>
