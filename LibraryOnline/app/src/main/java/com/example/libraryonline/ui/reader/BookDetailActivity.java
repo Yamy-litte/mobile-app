@@ -9,6 +9,12 @@ import com.example.libraryonline.data.local.dao.BookTitleDao;
 import com.example.libraryonline.data.local.db.DatabaseHelper;
 import com.example.libraryonline.data.model.BookTitle;
 import com.example.libraryonline.data.remote.firebase.BookCatalogueSyncManager;
+import com.example.libraryonline.data.remote.firebase.OnlineLoanRequestRepository;
+import com.google.firebase.auth.FirebaseAuth;
+import android.widget.EditText;
+import android.widget.TextView;
+import android.widget.Toast;
+import android.text.InputType;
 import com.example.libraryonline.data.session.*;
 import com.example.libraryonline.ui.auth.SessionActivity;
 import com.google.firebase.firestore.*;
@@ -22,6 +28,10 @@ public class BookDetailActivity extends SessionActivity {
     private DatabaseHelper helper;
     private BookCatalogueSyncManager sync;
     private ListenerRegistration documentListener;
+    private ListenerRegistration onlineRequestListener;
+    private final OnlineLoanRequestRepository onlineRequests = new OnlineLoanRequestRepository();
+    private String currentOnlineStatus = "";
+    private boolean requestSubmitting;
     private final ExecutorService worker = Executors.newSingleThreadExecutor();
     private long generation;
     private Boolean remoteVisible;
@@ -53,6 +63,7 @@ public class BookDetailActivity extends SessionActivity {
         bookId = getIntent().getStringExtra(EXTRA_BOOK_ID);
         helper = new DatabaseHelper(getApplicationContext());
         findViewById(R.id.detailBack).setOnClickListener(v -> finish());
+        findViewById(R.id.detailRequestOnline).setOnClickListener(v -> openOnlineRequestForm());
         findViewById(R.id.detailRetry)
                 .setOnClickListener(
                         v -> {
@@ -78,6 +89,7 @@ public class BookDetailActivity extends SessionActivity {
     @Override
     protected void onSessionAuthorized(SessionProfile profile) {
         startCatalogue();
+        listenOnlineRequest(profile.uid);
     }
 
     private void startCatalogue() {
@@ -153,9 +165,11 @@ public class BookDetailActivity extends SessionActivity {
                                 new BookTitleDao(helper.getReadableDatabase()).findById(bookId);
                         runOnUiThread(
                                 () -> {
-                                    if (current(token))
+                                    if (current(token)) {
                                         detail.bind(
                                                 Boolean.FALSE.equals(remoteVisible) ? null : book);
+                                        updateOnlineButton();
+                                    }
                                 });
                     } catch (Exception error) {
                         runOnUiThread(
@@ -169,6 +183,12 @@ public class BookDetailActivity extends SessionActivity {
 
     private void stopCatalogue() {
         generation++;
+        if (onlineRequestListener != null) {
+            onlineRequestListener.remove();
+            onlineRequestListener = null;
+        }
+        requestSubmitting = false;
+        currentOnlineStatus = "";
         if (documentListener != null) {
             documentListener.remove();
             documentListener = null;
@@ -177,6 +197,95 @@ public class BookDetailActivity extends SessionActivity {
             sync.close();
             sync = null;
         }
+    }
+
+    private void listenOnlineRequest(String uid) {
+        if (uid == null || uid.isEmpty() || bookId == null || bookId.contains("/")) return;
+        String id = OnlineLoanRequestRepository.requestId(uid, bookId);
+        onlineRequestListener = FirebaseFirestore.getInstance()
+                .collection(OnlineLoanRequestRepository.REQUESTS)
+                .document(id).addSnapshotListener((doc, error) -> {
+                    if (!isSessionReady() || isFinishing() || isDestroyed()) return;
+                    if (error != null) {
+                        ((TextView) findViewById(R.id.detailOnlineStatus)).setText(
+                                "Không tải được trạng thái yêu cầu. Kiểm tra kết nối mạng.");
+                        return;
+                    }
+                    if (doc == null) return;
+                    currentOnlineStatus = doc.exists()
+                            ? doc.getString("status") : "";
+                    TextView status = findViewById(R.id.detailOnlineStatus);
+                    if (doc.exists()) {
+                        String description = OnlineLoanRequestRepository.label(currentOnlineStatus);
+                        if (OnlineLoanRequestRepository.REJECTED.equals(currentOnlineStatus)
+                                && doc.getString("rejectionReason") != null)
+                            description += ": " + doc.getString("rejectionReason");
+                        status.setText(description);
+                    } else status.setText(R.string.online_borrow_request_hint);
+                    updateOnlineButton();
+                });
+    }
+
+    private void updateOnlineButton() {
+        View request = findViewById(R.id.detailRequestOnline);
+        TextView availability = findViewById(R.id.detailAvailability);
+        boolean hasStock = availability != null
+                && availability.getText().toString().startsWith("Có ");
+        boolean alreadyOpen = OnlineLoanRequestRepository.PENDING.equals(currentOnlineStatus)
+                || OnlineLoanRequestRepository.APPROVED.equals(currentOnlineStatus);
+        request.setEnabled(isSessionReady() && !requestSubmitting
+                && !Boolean.FALSE.equals(remoteVisible) && hasStock && !alreadyOpen
+                && findViewById(R.id.detailContent).getVisibility() == View.VISIBLE);
+    }
+
+    private void openOnlineRequestForm() {
+        if (!isSessionReady() || !findViewById(R.id.detailRequestOnline).isEnabled()) return;
+        EditText days = new EditText(this);
+        days.setInputType(InputType.TYPE_CLASS_NUMBER);
+        days.setSingleLine(true);
+        days.setText("14");
+        days.setHint(R.string.online_borrow_choose_days);
+        int padding = (int) (20 * getResources().getDisplayMetrics().density);
+        days.setPadding(padding, padding / 2, padding, padding / 2);
+        privateDialog()
+                .setTitle("Gửi yêu cầu mượn Online")
+                .setMessage("Chọn số ngày muốn mượn. Khi Admin duyệt, bạn có 24 giờ đến nhận sách.")
+                .setView(days)
+                .setNegativeButton("Hủy", null)
+                .setPositiveButton("Gửi yêu cầu", (dialog, which) -> {
+                    int count;
+                    try {
+                        count = Integer.parseInt(days.getText().toString().trim());
+                    } catch (NumberFormatException error) {
+                        Toast.makeText(this, "Hãy nhập số ngày mượn hợp lệ.", Toast.LENGTH_LONG).show();
+                        return;
+                    }
+                    if (count < 1 || count > 60) {
+                        Toast.makeText(this, "Số ngày mượn từ 1 đến 60, theo hạn mức cấu hình.",
+                                Toast.LENGTH_LONG).show();
+                        return;
+                    }
+                    String uid = FirebaseAuth.getInstance().getUid();
+                    if (uid == null || !isSessionReady()) return;
+                    requestSubmitting = true;
+                    updateOnlineButton();
+                    onlineRequests.submit(uid, bookId, count).addOnCompleteListener(this, result -> {
+                        if (!isSessionReady() || isFinishing() || isDestroyed()) return;
+                        requestSubmitting = false;
+                        updateOnlineButton();
+                        if (result.isSuccessful()) {
+                            ((TextView) findViewById(R.id.detailOnlineStatus)).setText(
+                                    "Đã gửi yêu cầu. Chờ Admin kiểm tra và duyệt.");
+                            Toast.makeText(this, "Đã gửi yêu cầu mượn Online.", Toast.LENGTH_LONG).show();
+                        } else {
+                            Exception error = result.getException();
+                            Toast.makeText(this, "Không gửi được: "
+                                    + (error == null ? "Hãy thử lại." : error.getMessage()),
+                                    Toast.LENGTH_LONG).show();
+                        }
+                    });
+                })
+                .show();
     }
 
     @Override
