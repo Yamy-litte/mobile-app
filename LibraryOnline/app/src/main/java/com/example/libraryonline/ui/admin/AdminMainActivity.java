@@ -367,11 +367,40 @@ public class AdminMainActivity extends com.example.libraryonline.ui.auth.Session
                             })
                             .addOnFailureListener(error -> {
                                 if (!isSessionReady() || !uid.equals(adminUid)) return;
-                                save.setEnabled(true);
                                 String cause = error.getMessage() == null ? "" : error.getMessage();
                                 boolean denied = error instanceof com.google.firebase.firestore.FirebaseFirestoreException
                                         && ((com.google.firebase.firestore.FirebaseFirestoreException) error).getCode()
                                         == com.google.firebase.firestore.FirebaseFirestoreException.Code.PERMISSION_DENIED;
+                                if (denied && needsBirthRule) {
+                                    // Current deployed Rules may not yet allow dateOfBirth.
+                                    // Save only the independently permitted fields with explicit partial feedback.
+                                    Map<String, Object> editableWithoutBirth = new HashMap<>(updates);
+                                    editableWithoutBirth.remove("dateOfBirth");
+                                    firestore.collection("Admins").document(uid).update(editableWithoutBirth)
+                                            .addOnSuccessListener(ignored -> {
+                                                if (!isSessionReady() || !uid.equals(adminUid)) return;
+                                                save.setEnabled(true);
+                                                adminDisplayName = name;
+                                                adminPhone = phone;
+                                                ((TextView) findViewById(R.id.textAdminProfileName)).setText(name);
+                                                ((TextView) findViewById(R.id.textAdminSession)).setText("Admin " + name);
+                                                String initial = name.substring(0, 1).toUpperCase(Locale.ROOT);
+                                                ((TextView) findViewById(R.id.textAdminProfileAvatar)).setText(initial);
+                                                ((TextView) findViewById(R.id.buttonAdminAccount)).setText(initial);
+                                                showAdminProfileStatus(
+                                                        "Họ tên và số điện thoại đã lưu. Ngày sinh CHƯA lưu: "
+                                                                + "Firebase Rules cần cho phép dateOfBirth.", true);
+                                            })
+                                            .addOnFailureListener(second -> {
+                                                if (!isSessionReady() || !uid.equals(adminUid)) return;
+                                                save.setEnabled(true);
+                                                showAdminProfileStatus(
+                                                        "Firebase từ chối lưu hồ sơ, kể cả khi bỏ ngày sinh. "
+                                                                + "Kiểm tra trạng thái Admin và Rules.", true);
+                                            });
+                                    return;
+                                }
+                                save.setEnabled(true);
                                 showAdminProfileStatus(
                                         denied && needsBirthRule
                                             ? "Không được phép lưu ngày sinh: Firebase Rules đang triển khai chưa hỗ trợ trường dateOfBirth."
