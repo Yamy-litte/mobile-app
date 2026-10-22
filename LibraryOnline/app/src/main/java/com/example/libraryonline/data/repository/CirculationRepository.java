@@ -66,6 +66,21 @@ public final class CirculationRepository implements AutoCloseable {
 
             BookCopy copy = findCopyByBarcode(db, copyBarcode);
             if (copy == null) throw new IllegalArgumentException("Không tìm thấy mã cuốn sách.");
+            // A newly approved Firestore Online request creates a remote ChoLay hold.
+            // This older SQLite checkout has no shared loan receipt/ack path: allowing it
+            // would leave Firestore held and could later release an already borrowed copy.
+            // Legacy local Online reservations remain usable; the new cloud pickup is a
+            // separate operation that needs its own cross-device reconciliation.
+            if ("ChoLay".equals(copy.copyStatus)
+                    && scalarInt(db,
+                        "SELECT COUNT(*) FROM Reservations WHERE userId=? AND copyId=? "
+                                + "AND reservationType='Online' "
+                                + "AND reservationStatus NOT IN ('Cancelled','Expired','Completed','Received')",
+                        new String[]{reader.userId, copy.copyId}) == 0)
+                throw new IllegalArgumentException(
+                        "Cuốn đang giữ bởi yêu cầu Online trên Firebase. "
+                                + "Chưa thể giao qua phiếu SQLite cũ; hãy dùng quy trình giao sách Online "
+                                + "sau khi đồng bộ mượn/trả.");
 
             int activeCount = scalarInt(db,
                     "SELECT COUNT(*) FROM LoanDetails d JOIN LoanReceipts r ON r.loanReceiptId=d.loanReceiptId " +
