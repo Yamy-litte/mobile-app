@@ -39,6 +39,13 @@
     <string name="admin_security_hint">Dùng mật khẩu mạnh và không chia sẻ tài khoản quản trị.</string>
     <string name="admin_change_password">Đổi mật khẩu</string>
     <string name="admin_tools_heading">Công cụ quản trị</string>
+    <string name="admin_session_heading">Phiên đăng nhập</string>
+    <string name="admin_manage_readers">Quản lý độc giả</string>
+    <string name="admin_manage_readers_hint">Tìm kiếm, khóa/mở thẻ và gia hạn thẻ độc giả.</string>
+    <string name="admin_system_config">Cấu hình hệ thống</string>
+    <string name="admin_system_config_hint">Thiết lập hạn mức mượn, thời gian giữ sách và mức phạt.</string>
+    <string name="admin_reports">Báo cáo thống kê</string>
+    <string name="admin_reports_hint">Xem tổng hợp tình hình mượn trả và thu phạt trên thiết bị.</string>
     <string name="admin_management_shortcut">Quản lý độc giả, cấu hình và báo cáo</string>
     <string name="admin_edit_contact_title">Cập nhật thông tin liên hệ</string>
     <string name="admin_phone_hint">Số điện thoại (10 số)</string>
