@@ -31,6 +31,23 @@ public class InventoryPolicyTest {
         BookCopy c=copy("SanSang");c.priorityUserId="reader";
         assertThrows(IllegalArgumentException.class,()->InventoryPolicy.requireRetirable(c));
     }
+    @Test public void onlyHiddenRepairCopiesWithoutPriorityCanBeRestored() {
+        BookCopy candidate=copy("DangSuaChua");
+        candidate.isHidden=true;
+        assertTrue(InventoryPolicy.canRestore(candidate));
+        InventoryPolicy.requireRestorable(candidate);
+        candidate.priorityUserId="reader";
+        assertFalse(InventoryPolicy.canRestore(candidate));
+        assertThrows(IllegalArgumentException.class,
+                ()->InventoryPolicy.requireRestorable(candidate));
+        candidate.priorityUserId=null;
+        for(String state:Arrays.asList("ThanhLy","DaMat","DaMuon","ChoLay","DaDatTruoc","SanSang")) {
+            candidate.copyStatus=state;
+            assertFalse(InventoryPolicy.canRestore(candidate));
+        }
+        candidate.copyStatus="DangSuaChua";candidate.isHidden=false;
+        assertFalse(InventoryPolicy.canRestore(candidate));
+    }
     @Test public void validatesBoundedIntakeAndShelf() {
         InventoryPolicy.validateIntake(1,"A");InventoryPolicy.validateIntake(5,"A");
         for(int n:new int[]{0,-1,6,Integer.MAX_VALUE})

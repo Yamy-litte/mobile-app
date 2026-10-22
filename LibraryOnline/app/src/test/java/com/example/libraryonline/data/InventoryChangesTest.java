@@ -33,6 +33,40 @@ public class InventoryChangesTest {
         c.copyStatus="ThanhLy";c.isHidden=true;b.availableCopies=0;
         assertTrue(InventoryChanges.transition(b,Arrays.asList(c),"old","ThanhLy").isEmpty());
     }
+    @Test public void restoringRepairCopyUpdatesParentExactlyOnceAndKeepsHistory(){
+        BookTitle b=title();BookCopy c=copy();
+        c.copyStatus="DangSuaChua";c.isHidden=true;b.availableCopies=0;
+        Map<String,Map<String,Object>> writes=InventoryChanges.restore(b,Arrays.asList(c),"old");
+        assertEquals(2,writes.size());
+        assertEquals(1,writes.get("BookTitles/BOOK").get("availableCopies"));
+        assertFalse(writes.get("BookTitles/BOOK").containsKey("totalCopies"));
+        assertEquals("SanSang",writes.get("BookCopies/old").get("copyStatus"));
+        assertEquals(false,writes.get("BookCopies/old").get("isHidden"));
+        assertFalse(writes.get("BookCopies/old").containsKey("barcode"));
+        c.copyStatus="SanSang";c.isHidden=false;b.availableCopies=1;
+        assertTrue(InventoryChanges.restore(b,Arrays.asList(c),"old").isEmpty());
+    }
+    @Test public void restoreRefusesRetiredLostBorrowedOrHiddenParent(){
+        BookTitle b=title();b.availableCopies=0;
+        BookCopy c=copy();c.isHidden=true;
+        for(String state:Arrays.asList("ThanhLy","DaMat","DaMuon","ChoLay","DaDatTruoc")){
+            c.copyStatus=state;
+            assertThrows(IllegalArgumentException.class,
+                    ()->InventoryChanges.restore(b,Arrays.asList(c),"old"));
+        }
+        c.copyStatus="DangSuaChua";
+        c.priorityUserId="reader";
+        assertThrows(IllegalArgumentException.class,
+                ()->InventoryChanges.restore(b,Arrays.asList(c),"old"));
+        c.priorityUserId=null;b.isHidden=true;
+        assertThrows(IllegalArgumentException.class,
+                ()->InventoryChanges.restore(b,Arrays.asList(c),"old"));
+        b.isHidden=false;b.availableCopies=1;
+        assertThrows(IllegalArgumentException.class,
+                ()->InventoryChanges.restore(b,Arrays.asList(c),"old"));
+        assertThrows(IllegalArgumentException.class,
+                ()->InventoryChanges.restore(b,Arrays.asList(c),"unknown"));
+    }
     @Test public void inconsistentCountersBlockStockChanges(){
         BookTitle b=title();b.availableCopies=0;
         assertThrows(IllegalArgumentException.class,()->InventoryChanges.transition(b,Arrays.asList(copy()),"old","ThanhLy"));

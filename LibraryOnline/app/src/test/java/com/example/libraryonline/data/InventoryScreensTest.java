@@ -214,6 +214,32 @@ public class InventoryScreensTest {
     }
 
     @Test
+    public void hiddenTitleAndRepairCopyExposeRestoreWithoutRestoringRetiredCopies()
+            throws Exception {
+        book.isHidden = true;
+        render();
+        assertEquals("Hiện lại đầu sách",
+                ((TextView) screen.findViewById(R.id.inventoryBookHide)).getText().toString());
+        screen.findViewById(R.id.inventoryBookCopies).performClick();
+        assertEquals("Hiện lại đầu sách",
+                ((TextView) screen.findViewById(R.id.inventoryHideTitle)).getText().toString());
+        screen.findViewById(R.id.copyShelf).performClick();
+        copy.copyStatus = "DangSuaChua";
+        copy.isHidden = true;
+        render();
+        assertEquals(View.VISIBLE, screen.findViewById(R.id.copyRestore).getVisibility());
+        assertFalse(screen.findViewById(R.id.copyRestore).isEnabled()); // Parent still hidden.
+        assertEquals(View.GONE, screen.findViewById(R.id.copyHide).getVisibility());
+        book.isHidden = false;
+        render();
+        assertTrue(screen.findViewById(R.id.copyRestore).isEnabled());
+        copy.copyStatus = "ThanhLy";
+        render();
+        assertEquals(View.GONE, screen.findViewById(R.id.copyRestore).getVisibility());
+        assertEquals(View.VISIBLE, screen.findViewById(R.id.copyRestoreHint).getVisibility());
+    }
+
+    @Test
     public void labelPageWaitsForActualCopiesAndNeverFabricatesBarcodes() throws Exception {
         StockIntake intake = new StockIntake("receipt-test", 2, "A2-15");
         model.completedIntake = intake;

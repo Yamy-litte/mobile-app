@@ -156,6 +156,63 @@ test("hiding or retiring a ready copy must decrement parent atomically", async (
   const parent=await getDoc(doc(d,"BookTitles/book"));
   require("node:assert/strict").equal(parent.data().totalCopies,1);
 });
+test("hidden title can be restored by active admin without changing copy counters", async () => {
+  const d = db("admin"), title = doc(d, "BookTitles/book");
+  await assertSucceeds(updateDoc(title, { isHidden: true }));
+  await assertSucceeds(updateDoc(title, { isHidden: false }));
+  await assertFails(updateDoc(doc(db("reader"), "BookTitles/book"), { isHidden: true }));
+});
+test("only repair-hidden copy may be restored, with matching parent stock increment", async () => {
+  const d = db("admin");
+  const parent = doc(d, "BookTitles/book"), child = doc(d, "BookCopies/copy");
+  const hide = writeBatch(d);
+  hide.update(child, { copyStatus: "DangSuaChua", isHidden: true });
+  hide.update(parent, { availableCopies: 0 });
+  await assertSucceeds(hide.commit());
+  await assertFails(updateDoc(child, { copyStatus: "SanSang", isHidden: false }));
+  const restored = writeBatch(d);
+  restored.update(child, { copyStatus: "SanSang", isHidden: false });
+  restored.update(parent, { availableCopies: 1 });
+  await assertSucceeds(restored.commit());
+  const updatedParent = await getDoc(parent);
+  require("node:assert/strict").equal(updatedParent.data().availableCopies, 1);
+  require("node:assert/strict").equal(updatedParent.data().totalCopies, 1);
+});
+test("hidden repair cannot be restored when title is hidden or priorities exist", async () => {
+  const d = db("admin"), parent = doc(d, "BookTitles/book"), child = doc(d, "BookCopies/copy");
+  await env.withSecurityRulesDisabled(c => {
+    const b = writeBatch(c.firestore());
+    b.update(doc(c.firestore(), "BookTitles/book"), { isHidden: true, availableCopies: 0 });
+    b.update(doc(c.firestore(), "BookCopies/copy"), { isHidden: true, copyStatus: "DangSuaChua" });
+    return b.commit();
+  });
+  let attempt = writeBatch(d);
+  attempt.update(child, { copyStatus: "SanSang", isHidden: false });
+  attempt.update(parent, { availableCopies: 1 });
+  await assertFails(attempt.commit());
+  await assertSucceeds(updateDoc(parent, { isHidden: false }));
+  await env.withSecurityRulesDisabled(c =>
+    updateDoc(doc(c.firestore(), "BookCopies/copy"), { priorityUserId: "reader" }));
+  attempt = writeBatch(d);
+  attempt.update(child, { copyStatus: "SanSang", isHidden: false });
+  attempt.update(parent, { availableCopies: 1 });
+  await assertFails(attempt.commit());
+});
+test("retired and lost copies remain non-restorable even with a parent counter increase", async () => {
+  const d = db("admin"), parent = doc(d, "BookTitles/book"), child = doc(d, "BookCopies/copy");
+  for (const status of ["ThanhLy", "DaMat"]) {
+    await env.withSecurityRulesDisabled(c => {
+      const b = writeBatch(c.firestore());
+      b.update(doc(c.firestore(), "BookTitles/book"), { availableCopies: 0 });
+      b.update(doc(c.firestore(), "BookCopies/copy"), { isHidden: true, copyStatus: status });
+      return b.commit();
+    });
+    const attempt = writeBatch(d);
+    attempt.update(child, { copyStatus: "SanSang", isHidden: false });
+    attempt.update(parent, { availableCopies: 1 });
+    await assertFails(attempt.commit());
+  }
+});
 test("five-copy intake fits access budget and invalid child rolls back parent", async () => {
   const d=db("admin"), b=writeBatch(d);
   b.update(doc(d,"BookTitles/book"),{totalCopies:6,availableCopies:6});
