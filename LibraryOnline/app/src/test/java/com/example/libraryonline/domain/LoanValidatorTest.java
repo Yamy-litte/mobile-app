@@ -11,6 +11,7 @@ public class LoanValidatorTest {
     private User activeReader() {
         User user = new User();
         user.userId = "reader-1";
+        user.role = "Reader";
         user.cardStatus = "HoatDong";
         return user;
     }
