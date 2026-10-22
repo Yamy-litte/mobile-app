@@ -97,6 +97,42 @@ public class InventoryEmulatorTest {
         assertEquals(Long.valueOf(1),await(db.collection("BookTitles").document(b.bookTitleId).get()).getLong("totalCopies"));
         assertEquals(1,await(db.collection("BookCopies").whereEqualTo("bookTitleId",b.bookTitleId).get()).size());
     }
+    @Test public void restoredRepairCopyAndTitleKeepInventoryCountersConsistent() throws Exception {
+        BookTitle b=book();
+        StockIntake intake=new StockIntake(2,"A1");
+        await(repo.createTitle(b,intake));
+        String copyId=intake.copyId(0);
+        await(repo.hideCopy(copyId));
+        assertEquals(Long.valueOf(1),
+                await(db.collection("BookTitles").document(b.bookTitleId).get()).getLong("availableCopies"));
+        await(repo.hideTitle(b.bookTitleId));
+        try {
+            await(repo.restoreCopy(copyId));
+            fail("Cannot restore a copy while its parent title is hidden");
+        } catch(IllegalArgumentException expected) {
+            assertTrue(expected.getMessage().contains("Hiện lại đầu sách"));
+        }
+        await(repo.restoreTitle(b.bookTitleId));
+        await(repo.restoreTitle(b.bookTitleId));
+        await(repo.restoreCopy(copyId));
+        await(repo.restoreCopy(copyId));
+        DocumentSnapshot title=await(db.collection("BookTitles").document(b.bookTitleId).get());
+        DocumentSnapshot restored=await(db.collection("BookCopies").document(copyId).get());
+        assertEquals(Long.valueOf(2),title.getLong("availableCopies"));
+        assertEquals(Long.valueOf(2),title.getLong("totalCopies"));
+        assertEquals(Boolean.FALSE,title.getBoolean("isHidden"));
+        assertEquals(Boolean.FALSE,restored.getBoolean("isHidden"));
+        assertEquals("SanSang",restored.getString("copyStatus"));
+        assertEquals(intake.barcode(0),restored.getString("barcode"));
+        await(repo.retireCopy(copyId));
+        try {
+            await(repo.restoreCopy(copyId));
+            fail("Retired copies must never be restored via repair action");
+        } catch(IllegalArgumentException expected) {
+            assertTrue(expected.getMessage().contains("thanh lý"));
+        }
+    }
+
     private void makeLegacyTitle(String id) throws Exception {
         URL url=new URL("http://127.0.0.1:8088/v1/projects/"+PROJECT+"/databases/(default)/documents:commit");
         HttpURLConnection connection=(HttpURLConnection)url.openConnection(Proxy.NO_PROXY);connection.setRequestMethod("POST");
