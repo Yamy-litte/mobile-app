@@ -48,6 +48,8 @@ public class AdminManagementActivity extends SessionActivity {
     private java.util.List<DocumentSnapshot> users = new java.util.ArrayList<>();
     private String searchText = "";
     private EditText searchInput;
+    private TextView readersSummary;
+    private String readerFilter = "all";
     private LinearLayout resultsContainer;
 
     @Override protected void onCreate(Bundle state) {
@@ -107,29 +109,69 @@ public class AdminManagementActivity extends SessionActivity {
 
     private void showReaders() {
         if (!isSessionReady()) return;
-        clearContent("Quản lý độc giả", "Tìm theo họ tên hoặc số điện thoại. Thay đổi thẻ được lưu lên Firestore.");
+        clearContent("Tìm độc giả", "Tìm theo họ tên hoặc số điện thoại. Thẻ được quản lý trên Firestore.");
+        readerFilter = "all";
         searchInput = new EditText(this);
         searchInput.setSingleLine(true);
-        searchInput.setHint("Tên độc giả hoặc số điện thoại");
+        searchInput.setHint("Tìm theo tên / SĐT");
         searchInput.setText(searchText);
-        content.addView(searchInput, matchWrap());
-        Button search = button("Tìm kiếm");
-        search.setOnClickListener(v -> {
-            searchText = searchInput.getText().toString().trim().toLowerCase(Locale.ROOT);
-            renderUsers();
-        });
-        content.addView(search, matchWrap());
-        TextView note = text("Trạng thái thẻ và hạn dùng lấy trực tiếp từ hồ sơ cloud.", 13, false);
-        content.addView(note, matchWrap());
+        searchInput.setTextColor(getColor(R.color.admin_screen_ink));
+        searchInput.setTextSize(14);
+        searchInput.setBackgroundResource(R.drawable.bg_admin_screen_field);
+        searchInput.setCompoundDrawablesWithIntrinsicBounds(R.drawable.ic_inventory_search, 0, 0, 0);
+        searchInput.setCompoundDrawablePadding(dp(10));
+        searchInput.setPadding(dp(16), 0, dp(16), 0);
+        content.addView(searchInput, new LinearLayout.LayoutParams(-1, dp(52)));
+
+        readersSummary = text("Đang tải danh sách độc giả...", 13, false);
+        readersSummary.setBackgroundResource(R.drawable.bg_admin_screen_readonly);
+        readersSummary.setPadding(dp(12), dp(10), dp(12), dp(10));
+        content.addView(readersSummary, matchWrap());
+
+        android.widget.HorizontalScrollView filterScroll = new android.widget.HorizontalScrollView(this);
+        filterScroll.setHorizontalScrollBarEnabled(false);
+        LinearLayout chips = new LinearLayout(this);
+        chips.setOrientation(LinearLayout.HORIZONTAL);
+        String[] keys = {"all", "active", "expired", "locked"};
+        String[] labels = {"Tất cả", "Hoạt động", "Hết hạn", "Bị khóa"};
+        java.util.List<Button> choices = new java.util.ArrayList<>();
+        for (int i = 0; i < keys.length; i++) {
+            final String key = keys[i];
+            Button chip = button(labels[i]);
+            chip.setTextSize(12);
+            chip.setMinHeight(dp(42));
+            LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(-2, dp(42));
+            lp.setMargins(0, dp(7), dp(8), dp(8));
+            chips.addView(chip, lp);
+            choices.add(chip);
+            chip.setOnClickListener(v -> {
+                readerFilter = key;
+                styleReaderFilterChips(choices, keys);
+                renderUsers();
+            });
+        }
+        styleReaderFilterChips(choices, keys);
+        filterScroll.addView(chips);
+        content.addView(filterScroll, matchWrap());
+
         resultsContainer = new LinearLayout(this);
         resultsContainer.setOrientation(LinearLayout.VERTICAL);
         content.addView(resultsContainer, matchWrap());
-        if (usersListener != null) usersListener.remove();
+
+        searchInput.addTextChangedListener(new android.text.TextWatcher() {
+            @Override public void beforeTextChanged(CharSequence text, int start, int count, int after) {}
+            @Override public void onTextChanged(CharSequence text, int start, int before, int count) {
+                searchText = text.toString().trim().toLowerCase(Locale.ROOT);
+                renderUsers();
+            }
+            @Override public void afterTextChanged(android.text.Editable text) {}
+        });
+        if (usersListener != null) { usersListener.remove(); usersListener = null; }
         usersListener = firestore.collection("Users").whereEqualTo("role", "Reader")
                 .addSnapshotListener((snapshot, error) -> {
-                    if (!isSessionReady()) return;
+                    if (!isSessionReady() || searchInput == null) return;
                     if (error != null) {
-                        if (resultsContainer != null) resultsContainer.addView(text("Không tải được độc giả: " + safe(error.getMessage()), 14, false), matchWrap());
+                        readersSummary.setText("Không tải được hồ sơ. Kiểm tra kết nối và quyền truy cập.");
                         return;
                     }
                     if (snapshot == null) return;
@@ -137,6 +179,16 @@ public class AdminManagementActivity extends SessionActivity {
                     cacheReaderProfiles(users);
                     renderUsers();
                 });
+    }
+
+    private void styleReaderFilterChips(java.util.List<Button> chips, String[] keys) {
+        for (int i = 0; i < keys.length; i++) {
+            boolean selected = keys[i].equals(readerFilter);
+            chips.get(i).setBackgroundTintList(android.content.res.ColorStateList.valueOf(
+                    getColor(selected ? R.color.admin_screen_primary : R.color.library_surface)));
+            chips.get(i).setTextColor(getColor(
+                    selected ? R.color.white : R.color.admin_screen_ink));
+        }
     }
 
     private void cacheReaderProfiles(java.util.List<DocumentSnapshot> documents) {
@@ -189,45 +241,103 @@ public class AdminManagementActivity extends SessionActivity {
     }
 
     private void renderUsers() {
-        if (searchInput == null || !isSessionReady()) return;
-        String query = searchText;
-        // Rebuild only result cards, preserving the search controls.
-        if (resultsContainer == null) return;
+        if (searchInput == null || resultsContainer == null || !isSessionReady()) return;
         resultsContainer.removeAllViews();
-        int count = 0;
+        int active = 0, locked = 0, expired = 0, visible = 0;
+        String today = new SimpleDateFormat("yyyy-MM-dd", Locale.ROOT).format(new Date());
         for (DocumentSnapshot doc : users) {
+            String cardStatus = value(doc, "cardStatus");
+            String expiry = value(doc, "cardExpiryDate");
+            boolean isLocked = "BiKhoa".equals(cardStatus);
+            boolean isExpired = !expiry.isEmpty() && expiry.compareTo(today) < 0;
+            if (isLocked) locked++;
+            else if (isExpired) expired++;
+            else active++;
             String name = value(doc, "fullName");
             String phone = value(doc, "phone");
-            if (!query.isEmpty() && !name.toLowerCase(Locale.ROOT).contains(query)
-                    && !phone.toLowerCase(Locale.ROOT).contains(query)) continue;
-            count++;
-            LinearLayout card = new LinearLayout(this);
-            card.setOrientation(LinearLayout.VERTICAL);
-            card.setPadding(dp(16), dp(14), dp(16), dp(14));
-            card.setBackgroundResource(R.drawable.bg_admin_card);
-            LinearLayout.LayoutParams cardParams = matchWrap();
-            cardParams.bottomMargin = dp(10);
-            resultsContainer.addView(card, cardParams);
-            card.addView(text(name.isEmpty() ? "Độc giả" : name, 17, true), matchWrap());
-            card.addView(text("SĐT: " + (phone.isEmpty() ? "Chưa cập nhật" : phone), 14, false), matchWrap());
+            if (!searchText.isEmpty()
+                    && !name.toLowerCase(Locale.ROOT).contains(searchText)
+                    && !phone.toLowerCase(Locale.ROOT).contains(searchText)) continue;
+            if ("active".equals(readerFilter) && (isLocked || isExpired)) continue;
+            if ("expired".equals(readerFilter) && (!isExpired || isLocked)) continue;
+            if ("locked".equals(readerFilter) && !isLocked) continue;
+            visible++;
+            LinearLayout card = panel();
+            LinearLayout.LayoutParams margins = matchWrap();
+            margins.bottomMargin = dp(10);
+            resultsContainer.addView(card, margins);
+            TextView heading = text(name.isEmpty() ? "Độc giả" : name, 17, true);
+            card.addView(heading, matchWrap());
+            TextView status = text("Mã thẻ: " + value(doc, "barcode") + " · "
+                            + (isLocked ? "Bị khóa" : isExpired ? "Hết hạn" : "Hoạt động"),
+                    13, true);
+            status.setTextColor(getColor(isLocked ? R.color.admin_screen_red
+                    : isExpired ? R.color.admin_screen_orange : R.color.admin_screen_green));
+            card.addView(status, matchWrap());
             card.addView(text("Email: " + value(doc, "email"), 13, false), matchWrap());
-            card.addView(text("Mã thẻ: " + value(doc, "barcode"), 13, false), matchWrap());
-            card.addView(text("Trạng thái: " + value(doc, "cardStatus") + "   •   Hạn: " + value(doc, "cardExpiryDate"), 13, false), matchWrap());
-            LinearLayout actions = new LinearLayout(this);
-            actions.setOrientation(LinearLayout.HORIZONTAL);
-            Button details = button("Lịch sử");
-            details.setOnClickListener(v -> showReaderHistory(doc));
-            actions.addView(details, new LinearLayout.LayoutParams(0, dp(48), 1));
-            String status = value(doc, "cardStatus");
-            Button lock = button("BiKhoa".equals(status) ? "Mở khóa" : "Khóa thẻ");
-            lock.setOnClickListener(v -> updateCardStatus(doc, "BiKhoa".equals(status) ? "HoatDong" : "BiKhoa"));
-            actions.addView(lock, new LinearLayout.LayoutParams(0, dp(48), 1));
-            Button renew = button("Gia hạn 1 năm");
-            renew.setOnClickListener(v -> renewCard(doc));
-            actions.addView(renew, new LinearLayout.LayoutParams(0, dp(48), 1));
-            card.addView(actions, matchWrap());
+            card.addView(text("SĐT: " + (phone.isEmpty() ? "Chưa cập nhật" : phone), 13, false), matchWrap());
+            card.addView(text("Hạn thẻ: " + (expiry.isEmpty() ? "Chưa cập nhật" : expiry), 12, false), matchWrap());
+            Button open = button("Xem hồ sơ");
+            open.setOnClickListener(v -> showReaderDetails(doc));
+            card.addView(open, matchWrap());
         }
-        if (count == 0) resultsContainer.addView(text("Không tìm thấy độc giả phù hợp.", 14, false), matchWrap());
+        readersSummary.setText("Tổng: " + users.size()
+                + "  |  Hoạt động: " + active
+                + "  |  Hết hạn: " + expired
+                + "  |  Bị khóa: " + locked);
+        if (visible == 0)
+            resultsContainer.addView(text("Không tìm thấy độc giả phù hợp.", 14, false), matchWrap());
+    }
+
+    /** Detail sub-screen from Figma; only card status/expiry are mutable for readers. */
+    private void showReaderDetails(DocumentSnapshot doc) {
+        if (!isSessionReady()) return;
+        clearContent("Hồ sơ độc giả", "Chi tiết thẻ và lịch sử được ghi trên thiết bị.");
+        Button back = button("← Trở về danh sách độc giả");
+        back.setOnClickListener(v -> showReaders());
+        content.addView(back, matchWrap());
+
+        LinearLayout card = panel();
+        content.addView(card, matchWrap());
+        card.addView(text(value(doc, "fullName"), 21, true), matchWrap());
+        card.addView(text("Mã thẻ: " + value(doc, "barcode"), 14, true), matchWrap());
+        String status = value(doc, "cardStatus");
+        TextView state = text("Trạng thái: " + ("BiKhoa".equals(status) ? "Bị khóa" : "HoatDong".equals(status) ? "Hoạt động" : status),
+                14, true);
+        state.setTextColor(getColor("BiKhoa".equals(status)
+                ? R.color.admin_screen_red : R.color.admin_screen_green));
+        card.addView(state, matchWrap());
+        card.addView(text("Hiệu lực đến: " + value(doc, "cardExpiryDate"), 13, false), matchWrap());
+
+        LinearLayout identity = panel();
+        content.addView(identity, matchWrap());
+        identity.addView(text("Thông tin độc giả", 17, true), matchWrap());
+        identity.addView(text("Email: " + value(doc, "email"), 14, false), matchWrap());
+        identity.addView(text("Số điện thoại: " + value(doc, "phone"), 14, false), matchWrap());
+        identity.addView(text("Ngày sinh: " + value(doc, "dateOfBirth"), 14, false), matchWrap());
+
+        Button history = button("Xem lịch sử mượn và các khoản phạt");
+        history.setOnClickListener(v -> showReaderHistory(doc));
+        content.addView(history, matchWrap());
+
+        Button lock = button("BiKhoa".equals(status) ? "Mở khóa thẻ" : "Khóa thẻ thủ công");
+        lock.setOnClickListener(v -> updateCardStatus(doc, "BiKhoa".equals(status) ? "HoatDong" : "BiKhoa"));
+        content.addView(lock, matchWrap());
+        Button renew = button("Gia hạn thẻ thêm 1 năm");
+        renew.setOnClickListener(v -> renewCard(doc));
+        content.addView(renew, matchWrap());
+
+        TextView note = text("Hồ sơ cloud và lịch sử SQLite có phạm vi dữ liệu khác nhau. "
+                + "Việc khóa thẻ và gia hạn cần xác nhận trước khi cập nhật Firestore.", 12, false);
+        content.addView(note, matchWrap());
+    }
+
+    private LinearLayout panel() {
+        LinearLayout box = new LinearLayout(this);
+        box.setOrientation(LinearLayout.VERTICAL);
+        box.setPadding(dp(15), dp(15), dp(15), dp(15));
+        box.setBackgroundResource(R.drawable.bg_admin_screen_card);
+        return box;
     }
 
     private void updateCardStatus(DocumentSnapshot doc, String status) {
