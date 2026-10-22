@@ -39,7 +39,7 @@
     <string name="inventory_ui_print_single">In / Lưu nhãn PDF</string>
     <string name="inventory_ui_history">Lịch sử mượn trả</string>
     <string name="inventory_ui_history_pending">Lịch sử mượn trả chưa được kết nối tại màn hình này.</string>
-    <string name="inventory_ui_hide_heading">Ẩn cuốn hoặc thanh lý</string>
+    <string name="inventory_ui_hide_heading">Trạng thái và quản lý cuốn sách</string>
     <string name="inventory_ui_retire_rule">Chỉ áp dụng với cuốn sẵn sàng, chưa ẩn và không có người được ưu tiên. Bản ghi và lịch sử được giữ nguyên.</string>
     <string name="inventory_ui_hide_copy">Ẩn cuốn sách</string>
     <string name="inventory_ui_restore_copy">Hiện lại cuốn sách</string>
