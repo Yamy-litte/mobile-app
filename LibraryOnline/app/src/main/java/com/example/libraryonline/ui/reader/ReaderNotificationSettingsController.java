@@ -26,7 +26,7 @@ import com.google.firebase.firestore.DocumentSnapshot;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
-import java.util.Comparator;
+import java.util.Collections;
 import java.util.Date;
 import java.util.List;
 import java.util.Locale;
@@ -163,7 +163,8 @@ public final class ReaderNotificationSettingsController {
         long now = System.currentTimeMillis();
         for (ReaderReminderReceiver.Reminder r : loans) if (r.atMillis > now) upcoming.add(r);
         for (ReaderReminderReceiver.Reminder r : holds) if (r.atMillis > now) upcoming.add(r);
-        upcoming.sort(Comparator.comparingLong(r -> r.atMillis));
+        // Collections.sort is available on API 23; List.sort / Comparator.comparingLong require API 24.
+        Collections.sort(upcoming, (left, right) -> Long.compare(left.atMillis, right.atMillis));
         ReaderReminderReceiver.replaceAll(activity, uid, upcoming, schedule);
         render(R.id.readerAlertsScheduled, R.id.readerAlertsScheduledSummary, upcoming, schedule);
         render(R.id.readerSettingsScheduled, R.id.readerSettingsScheduledSummary, upcoming, schedule);
