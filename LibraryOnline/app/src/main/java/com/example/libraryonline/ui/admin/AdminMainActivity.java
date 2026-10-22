@@ -134,17 +134,22 @@ public class AdminMainActivity extends com.example.libraryonline.ui.auth.Session
                             stopRequestListeners();
                             startRequests();
                         });
-        findViewById(R.id.buttonAdminManagement)
-                .setOnClickListener(v -> {
-                    if (isSessionReady())
-                        startActivity(new android.content.Intent(this, AdminManagementActivity.class));
-                });
+        findViewById(R.id.actionAdminReaders).setOnClickListener(v -> openManagementSection("readers"));
+        findViewById(R.id.actionAdminConfig).setOnClickListener(v -> openManagementSection("config"));
+        findViewById(R.id.actionAdminReports).setOnClickListener(v -> openManagementSection("reports"));
         findViewById(R.id.buttonAdminLogout).setOnClickListener(v -> logoutSession());
         findViewById(R.id.buttonAdminEditProfile).setOnClickListener(v -> showEditAdminContact());
         findViewById(R.id.buttonAdminChangePassword).setOnClickListener(v -> {
             if (isSessionReady())
                 startActivity(new android.content.Intent(this, AdminPasswordActivity.class));
         });
+    }
+
+    private void openManagementSection(String section) {
+        if (!isSessionReady()) return;
+        android.content.Intent intent = new android.content.Intent(this, AdminManagementActivity.class);
+        intent.putExtra("section", section);
+        startActivity(intent);
     }
 
     private void loadAdminProfile(com.example.libraryonline.data.session.SessionProfile profile) {
