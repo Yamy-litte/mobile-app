@@ -106,7 +106,9 @@ public class AdminMainActivity extends com.example.libraryonline.ui.auth.Session
                         new androidx.activity.OnBackPressedCallback(true) {
                             @Override
                             public void handleOnBackPressed() {
-                                if (homeView.selectedTab() != AdminHomeView.HOME)
+                                if (homeView.selectedTab() == AdminHomeView.APPROVALS)
+                                    homeView.show(AdminHomeView.REQUESTS);
+                                else if (homeView.selectedTab() != AdminHomeView.HOME)
                                     homeView.show(AdminHomeView.HOME);
                                 else {
                                     setEnabled(false);

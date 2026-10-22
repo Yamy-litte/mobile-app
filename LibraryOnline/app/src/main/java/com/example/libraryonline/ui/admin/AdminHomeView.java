@@ -11,9 +11,9 @@ import com.google.android.material.bottomnavigation.BottomNavigationView;
 
 /** Navigation within the existing Admin screen, with no new business operations. */
 public final class AdminHomeView {
-    public static final int HOME = 0, REQUESTS = 1, ACCOUNT = 2, CIRCULATION = 3;
+    public static final int HOME = 0, REQUESTS = 1, ACCOUNT = 2, CIRCULATION = 3, APPROVALS = 4;
     private final Activity activity;
-    private final int[] panels = {R.id.adminOverview, R.id.adminRequests, R.id.adminAccount};
+    private final int[] panels = {R.id.adminOverview, R.id.adminManagementHub, R.id.adminAccount};
     private final int[] tabs = {
         R.id.navAdminHome, R.id.navAdminRequests, R.id.navAdminAccount, R.id.navAdminCirculation
     };
@@ -58,13 +58,13 @@ public final class AdminHomeView {
                         ((ScrollView) activity.findViewById(R.id.adminScroll)).smoothScrollTo(0, 0);
                 });
         activity.findViewById(R.id.buttonAdminAccount).setOnClickListener(v -> show(ACCOUNT));
-        activity.findViewById(R.id.buttonAdminReview).setOnClickListener(v -> show(REQUESTS));
+        activity.findViewById(R.id.buttonAdminReview).setOnClickListener(v -> show(APPROVALS));
         activity.findViewById(R.id.actionAdminRegistrations)
-                .setOnClickListener(v -> show(REQUESTS));
+                .setOnClickListener(v -> show(APPROVALS));
         activity.findViewById(R.id.actionAdminResets)
                 .setOnClickListener(
                         v -> {
-                            show(REQUESTS);
+                            show(APPROVALS);
                             ScrollView scroll = activity.findViewById(R.id.adminScroll);
                             scroll.post(
                                     () -> {
@@ -85,18 +85,20 @@ public final class AdminHomeView {
     }
 
     public void show(int tab) {
-        selected = tab >= HOME && tab <= CIRCULATION ? tab : HOME;
+        selected = tab >= HOME && tab <= APPROVALS ? tab : HOME;
         for (int i = 0; i < panels.length; i++) {
             activity.findViewById(panels[i])
                     .setVisibility(i == selected ? View.VISIBLE : View.GONE);
         }
+        activity.findViewById(R.id.adminRequests).setVisibility(
+                selected == APPROVALS ? View.VISIBLE : View.GONE);
         activity.findViewById(R.id.adminScroll)
                 .setVisibility(selected == CIRCULATION ? View.GONE : View.VISIBLE);
         activity.findViewById(R.id.adminHomeHeader)
                 .setVisibility(selected == HOME ? View.VISIBLE : View.GONE);
         activity.findViewById(R.id.adminCirculation)
                 .setVisibility(selected == CIRCULATION ? View.VISIBLE : View.GONE);
-        navigation.getMenu().findItem(tabs[selected]).setChecked(true);
+        navigation.getMenu().findItem(tabs[selected == APPROVALS ? REQUESTS : selected]).setChecked(true);
         ((ScrollView) activity.findViewById(R.id.adminScroll)).scrollTo(0, 0);
     }
 }
