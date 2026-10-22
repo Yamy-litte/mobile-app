@@ -1,6 +1,8 @@
 package com.example.libraryonline.ui.reader;
 
 import android.graphics.Typeface;
+import android.os.Handler;
+import android.os.Looper;
 import android.view.View;
 import android.widget.LinearLayout;
 import android.widget.TextView;
@@ -21,6 +23,8 @@ import com.google.firebase.Timestamp;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.List;
 import java.util.Locale;
 
@@ -31,6 +35,16 @@ final class ReaderOnlineLoanController {
     private final OnlineLoanRequestRepository repository = new OnlineLoanRequestRepository();
     private ListenerRegistration requestsListener, notificationsListener;
     private String authorizedUid;
+    private final Handler clockHandler = new Handler(Looper.getMainLooper());
+    private final Map<TextView, Timestamp> activeCountdowns = new HashMap<>();
+    private final Runnable countdownPulse = new Runnable() {
+        @Override public void run() {
+            if (authorizedUid == null || !current(authorizedUid)) return;
+            for (Map.Entry<TextView, Timestamp> hold : activeCountdowns.entrySet())
+                hold.getKey().setText(remainingText(hold.getValue()));
+            if (!activeCountdowns.isEmpty()) clockHandler.postDelayed(this, 60_000L);
+        }
+    };
 
     ReaderOnlineLoanController(ReaderMainActivity activity) { this.activity = activity; }
 
@@ -70,6 +84,8 @@ final class ReaderOnlineLoanController {
 
     void stop() {
         authorizedUid = null;
+        clockHandler.removeCallbacks(countdownPulse);
+        activeCountdowns.clear();
         if (requestsListener != null) { requestsListener.remove(); requestsListener = null; }
         if (notificationsListener != null) {
             notificationsListener.remove();
@@ -123,6 +139,15 @@ final class ReaderOnlineLoanController {
                 .format(timestamp.toDate());
     }
 
+    private static String remainingText(Timestamp until) {
+        if (until == null) return "Đang xác minh hạn nhận tại thư viện";
+        long millis = until.toDate().getTime() - System.currentTimeMillis();
+        if (millis <= 0)
+            return "Đã quá giờ nhận. Chờ thư viện xác nhận hết hạn và trả cuốn về kho.";
+        long mins = (millis + 59_999L) / 60_000L;
+        return "Còn " + (mins / 60) + " giờ " + (mins % 60) + " phút để nhận sách";
+    }
+
     private List<DocumentSnapshot> recent(QuerySnapshot snap) {
         List<DocumentSnapshot> sorted = new ArrayList<>(snap.getDocuments());
         sorted.sort(Comparator.comparing((DocumentSnapshot doc) -> {
@@ -135,6 +160,8 @@ final class ReaderOnlineLoanController {
     private void displayRequests(QuerySnapshot snapshot) {
         LinearLayout container = activity.findViewById(R.id.containerReaderOnlineRequests);
         container.removeAllViews();
+        clockHandler.removeCallbacks(countdownPulse);
+        activeCountdowns.clear();
         List<DocumentSnapshot> records = recent(snapshot);
         message(R.id.textReaderOnlineSummary, records.isEmpty()
                 ? "Bạn chưa gửi yêu cầu mượn Online."
@@ -148,13 +175,25 @@ final class ReaderOnlineLoanController {
             item.addView(line(OnlineLoanRequestRepository.label(status), false));
             Long days = doc.getLong("loanDays");
             item.addView(line("Thời hạn mượn yêu cầu: " + (days == null ? "—" : days) + " ngày", false));
-            if (OnlineLoanRequestRepository.APPROVED.equals(status))
-                item.addView(line("Hạn đến nhận: " + time(doc.getTimestamp("holdUntil")), true));
+            if (OnlineLoanRequestRepository.APPROVED.equals(status)) {
+                Timestamp hold = doc.getTimestamp("holdUntil");
+                item.addView(line("Đã giữ sách cho bạn · Chờ lấy", true));
+                item.addView(line("Mã cuốn: " + (doc.getString("copyId") == null
+                        ? "Đang đồng bộ" : doc.getString("copyId")), false));
+                item.addView(line("Nhận trước: " + time(hold), false));
+                TextView countdown = line(remainingText(hold), true);
+                countdown.setTextColor(ContextCompat.getColor(activity, R.color.library_success));
+                item.addView(countdown);
+                if (hold != null) activeCountdowns.put(countdown, hold);
+                item.addView(line("Hạn trả chỉ tính từ khi Admin thực tế giao sách tại quầy.", false));
+            }
             if (OnlineLoanRequestRepository.REJECTED.equals(status)
                     && doc.getString("rejectionReason") != null)
                 item.addView(line("Lý do: " + doc.getString("rejectionReason"), false));
             item.addView(line("Gửi: " + time(doc.getTimestamp("createdAt")), false));
         }
+        if (!activeCountdowns.isEmpty() && current(authorizedUid))
+            clockHandler.postDelayed(countdownPulse, 60_000L);
     }
 
     private void displayNotifications(QuerySnapshot snapshot) {
