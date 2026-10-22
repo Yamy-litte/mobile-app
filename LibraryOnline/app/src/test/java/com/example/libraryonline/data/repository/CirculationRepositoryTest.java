@@ -383,6 +383,98 @@ public class CirculationRepositoryTest {
         }
     }
 
+
+    @Test
+    public void backgroundExpiryProcessorAdvancesExpiredReservationQueue() {
+        Context context = RuntimeEnvironment.getApplication();
+        context.deleteDatabase(DatabaseHelper.DATABASE_NAME);
+
+        DatabaseHelper seedHelper = new DatabaseHelper(context);
+        SQLiteDatabase db = seedHelper.getWritableDatabase();
+        String now = "2026-10-22T10:00:00";
+
+        for (int i = 2; i <= 3; i++) {
+            ContentValues reader = new ContentValues();
+            reader.put("userId", "reader-" + i);
+            reader.put("fullName", "Reader " + i);
+            reader.put("email", "reader-" + i + "@example.test");
+            reader.put("barcode", "CARD-" + i);
+            reader.put("role", "Reader");
+            reader.put("cardStatus", "HoatDong");
+            reader.put("isDeleted", 0);
+            reader.put("createdAt", now);
+            reader.put("updatedAt", now);
+            db.insertOrThrow("Users", null, reader);
+        }
+
+        ContentValues title = new ContentValues();
+        title.put("bookTitleId", "title-1");
+        title.put("title", "Test title");
+        title.put("totalCopies", 1);
+        title.put("availableCopies", 0);
+        title.put("isHidden", 0);
+        title.put("createdAt", now);
+        title.put("updatedAt", now);
+        db.insertOrThrow("BookTitles", null, title);
+
+        ContentValues copy = new ContentValues();
+        copy.put("copyId", "copy-1");
+        copy.put("bookTitleId", "title-1");
+        copy.put("barcode", "BOOK-1");
+        copy.put("copyStatus", "DaDatTruoc");
+        copy.put("priorityUserId", "reader-2");
+        copy.put("isHidden", 0);
+        copy.put("createdAt", now);
+        copy.put("updatedAt", now);
+        db.insertOrThrow("BookCopies", null, copy);
+
+        ContentValues expired = new ContentValues();
+        expired.put("reservationId", "reservation-expired");
+        expired.put("userId", "reader-2");
+        expired.put("bookTitleId", "title-1");
+        expired.put("copyId", "copy-1");
+        expired.put("reservationType", "DatTruoc");
+        expired.put("reservationStatus", "Ready");
+        expired.put("requestedLoanDays", 7);
+        expired.put("createdAt", now);
+        expired.put("priorityUntil", "2000-01-01T00:00:00");
+        expired.put("notifiedAt", now);
+        db.insertOrThrow("Reservations", null, expired);
+
+        ContentValues waiting = new ContentValues();
+        waiting.put("reservationId", "reservation-next");
+        waiting.put("userId", "reader-3");
+        waiting.put("bookTitleId", "title-1");
+        waiting.put("reservationType", "DatTruoc");
+        waiting.put("reservationStatus", "Pending");
+        waiting.put("queuePosition", 2);
+        waiting.put("requestedLoanDays", 7);
+        waiting.put("createdAt", now);
+        db.insertOrThrow("Reservations", null, waiting);
+        seedHelper.close();
+
+        CirculationRepository repository = new CirculationRepository(context);
+        try {
+            repository.processExpiredReservationHolds();
+            assertDatabaseValue(context,
+                    "SELECT reservationStatus FROM Reservations WHERE reservationId='reservation-expired'", "Expired");
+            assertDatabaseValue(context,
+                    "SELECT reservationStatus FROM Reservations WHERE reservationId='reservation-next'", "Ready");
+            assertDatabaseValue(context,
+                    "SELECT copyId FROM Reservations WHERE reservationId='reservation-next'", "copy-1");
+            assertDatabaseValue(context,
+                    "SELECT priorityUserId FROM BookCopies WHERE copyId='copy-1'", "reader-3");
+            assertDatabaseValue(context,
+                    "SELECT copyStatus FROM BookCopies WHERE copyId='copy-1'", "DaDatTruoc");
+            assertDatabaseValue(context,
+                    "SELECT userId FROM Notifications WHERE relatedEntityId='reservation-next'", "reader-3");
+            assertAvailableCopies(context, 0);
+        } finally {
+            repository.close();
+            context.deleteDatabase(DatabaseHelper.DATABASE_NAME);
+        }
+    }
+
     private static void assertDatabaseValue(Context context, String sql, String expected) {
         DatabaseHelper helper = new DatabaseHelper(context);
         try (android.database.Cursor cursor = helper.getReadableDatabase().rawQuery(sql, null)) {
