@@ -49,4 +49,6 @@
     <color name="online_forest">#195D55</color>
     <color name="online_tint">#EAF4F0</color>
     <color name="online_canvas">@color/background</color>
+    <!-- Original beige tint used by the Online back button only, not a screen canvas. -->
+    <color name="online_back_button_background">#FFF9F3</color>
 </resources>
