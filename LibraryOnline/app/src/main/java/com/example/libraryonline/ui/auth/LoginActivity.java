@@ -72,7 +72,7 @@ public class LoginActivity extends AppCompatActivity {
     }
 
 
-    private void scheduleReservationExpiryWork() {
+    protected void scheduleReservationExpiryWork() {
         PeriodicWorkRequest request = new PeriodicWorkRequest.Builder(
                 ReservationExpiryWorker.class, 15, TimeUnit.MINUTES).build();
         WorkManager.getInstance(getApplicationContext()).enqueueUniquePeriodicWork(
