@@ -14,7 +14,7 @@ test("admin management cloud writes are restricted to approved fields and bounde
   const userRules = rules.slice(rules.indexOf("match /Users/{userId}"), rules.indexOf("match /RegistrationEmailIndex/{email}"));
   assert.match(userRules, /affectedKeys\(\)\.hasOnly\(\['cardStatus', 'cardExpiryDate', 'updatedAt'\]\)/);
   assert.match(userRules, /request\.resource\.data\.cardStatus in \['HoatDong', 'BiKhoa', 'HetHan'\]/);
-  const configRules = rules.slice(rules.indexOf("match /SystemConfigs/{configId}"), rules.indexOf("match /{document=\\*\\*}"));
+  const configRules = rules.slice(rules.indexOf("match /SystemConfigs/{configId}"), rules.indexOf("match /{document=**}"));
   assert.match(configRules, /request\.resource\.data\.maxBooksPerUser <= 20/);
   assert.match(configRules, /request\.resource\.data\.updatedBy == request\.auth\.uid/);
 });
