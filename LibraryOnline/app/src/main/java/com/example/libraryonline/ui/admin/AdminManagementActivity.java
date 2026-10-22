@@ -74,6 +74,11 @@ public final class AdminManagementActivity extends SessionActivity {
         content.removeAllViews();
     }
 
+    @Override protected void onDestroy() {
+        io.shutdownNow();
+        super.onDestroy();
+    }
+
     private void showReaders() {
         if (!isSessionReady()) return;
         clearContent("Quản lý độc giả", "Tìm theo họ tên hoặc số điện thoại. Thay đổi thẻ được lưu lên Firestore.");
