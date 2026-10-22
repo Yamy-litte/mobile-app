@@ -179,7 +179,9 @@ public class AdminMainActivity extends com.example.libraryonline.ui.auth.Session
                     if (dob == null || dob.trim().isEmpty()) dob = doc.getString("birthDate");
                     if (dob == null || dob.trim().isEmpty()) dob = doc.getString("dob");
                     adminDisplayName = name == null || name.trim().isEmpty()
-                            ? profile.displayName : name.trim();
+                            ? (profile.displayName == null || profile.displayName.trim().isEmpty()
+                                    ? "Quản trị viên" : profile.displayName.trim())
+                            : name.trim();
                     adminPhone = phone == null ? "" : phone.trim();
                     adminBirthDate = dob == null ? "" : dob.trim();
                     ((TextView) findViewById(R.id.textAdminProfileName)).setText(adminDisplayName);
