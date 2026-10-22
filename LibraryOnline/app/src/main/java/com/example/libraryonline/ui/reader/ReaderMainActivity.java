@@ -39,6 +39,7 @@ import java.util.concurrent.Executors;
  */
 public class ReaderMainActivity extends com.example.libraryonline.ui.auth.SessionActivity {
     private ReaderHomeView homeView;
+    private ReaderAccountController accountController;
 
     private FirebaseFirestore firestore;
     private FirebaseAuth auth;
@@ -99,6 +100,7 @@ public class ReaderMainActivity extends com.example.libraryonline.ui.auth.Sessio
                         });
         bindViews();
         bindActions();
+        accountController = new ReaderAccountController(this);
         buildCategories();
     }
 
@@ -111,6 +113,7 @@ public class ReaderMainActivity extends com.example.libraryonline.ui.auth.Sessio
     protected void onSessionAuthorized(
             com.example.libraryonline.data.session.SessionProfile profile) {
         homeView.bindProfile(profile);
+        if (accountController != null) accountController.load();
         loadReaderProfile();
         if (databaseHelper == null) databaseHelper = new DatabaseHelper(getApplicationContext());
         loadBooksFromSqlite();
