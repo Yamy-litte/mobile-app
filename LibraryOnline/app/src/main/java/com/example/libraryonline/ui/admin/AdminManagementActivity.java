@@ -45,6 +45,7 @@ public final class AdminManagementActivity extends SessionActivity {
     private java.util.List<DocumentSnapshot> users = new java.util.ArrayList<>();
     private String searchText = "";
     private EditText searchInput;
+    private LinearLayout resultsContainer;
 
     @Override protected void onCreate(Bundle state) {
         super.onCreate(state);
@@ -67,7 +68,6 @@ public final class AdminManagementActivity extends SessionActivity {
 
     @Override protected void onSessionStopped() {
         if (usersListener != null) { usersListener.remove(); usersListener = null; }
-        io.shutdownNow();
         content.removeAllViews();
     }
 
@@ -87,12 +87,15 @@ public final class AdminManagementActivity extends SessionActivity {
         content.addView(search, matchWrap());
         TextView note = text("Trạng thái thẻ và hạn dùng lấy trực tiếp từ hồ sơ cloud.", 13, false);
         content.addView(note, matchWrap());
+        resultsContainer = new LinearLayout(this);
+        resultsContainer.setOrientation(LinearLayout.VERTICAL);
+        content.addView(resultsContainer, matchWrap());
         if (usersListener != null) usersListener.remove();
         usersListener = firestore.collection("Users").whereEqualTo("role", "Reader")
                 .addSnapshotListener((snapshot, error) -> {
                     if (!isSessionReady()) return;
                     if (error != null) {
-                        content.addView(text("Không tải được độc giả: " + safe(error.getMessage()), 14, false), matchWrap());
+                        if (resultsContainer != null) resultsContainer.addView(text("Không tải được độc giả: " + safe(error.getMessage()), 14, false), matchWrap());
                         return;
                     }
                     if (snapshot == null) return;
@@ -104,8 +107,9 @@ public final class AdminManagementActivity extends SessionActivity {
     private void renderUsers() {
         if (searchInput == null || !isSessionReady()) return;
         String query = searchText;
-        // Keep the title/search controls; rebuild only result cards.
-        while (content.getChildCount() > 3) content.removeViewAt(3);
+        // Rebuild only result cards, preserving the search controls.
+        if (resultsContainer == null) return;
+        resultsContainer.removeAllViews();
         int count = 0;
         for (DocumentSnapshot doc : users) {
             String name = value(doc, "fullName");
@@ -119,7 +123,7 @@ public final class AdminManagementActivity extends SessionActivity {
             card.setBackgroundResource(R.drawable.bg_admin_card);
             LinearLayout.LayoutParams cardParams = matchWrap();
             cardParams.bottomMargin = dp(10);
-            content.addView(card, cardParams);
+            resultsContainer.addView(card, cardParams);
             card.addView(text(name.isEmpty() ? "Độc giả" : name, 17, true), matchWrap());
             card.addView(text("SĐT: " + (phone.isEmpty() ? "Chưa cập nhật" : phone), 14, false), matchWrap());
             card.addView(text("Email: " + value(doc, "email"), 13, false), matchWrap());
@@ -139,7 +143,7 @@ public final class AdminManagementActivity extends SessionActivity {
             actions.addView(renew, new LinearLayout.LayoutParams(0, dp(48), 1));
             card.addView(actions, matchWrap());
         }
-        if (count == 0) content.addView(text("Không tìm thấy độc giả phù hợp.", 14, false), matchWrap());
+        if (count == 0) resultsContainer.addView(text("Không tìm thấy độc giả phù hợp.", 14, false), matchWrap());
     }
 
     private void updateCardStatus(DocumentSnapshot doc, String status) {
@@ -255,7 +259,7 @@ public final class AdminManagementActivity extends SessionActivity {
                         config.configId = "default"; config.maxBooksPerUser = books; config.maxLoanDays = days;
                         config.onlineHoldHours = online; config.reservationHoldHours = reserve;
                         config.lateFeePerDay = dailyFee; config.lostBookMultiplier = lost;
-                        config.updatedBy = adminUid;
+                        config.updatedBy = null; // Bootstrap Admins may not have a local parent row.
                         config.updatedAt = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.ROOT).format(new Date());
                         io.execute(() -> {
                             try (com.example.libraryonline.data.repository.SystemConfigRepository repo =
