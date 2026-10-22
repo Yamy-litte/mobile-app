@@ -19,11 +19,12 @@
     <string name="admin_screen_report">Báo cáo thu phạt</string>
     <string name="admin_screen_account_title">Tài khoản Admin</string>
     <string name="admin_screen_identity">Thông tin hồ sơ</string>
-    <string name="admin_screen_name_readonly">Họ tên · Cố định</string>
-    <string name="admin_screen_birth_readonly">Ngày sinh · Cố định</string>
-    <string name="admin_screen_identity_note">Thông tin định danh không chỉnh sửa tại đây.</string>
+    <string name="admin_screen_name_readonly">Họ và tên</string>
+    <string name="admin_screen_birth_readonly">Ngày sinh</string>
+    <string name="admin_screen_identity_note">Có thể sửa họ tên, ngày sinh và số điện thoại. Email đăng nhập được khóa.</string>
+    <string name="admin_screen_email_locked">Email đăng nhập · Không chỉnh sửa</string>
     <string name="admin_screen_contact">Thông tin liên hệ</string>
-    <string name="admin_screen_save_contact">Lưu liên hệ</string>
+    <string name="admin_screen_save_contact">Lưu thay đổi</string>
     <string name="admin_screen_security">Bảo mật &amp; phiên đăng nhập</string>
     <string name="admin_screen_data_loading">Đang tải dữ liệu trên thiết bị...</string>
     <string name="admin_screen_data_error">Không tải được số liệu trên thiết bị này.</string>

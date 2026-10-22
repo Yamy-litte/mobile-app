@@ -219,6 +219,7 @@
         android:textColor="@color/admin_screen_ink" android:text="@string/admin_screen_data_loading" />
 </LinearLayout>
                 </LinearLayout>
+                <include layout="@layout/view_admin_management_hub" />
                 <LinearLayout
                     android:id="@+id/adminRequests"
                     android:layout_width="match_parent"
@@ -317,13 +318,16 @@
                             android:fontFamily="serif" android:textSize="20sp" android:textStyle="bold"
                             android:textColor="@color/admin_screen_ink" android:text="@string/admin_screen_identity" />
                         <TextView style="@style/AdminScreenFieldLabel" android:text="@string/admin_screen_name_readonly" />
-                        <TextView android:id="@+id/textAdminProfileImmutableName" style="@style/AdminScreenField"
-                            android:background="@drawable/bg_admin_screen_readonly" android:drawableEnd="@drawable/ic_reader_lock"
-                            android:drawableTint="@color/admin_screen_muted" android:text="@string/admin_profile_unavailable" />
+                        <EditText android:id="@+id/textAdminProfileImmutableName" style="@style/AdminScreenField"
+                            android:hint="Họ và tên" android:inputType="textPersonName" android:singleLine="true"
+                            android:imeOptions="actionNext" android:autofillHints="name" />
                         <TextView style="@style/AdminScreenFieldLabel" android:text="@string/admin_screen_birth_readonly" />
-                        <TextView android:id="@+id/textAdminProfileDob" style="@style/AdminScreenField"
-                            android:background="@drawable/bg_admin_screen_readonly" android:drawableEnd="@drawable/ic_reader_lock"
-                            android:drawableTint="@color/admin_screen_muted" android:text="@string/admin_profile_unavailable" />
+                        <EditText android:id="@+id/textAdminProfileDob" style="@style/AdminScreenField"
+                            android:hint="Chọn ngày sinh" android:inputType="none"
+                            android:focusable="false" android:clickable="true" android:singleLine="true"
+                            android:drawableEnd="@drawable/ic_admin_arrow"
+                            android:drawableTint="@color/admin_screen_primary"
+                            android:contentDescription="Chọn ngày sinh" />
                         <TextView style="@style/AdminScreenCaption" android:layout_marginTop="14dp" android:text="@string/admin_screen_identity_note" />
                     </LinearLayout>
                     <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
@@ -332,17 +336,20 @@
                         <TextView android:layout_width="match_parent" android:layout_height="wrap_content"
                             android:fontFamily="serif" android:textSize="20sp" android:textStyle="bold"
                             android:textColor="@color/admin_screen_ink" android:text="@string/admin_screen_contact" />
-                        <TextView style="@style/AdminScreenFieldLabel" android:text="@string/admin_profile_email_label" />
-                        <EditText android:id="@+id/textAdminProfileEmail" style="@style/AdminScreenField"
-                            android:hint="@string/admin_email_hint" android:inputType="textEmailAddress"
-                            android:imeOptions="actionNext" android:singleLine="true" android:autofillHints="emailAddress"
-                            android:drawableEnd="@drawable/ic_inventory_edit" android:drawableTint="@color/admin_screen_primary" />
+                        <TextView style="@style/AdminScreenFieldLabel" android:text="@string/admin_screen_email_locked" />
+                        <TextView android:id="@+id/textAdminProfileEmail" style="@style/AdminScreenField"
+                            android:background="@drawable/bg_admin_screen_readonly"
+                            android:drawableEnd="@drawable/ic_reader_lock" android:drawableTint="@color/admin_screen_muted"
+                            android:text="@string/admin_profile_unavailable"
+                            android:contentDescription="Email đăng nhập không được chỉnh sửa" />
                         <TextView style="@style/AdminScreenFieldLabel" android:text="@string/admin_profile_phone_label" />
                         <EditText android:id="@+id/textAdminProfilePhone" style="@style/AdminScreenField"
                             android:hint="@string/admin_phone_hint" android:inputType="phone" android:singleLine="true"
                             android:imeOptions="actionDone" android:autofillHints="phone"
                             android:drawableEnd="@drawable/ic_inventory_edit" android:drawableTint="@color/admin_screen_primary" />
                     </LinearLayout>
+                    <TextView android:id="@+id/textAdminProfileUpdateStatus" style="@style/AdminScreenCaption"
+                        android:layout_marginTop="10dp" android:visibility="gone" android:accessibilityLiveRegion="polite" />
                     <Button android:id="@+id/buttonAdminEditProfile" android:layout_width="match_parent"
                         android:layout_height="52dp" android:layout_marginTop="14dp"
                         android:backgroundTint="@color/admin_screen_primary" android:text="@string/admin_screen_save_contact"

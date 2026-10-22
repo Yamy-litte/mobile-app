@@ -1,0 +1,75 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/adminManagementHub"
+    android:layout_width="match_parent" android:layout_height="wrap_content"
+    android:orientation="vertical" android:visibility="gone" android:paddingBottom="26dp">
+    <TextView android:layout_width="match_parent" android:layout_height="wrap_content"
+        android:layout_marginTop="18dp" android:text="Quản lý thư viện"
+        android:fontFamily="serif" android:textSize="25sp" android:textStyle="bold" android:textColor="@color/admin_screen_ink" />
+    <TextView style="@style/AdminScreenCaption" android:layout_marginTop="6dp"
+        android:layout_marginBottom="16dp"
+        android:text="Chọn một phân hệ. Mỗi mục mở màn hình riêng." />
+    <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
+        android:orientation="vertical" android:padding="14dp" android:background="@drawable/bg_admin_screen_card">
+        <TextView android:layout_width="match_parent" android:layout_height="wrap_content"
+            android:text="Tài khoản &amp; độc giả" android:textColor="@color/admin_screen_ink"
+            android:textStyle="bold" android:textSize="18sp" android:layout_marginBottom="12dp" />
+    <LinearLayout android:id="@+id/adminHubApprovals" style="@style/AdminScreenActionRow" android:layout_height="76dp"
+        android:contentDescription="Duyệt thẻ">
+        <ImageView android:layout_width="25dp" android:layout_height="25dp" android:src="@drawable/ic_admin_check" android:tint="@color/admin_screen_primary" android:contentDescription="@null" />
+        <LinearLayout android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1"
+            android:layout_marginStart="14dp" android:orientation="vertical">
+            <TextView android:layout_width="match_parent" android:layout_height="wrap_content"
+                android:text="Duyệt thẻ" android:textSize="16sp" android:textStyle="bold" android:textColor="@color/admin_screen_ink" />
+            <TextView android:layout_width="match_parent" android:layout_height="wrap_content"
+                android:layout_marginTop="4dp" android:text="Duyệt đăng ký và yêu cầu khôi phục" android:textSize="12sp" android:textColor="@color/admin_screen_muted" />
+        </LinearLayout>
+        <ImageView android:layout_width="18dp" android:layout_height="18dp" android:src="@drawable/ic_admin_arrow" android:contentDescription="@null" />
+    </LinearLayout>
+    <LinearLayout android:id="@+id/adminHubReaders" style="@style/AdminScreenActionRow" android:layout_height="76dp"
+        android:contentDescription="Quản lý độc giả">
+        <ImageView android:layout_width="25dp" android:layout_height="25dp" android:src="@drawable/ic_admin_people" android:tint="@color/admin_screen_primary" android:contentDescription="@null" />
+        <LinearLayout android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1"
+            android:layout_marginStart="14dp" android:orientation="vertical">
+            <TextView android:layout_width="match_parent" android:layout_height="wrap_content"
+                android:text="Quản lý độc giả" android:textSize="16sp" android:textStyle="bold" android:textColor="@color/admin_screen_ink" />
+            <TextView android:layout_width="match_parent" android:layout_height="wrap_content"
+                android:layout_marginTop="4dp" android:text="Tìm hồ sơ, gia hạn và khóa/mở thẻ" android:textSize="12sp" android:textColor="@color/admin_screen_muted" />
+        </LinearLayout>
+        <ImageView android:layout_width="18dp" android:layout_height="18dp" android:src="@drawable/ic_admin_arrow" android:contentDescription="@null" />
+    </LinearLayout>
+    </LinearLayout>
+    <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
+        android:layout_marginTop="14dp" android:orientation="vertical" android:padding="14dp"
+        android:background="@drawable/bg_admin_screen_card">
+        <TextView android:layout_width="match_parent" android:layout_height="wrap_content"
+            android:text="Thiết lập &amp; thống kê" android:textColor="@color/admin_screen_ink"
+            android:textStyle="bold" android:textSize="18sp" android:layout_marginBottom="12dp" />
+    <LinearLayout android:id="@+id/adminHubConfig" style="@style/AdminScreenActionRow" android:layout_height="76dp"
+        android:contentDescription="Cấu hình thư viện">
+        <ImageView android:layout_width="25dp" android:layout_height="25dp" android:src="@drawable/ic_admin_refresh" android:tint="@color/admin_screen_primary" android:contentDescription="@null" />
+        <LinearLayout android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1"
+            android:layout_marginStart="14dp" android:orientation="vertical">
+            <TextView android:layout_width="match_parent" android:layout_height="wrap_content"
+                android:text="Cấu hình thư viện" android:textSize="16sp" android:textStyle="bold" android:textColor="@color/admin_screen_ink" />
+            <TextView android:layout_width="match_parent" android:layout_height="wrap_content"
+                android:layout_marginTop="4dp" android:text="Hạn mức mượn và quy tắc vận hành" android:textSize="12sp" android:textColor="@color/admin_screen_muted" />
+        </LinearLayout>
+        <ImageView android:layout_width="18dp" android:layout_height="18dp" android:src="@drawable/ic_admin_arrow" android:contentDescription="@null" />
+    </LinearLayout>
+    <LinearLayout android:id="@+id/adminHubReports" style="@style/AdminScreenActionRow" android:layout_height="76dp"
+        android:contentDescription="Báo cáo thu phạt">
+        <ImageView android:layout_width="25dp" android:layout_height="25dp" android:src="@drawable/ic_admin_book" android:tint="@color/admin_screen_primary" android:contentDescription="@null" />
+        <LinearLayout android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1"
+            android:layout_marginStart="14dp" android:orientation="vertical">
+            <TextView android:layout_width="match_parent" android:layout_height="wrap_content"
+                android:text="Báo cáo thu phạt" android:textSize="16sp" android:textStyle="bold" android:textColor="@color/admin_screen_ink" />
+            <TextView android:layout_width="match_parent" android:layout_height="wrap_content"
+                android:layout_marginTop="4dp" android:text="Theo dõi tiền đã thu và khoản còn nợ" android:textSize="12sp" android:textColor="@color/admin_screen_muted" />
+        </LinearLayout>
+        <ImageView android:layout_width="18dp" android:layout_height="18dp" android:src="@drawable/ic_admin_arrow" android:contentDescription="@null" />
+    </LinearLayout>
+    </LinearLayout>
+    <TextView style="@style/AdminScreenCaption" android:layout_marginTop="14dp"
+        android:text="Hồ sơ Admin được quản lý trong tab Tài khoản riêng." />
+</LinearLayout>
