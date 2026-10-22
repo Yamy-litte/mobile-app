@@ -317,7 +317,7 @@ public final class CirculationRepository implements AutoCloseable {
                 "JOIN BookCopies b ON b.copyId=d.copyId " +
                 "WHERE r.userId=? AND d.returnDate IS NULL AND d.detailStatus IN ('DangMuon','QuaHan') " +
                 "UNION SELECT DISTINCT bookTitleId FROM Reservations WHERE userId=? " +
-                "AND reservationStatus NOT IN ('Cancelled','Expired','Completed') " +
+                "AND reservationStatus NOT IN ('Cancelled','Expired','Completed','Received') " +
                 "AND (copyId IS NULL OR copyId<>?)",
                 new String[]{userId, userId, excludedReservationCopyId})) {
             while (c.moveToNext()) ids.add(c.getString(0));
