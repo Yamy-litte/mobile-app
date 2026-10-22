@@ -20,7 +20,7 @@ public class AdminDashboardStatsDaoTest {
     @Before public void setUp() {
         db = SQLiteDatabase.create(null);
         db.execSQL("CREATE TABLE LoanDetails (loanDetailId TEXT, loanReceiptId TEXT, copyId TEXT, borrowDate TEXT, dueDate TEXT, returnDate TEXT, detailStatus TEXT, createdAt TEXT)");
-        db.execSQL("CREATE TABLE LoanReceipts (loanReceiptId TEXT, userId TEXT)");
+        db.execSQL("CREATE TABLE LoanReceipts (loanReceiptId TEXT, userId TEXT, createdAt TEXT, receiptStatus TEXT)");
         db.execSQL("CREATE TABLE BookCopies (copyId TEXT, bookTitleId TEXT, copyStatus TEXT, isHidden INTEGER)");
         db.execSQL("CREATE TABLE BookTitles (bookTitleId TEXT, title TEXT)");
         db.execSQL("CREATE TABLE Users (userId TEXT, fullName TEXT)");
@@ -52,7 +52,7 @@ public class AdminDashboardStatsDaoTest {
         db.execSQL("INSERT INTO Users VALUES ('u1','Độc giả kiểm thử')");
         db.execSQL("INSERT INTO BookTitles VALUES ('b1','Sách kiểm thử')");
         db.execSQL("INSERT INTO BookCopies VALUES ('c1','b1','ChoLay',0)");
-        db.execSQL("INSERT INTO LoanReceipts VALUES ('r1','u1')");
+        db.execSQL("INSERT INTO LoanReceipts VALUES ('r1','u1','2026-10-22T10:00:00','Open')");
         db.execSQL("INSERT INTO LoanDetails VALUES ('l1','r1','c1','2026-10-22','2026-10-21',NULL,'DangMuon','2026-10-22T10:00:00')");
         db.execSQL("INSERT INTO LoanDetails VALUES ('l2','r1','c1','2026-10-20','2026-10-23','2026-10-22','DaTra','2026-10-20T10:00:00')");
         AdminDashboardStatsDao.Summary result = new AdminDashboardStatsDao(db).load(day());

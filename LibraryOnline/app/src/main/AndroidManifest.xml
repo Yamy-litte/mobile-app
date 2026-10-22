@@ -54,6 +54,7 @@
         <activity android:name=".ui.admin.AdminPasswordActivity" android:exported="false" />
         <activity
             android:name=".ui.admin.AdminMainActivity"
-            android:exported="false" />
+            android:exported="false"
+            android:windowSoftInputMode="adjustResize" />
     </application>
 </manifest>

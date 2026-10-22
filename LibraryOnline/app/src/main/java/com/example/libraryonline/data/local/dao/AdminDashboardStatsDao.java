@@ -37,7 +37,9 @@ public final class AdminDashboardStatsDao {
     public Summary load(Calendar clock) {
         SimpleDateFormat formatter = new SimpleDateFormat("yyyy-MM-dd", Locale.ROOT);
         String today = formatter.format(clock.getTime());
-        int borrowed = count("SELECT COUNT(*) FROM LoanDetails WHERE borrowDate=?", new String[]{today});
+        int borrowed = count("SELECT COUNT(*) FROM LoanReceipts "
+                + "WHERE substr(createdAt,1,10)=? AND receiptStatus != 'Cancelled'",
+                new String[]{today});
         int returned = count("SELECT COUNT(*) FROM LoanDetails WHERE returnDate=?", new String[]{today});
         int awaiting = count("SELECT COUNT(*) FROM BookCopies WHERE copyStatus='ChoLay' AND isHidden=0", null);
         int overdue = count("SELECT COUNT(*) FROM LoanDetails WHERE returnDate IS NULL "
