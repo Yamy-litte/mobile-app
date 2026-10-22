@@ -52,4 +52,9 @@
     <string name="circulation_return">Nhận trả</string>
     <string name="circulation_idle">Kết quả giao dịch sẽ hiển thị tại đây.</string>
 
+
+    <string name="circulation_penalty_id_label">Mã khoản phạt</string>
+    <string name="circulation_penalty_id_hint">Tự điền sau khi nhận trả trễ hoặc nhập mã khoản phạt</string>
+    <string name="circulation_collect_fine">Đã thu tiền mặt</string>
+
 </resources>
