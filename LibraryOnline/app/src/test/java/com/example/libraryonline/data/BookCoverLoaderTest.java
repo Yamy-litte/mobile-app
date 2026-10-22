@@ -50,24 +50,27 @@ public class BookCoverLoaderTest {
         controller.pause().stop().destroy();
         Glide.tearDown();
     }
-    private String imageFile() throws Exception {
+    private File createImageFile() throws Exception {
         File file = new File(activity.getCacheDir(), "book-cover-test.png");
         Bitmap bitmap = Bitmap.createBitmap(32, 48, Bitmap.Config.ARGB_8888);
         try (FileOutputStream out = new FileOutputStream(file)) {
             assertTrue(bitmap.compress(Bitmap.CompressFormat.PNG, 100, out));
         }
-        return Uri.fromFile(file).toString();
+        return file;
+    }
+    private String imageFile() throws Exception {
+        return Uri.fromFile(createImageFile()).toString();
     }
     private void awaitRequest() throws Exception {
         Request request = new DrawableImageViewTarget(image).getRequest();
         assertNotNull(request);
         long deadline = System.nanoTime() + java.util.concurrent.TimeUnit.SECONDS.toNanos(8);
-        while (request.isRunning() && System.nanoTime() < deadline) {
+        while (!request.isComplete() && !request.isFailed() && System.nanoTime() < deadline) {
             Shadows.shadowOf(android.os.Looper.getMainLooper()).idle();
             Thread.sleep(10);
         }
         Shadows.shadowOf(android.os.Looper.getMainLooper()).idle();
-        assertFalse("Image request did not finish", request.isRunning());
+        assertTrue("Image request did not finish", request.isComplete() || request.isFailed());
     }
     @Test public void validImageIsDisplayedAndPlaceholderIsHidden() throws Exception {
         BookCoverLoader.load(imageFile(), image, fallback);
@@ -89,7 +92,8 @@ public class BookCoverLoaderTest {
         assertEquals(View.VISIBLE, fallback.getVisibility());
     }
     @Test public void httpCoverIsDecodedAndRebindingReusesTheCache() throws Exception {
-        byte[] png = java.nio.file.Files.readAllBytes(new File(Uri.parse(imageFile()).getPath()).toPath());
+        File sourceFile = createImageFile();
+        byte[] png = java.nio.file.Files.readAllBytes(sourceFile.toPath());
         java.util.concurrent.atomic.AtomicInteger requests = new java.util.concurrent.atomic.AtomicInteger();
         java.net.ServerSocket server = new java.net.ServerSocket();
         server.bind(new java.net.InetSocketAddress("127.0.0.1", 0));
