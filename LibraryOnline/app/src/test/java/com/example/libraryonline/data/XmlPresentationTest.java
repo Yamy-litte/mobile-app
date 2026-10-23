@@ -54,7 +54,9 @@ public class XmlPresentationTest {
                     {R.layout.item_reader_online_request, R.id.readerOnlineItemCancel},
                     {R.layout.item_reader_online_request, R.id.readerOnlineItemDue},
                     {R.layout.view_reader_loans, R.id.containerReaderOnlineReceipts},
-                    {R.layout.item_reader_online_receipt, R.id.readerOnlineReceiptStatus}
+                    {R.layout.item_reader_online_receipt, R.id.readerOnlineReceiptStatus},
+                    {R.layout.activity_reader_online_borrow, R.id.onlineBorrowValidation},
+                    {R.layout.activity_reader_online_borrow, R.id.onlineBorrowRetry}
             };
             for (int[] pair : checks) {
                 View view = activity.getLayoutInflater().inflate(
@@ -100,6 +102,21 @@ public class XmlPresentationTest {
                     text.getColorForState(selected, 0));
             assertEquals(ContextCompat.getColor(activity, R.color.library_accent_background),
                     bg.getDefaultColor());
+        }
+    }
+
+    @Test public void onlineRequestValidationColorIsResourceDriven() {
+        try (ActivityController<Screen> controller =
+                     Robolectric.buildActivity(Screen.class).setup()) {
+            Screen activity = controller.get();
+            ColorStateList validation = ContextCompat.getColorStateList(
+                    activity, R.color.online_borrow_validation_text);
+            assertNotNull(validation);
+            assertTrue(validation.isStateful());
+            assertEquals(ContextCompat.getColor(activity, R.color.library_success),
+                    validation.getColorForState(new int[]{android.R.attr.state_selected}, 0));
+            assertEquals(ContextCompat.getColor(activity, R.color.text_secondary),
+                    validation.getDefaultColor());
         }
     }
 

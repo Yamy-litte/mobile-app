@@ -574,7 +574,15 @@ service cloud.firestore {
     }
 
     match /OnlineLoanRequests/{requestId} {
-      allow read: if isAdmin()
+      // A missing request is readable only by its owner so first-time
+      // transaction checks do not trigger PERMISSION_DENIED.
+      allow get: if isAdmin()
+        || (signedIn() && (
+            (resource != null && resource.data.userId == request.auth.uid)
+            || (!exists(/databases/$(database)/documents/OnlineLoanRequests/$(requestId))
+                && requestId.matches('^' + request.auth.uid + '_[^/]+$'))
+        ));
+      allow list: if isAdmin()
         || (signedIn() && resource.data.userId == request.auth.uid);
       allow create: if validNewOnlineRequest(requestId);
       allow update: if (

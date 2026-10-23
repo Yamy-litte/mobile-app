@@ -3,7 +3,7 @@ const { before, after, beforeEach, test } = require("node:test");
 const fs = require("node:fs");
 const { URL } = require("node:url");
 const { initializeTestEnvironment, assertSucceeds, assertFails } = require("@firebase/rules-unit-testing");
-const { collection, query, where, getDocs, getCountFromServer, doc, setDoc, getDoc, updateDoc, deleteDoc, deleteField, writeBatch, serverTimestamp, Timestamp } = require("firebase/firestore");
+const { collection, query, where, getDocs, getCountFromServer, doc, setDoc, getDoc, updateDoc, deleteDoc, deleteField, writeBatch, runTransaction, serverTimestamp, Timestamp } = require("firebase/firestore");
 let env;
 const projectId = "demo-library-online";
 const category = { categoryId: "cat", name: "Văn học", isActive: true };
@@ -240,6 +240,42 @@ function onlineNoticeFixture(status, message) {
     createdAt:serverTimestamp(), readAt:null
   };
 }
+test("First-time online submit creates after reading user, title and config without GET on missing request", async () => {
+  const own=db("reader"), ref=doc(own,"OnlineLoanRequests/reader_book");
+  await assertSucceeds(runTransaction(own, async tx => {
+    const profile = await tx.get(doc(own,"Users/reader"));
+    const title = await tx.get(doc(own,"BookTitles/book"));
+    const config = await tx.get(doc(own,"SystemConfigs/default"));
+    require("node:assert/strict").equal(profile.data().role,"Reader");
+    require("node:assert/strict").equal(title.data().availableCopies,1);
+    require("node:assert/strict").equal(config.exists(),false);
+    // The previously deployed Rules denied reading a missing request. Do not
+    // query ref in the transaction; create is validated by security rules.
+    tx.set(ref,onlineRequestFixture());
+  }));
+  require("node:assert/strict").equal((await getDoc(ref)).data().status,"Pending");
+  await assertFails(setDoc(ref,onlineRequestFixture()));
+});
+
+test("Reader can fetch its missing request and submit in Firestore transaction, without exposing others", async () => {
+  const own = db("reader");
+  const ref = doc(own, "OnlineLoanRequests/reader_book");
+  const absent = await assertSucceeds(getDoc(ref));
+  require("node:assert/strict").equal(absent.exists(), false);
+  // Missing request for another owner must not be readable.
+  await assertFails(getDoc(doc(own, "OnlineLoanRequests/other_book")));
+  await assertFails(getDoc(doc(db("other"), "OnlineLoanRequests/reader_book")));
+  // Android submit() reads the absent document before creating it in a transaction.
+  await assertSucceeds(runTransaction(own, async tx => {
+    const previous = await tx.get(ref);
+    require("node:assert/strict").equal(previous.exists(), false);
+    tx.set(ref, onlineRequestFixture());
+  }));
+  const result = await assertSucceeds(getDoc(ref));
+  require("node:assert/strict").equal(result.data().status, "Pending");
+  await assertFails(getDoc(doc(db("other"), "OnlineLoanRequests/reader_book")));
+});
+
 test("reader submits only their own active request, never a preorder or duplicate", async () => {
   const own = db("reader"), request = doc(own,"OnlineLoanRequests/reader_book");
   await assertFails(setDoc(doc(db("other"), "OnlineLoanRequests/reader_book"), onlineRequestFixture()));

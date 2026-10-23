@@ -60,3 +60,20 @@ firebase deploy --only firestore:rules
 ```
 
 Không cấp quyền thêm cho Reader được ghi BookCopies/BookTitles, không deploy hoặc ghi Firebase production trong bước sửa code này.
+
+## Khắc phục khi bấm Gửi yêu cầu mà không thấy phản hồi (23/10/2026)
+
+Đã sửa luồng và thông báo ở mã nguồn:
+
+1. Trước đây Reader dùng `tx.get(OnlineLoanRequests/{uid}_{bookId})` ngay khi gửi yêu cầu lần đầu. Document lúc này **chưa tồn tại**, Rules cũ chỉ kiểm tra `resource.data.userId` nên có thể từ chối GET.
+2. Android mới dùng **truy vấn owner** `whereEqualTo("userId", uid)` để tải danh sách và xác định đơn đã có hay chưa. Khi lần đầu tạo, transaction đọc User/BookTitle/Config rồi **set document mới mà không GET một document chưa tồn tại**. Khi gửi lại đơn cũ, transaction vẫn GET và kiểm tra trạng thái/attempt. Firestore Rules vẫn chặn ghi trùng. Cách này giúp **gửi Pending lần đầu hoạt động với cả Rules cũ**, miễn là query owner, Reader, sách và config đều hợp lệ.
+3. Rules mới cũng tách `allow get` và `allow list` để cho phép GET của chính Reader đối với document chưa tồn tại, **không mở quyền đọc đơn hiện có của người khác**.
+4. Nút `onlineBorrowConfirm` cũ bị vô hiệu hóa âm thầm nếu không có Internet/quyền Firestore hoặc chưa đọc cấu hình, quota. Giao diện mới có `onlineBorrowValidation`, `onlineBorrowRetry` và báo lý do cụ thể bằng Toast. Chỉ ghi sau khi tất cả kiểm tra hợp lệ; chỉ chuyển đến tab Mượn sách sau khi transaction Firestore báo thành công.
+
+Nếu vẫn gặp `PERMISSION_DENIED`: cần chạy Firebase Emulator Rules tests và **deploy `firestore.rules` mới** vào đúng Firebase project. `git pull` chỉ cập nhật mã trên máy, không cập nhật Rules trên Firebase. Lỗi này không khắc phục được chỉ bằng Build lại APK.
+
+Chu trình kiểm tra:
+- Reader đăng nhập với thẻ `HoatDong`, mở chi tiết sách còn `availableCopies > 0`, vào Mượn Online.
+- Dùng `Kiểm tra lại kết nối và điều kiện` nếu trang báo chưa xác minh.
+- Nhấn Xác nhận: trước khi Firestore xác nhận hiển thị “Đang gửi…”. Thành công tự mở tab Mượn sách, danh sách Online có `Pending`; Admin mở mục Yêu cầu Online sẽ thấy đơn.
+- Nếu không thành công, ghi lại chính xác mã lỗi trên màn hình. Không đánh dấu đơn là thành công khi Firestore báo lỗi.
