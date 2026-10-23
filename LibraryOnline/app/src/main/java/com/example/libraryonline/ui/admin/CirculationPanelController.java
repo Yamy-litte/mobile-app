@@ -192,6 +192,8 @@ final class CirculationPanelController implements AutoCloseable {
                         && !((com.example.libraryonline.ui.auth.SessionActivity) activity).isSessionReady()) return;
                 result.setText(output);
                 Toast.makeText(activity, output, Toast.LENGTH_LONG).show();
+                if (!error && activity instanceof AdminMainActivity)
+                    ((AdminMainActivity) activity).refreshDashboardAfterCirculation();
             });
         });
     }
