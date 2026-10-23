@@ -335,3 +335,84 @@ test("expired online hold returns reserved copy once; unauthorized reader cannot
   duplicate.update(doc(d,"BookTitles/book"),{availableCopies:2,updatedAt:serverTimestamp()});
   await assertFails(duplicate.commit());
 });
+
+test("Online handover checks linked copy and notification; Reader cannot forge checkout", async () => {
+  const now = new Date();
+  await env.withSecurityRulesDisabled(async c => {
+    const d=c.firestore(), batch=writeBatch(d);
+    batch.set(doc(d,"OnlineLoanRequests/reader_book"),{
+      requestId:"reader_book",userId:"reader",bookTitleId:"book",bookTitle:"Real inventory",
+      loanDays:7,attempt:1,status:"Approved",createdAt:Timestamp.fromDate(now),
+      updatedAt:Timestamp.fromDate(now),reviewedBy:"admin",reviewedAt:Timestamp.fromDate(now),
+      notificationId:"reader_book_v1_Approved",copyId:"copy",
+      holdUntil:Timestamp.fromDate(new Date(Date.now()+24*3600000))
+    });
+    batch.update(doc(d,"BookCopies/copy"),{copyStatus:"ChoLay",priorityUserId:"reader"});
+    batch.update(doc(d,"BookTitles/book"),{availableCopies:0});
+    await batch.commit();
+  });
+  const d=db("admin"), request=doc(d,"OnlineLoanRequests/reader_book");
+  const due=Timestamp.fromDate(new Date(Date.now()+7*86400000));
+  const notification=doc(d,"OnlineLoanNotifications/reader_book_v1_Collected");
+  const issued={status:"Collected",collectedBy:"admin",collectedAt:serverTimestamp(),
+      dueAt:due,updatedAt:serverTimestamp(),notificationId:notification.id};
+  await assertFails(updateDoc(request,issued));
+  await assertFails(updateDoc(doc(db("reader"),"OnlineLoanRequests/reader_book"),issued));
+  const batch=writeBatch(d);
+  batch.update(request,issued);
+  batch.update(doc(d,"BookCopies/copy"),{copyStatus:"DaMuon",priorityUserId:null,
+      updatedAt:serverTimestamp()});
+  batch.set(notification,onlineNoticeFixture("Collected","Đã nhận sách tại quầy."));
+  await assertSucceeds(batch.commit());
+  const title=await getDoc(doc(d,"BookTitles/book"));
+  require("node:assert/strict").equal(title.data().availableCopies,0);
+  require("node:assert/strict").equal((await getDoc(request)).data().status,"Collected");
+  await assertFails(updateDoc(request,{status:"Approved"}));
+});
+
+test("Online return restores availability once; Reader can request again only after return", async () => {
+  const now=new Date();
+  await env.withSecurityRulesDisabled(async c => {
+    const d=c.firestore(), batch=writeBatch(d);
+    batch.set(doc(d,"OnlineLoanRequests/reader_book"),{
+      requestId:"reader_book", userId:"reader", bookTitleId:"book",
+      bookTitle:"Real inventory", loanDays:7, attempt:1, status:"Collected",
+      createdAt:Timestamp.fromDate(now),updatedAt:Timestamp.fromDate(now),
+      reviewedBy:"admin",reviewedAt:Timestamp.fromDate(now),
+      notificationId:"reader_book_v1_Collected",copyId:"copy",
+      holdUntil:Timestamp.fromDate(new Date(Date.now()+24*3600000)),
+      collectedAt:Timestamp.fromDate(now),collectedBy:"admin",
+      dueAt:Timestamp.fromDate(new Date(Date.now()+7*86400000))
+    });
+    batch.update(doc(d,"BookCopies/copy"),{copyStatus:"DaMuon",priorityUserId:null});
+    batch.update(doc(d,"BookTitles/book"),{availableCopies:0});
+    await batch.commit();
+  });
+  const d=db("admin"), request=doc(d,"OnlineLoanRequests/reader_book");
+  const notification=doc(d,"OnlineLoanNotifications/reader_book_v1_Returned");
+  await assertFails(updateDoc(request,{status:"Returned",returnedBy:"admin",
+    returnedAt:serverTimestamp(),updatedAt:serverTimestamp(),notificationId:notification.id}));
+  const batch=writeBatch(d);
+  batch.update(request,{status:"Returned",returnedBy:"admin",
+    returnedAt:serverTimestamp(),updatedAt:serverTimestamp(),notificationId:notification.id});
+  batch.update(doc(d,"BookCopies/copy"),{copyStatus:"SanSang",priorityUserId:null,
+    updatedAt:serverTimestamp()});
+  batch.update(doc(d,"BookTitles/book"),{availableCopies:1,updatedAt:serverTimestamp()});
+  batch.set(notification,onlineNoticeFixture("Returned","Đã nhận trả sách."));
+  await assertSucceeds(batch.commit());
+  require("node:assert/strict").equal((await getDoc(doc(d,"BookTitles/book"))).data().availableCopies,1);
+  const again=writeBatch(d);
+  again.update(request,{status:"Returned",updatedAt:serverTimestamp()});
+  again.update(doc(d,"BookTitles/book"),{availableCopies:2});
+  await assertFails(again.commit());
+  const reapply={
+    status:"Pending",attempt:2,loanDays:7,
+    createdAt:serverTimestamp(),updatedAt:serverTimestamp(),
+    copyId:deleteField(),holdUntil:deleteField(),reviewedBy:deleteField(),
+    reviewedAt:deleteField(),notificationId:deleteField(),
+    collectedAt:deleteField(),collectedBy:deleteField(),dueAt:deleteField(),
+    returnedAt:deleteField(),returnedBy:deleteField()
+  };
+  await assertSucceeds(updateDoc(doc(db("reader"),"OnlineLoanRequests/reader_book"),reapply));
+  await assertFails(updateDoc(doc(db("reader"),"OnlineLoanRequests/reader_book"),{status:"Collected"}));
+});
