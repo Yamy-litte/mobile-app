@@ -216,7 +216,7 @@ public class ReaderMainActivity extends com.example.libraryonline.ui.auth.Sessio
                 });
     }
 
-    /** Never borrow on scan. ISBN filters locally; a physical copy resolves via Firestore. */
+    /** ISBN maps to a title; a physical Code-128 label maps to a BookCopy. */
     private void searchScannedBook(String barcode) {
         if (!isSessionReady()) return;
         selectedCategory = "";
@@ -229,49 +229,73 @@ public class ReaderMainActivity extends com.example.libraryonline.ui.auth.Sessio
                 return;
             }
         }
-        // Physical copy barcodes are NOT an ISBN or BookTitle ID. Resolve their parent first.
-        Toast.makeText(this, "Đang tìm cuốn sách theo barcode…", Toast.LENGTH_SHORT).show();
         FirebaseUser user = auth.getCurrentUser();
         final String uid = user == null ? null : user.getUid();
         if (uid == null) return;
+        Toast.makeText(this, "Đang tra barcode trong thư viện…", Toast.LENGTH_SHORT).show();
+        firestore.collection("BookTitles").whereEqualTo("isbn", barcode)
+                .get(Source.SERVER).addOnCompleteListener(this, titles -> {
+                    if (!sameReaderSession(uid)) return;
+                    if (!titles.isSuccessful()) {
+                        Toast.makeText(this, "Lỗi tra cứu ISBN trên Firestore.",
+                                Toast.LENGTH_LONG).show();
+                        return;
+                    }
+                    for (DocumentSnapshot title : titles.getResult().getDocuments()) {
+                        if (!Boolean.TRUE.equals(title.getBoolean("isHidden"))) {
+                            openScannedTitle(title.getId(), uid);
+                            return;
+                        }
+                    }
+                    lookupPhysicalCopy(barcode, uid);
+                });
+    }
+
+    private boolean sameReaderSession(String uid) {
+        FirebaseUser current = auth.getCurrentUser();
+        return isSessionReady() && current != null && uid.equals(current.getUid())
+                && !isFinishing() && !isDestroyed();
+    }
+
+    private void lookupPhysicalCopy(String barcode, String uid) {
         firestore.collection("BookCopies").whereEqualTo("barcode", barcode)
-                .get(Source.SERVER).addOnCompleteListener(this, result -> {
-                    FirebaseUser current = auth.getCurrentUser();
-                    if (!isSessionReady() || current == null || !uid.equals(current.getUid()))
-                        return;
-                    if (!result.isSuccessful()) {
-                        Toast.makeText(this, "Không tìm được mã trên Firestore. Có thể nhập ISBN bằng tay.",
+                .get(Source.SERVER).addOnCompleteListener(this, copies -> {
+                    if (!sameReaderSession(uid)) return;
+                    if (!copies.isSuccessful()) {
+                        Toast.makeText(this, "Lỗi tra cứu barcode cuốn sách.",
                                 Toast.LENGTH_LONG).show();
                         return;
                     }
-                    if (result.getResult().isEmpty()) {
+                    if (copies.getResult().isEmpty()) {
                         searchInput.setText(barcode);
-                        Toast.makeText(this, "Không tìm thấy cuốn có barcode: " + barcode,
+                        Toast.makeText(this, "Không tìm thấy ISBN hoặc barcode: " + barcode,
                                 Toast.LENGTH_LONG).show();
                         return;
                     }
-                    DocumentSnapshot copy = result.getResult().getDocuments().get(0);
-                    String titleId = copy.getString("bookTitleId");
-                    if (titleId == null || Boolean.TRUE.equals(copy.getBoolean("isHidden"))) {
-                        Toast.makeText(this, "Cuốn sách đã ẩn hoặc dữ liệu không hợp lệ.",
+                    for (DocumentSnapshot copy : copies.getResult().getDocuments()) {
+                        String titleId = copy.getString("bookTitleId");
+                        if (titleId != null && !Boolean.TRUE.equals(copy.getBoolean("isHidden"))) {
+                            openScannedTitle(titleId, uid);
+                            return;
+                        }
+                    }
+                    Toast.makeText(this, "Các cuốn có barcode này đang bị ẩn.",
+                            Toast.LENGTH_LONG).show();
+                });
+    }
+
+    private void openScannedTitle(String titleId, String uid) {
+        firestore.collection("BookTitles").document(titleId).get(Source.SERVER)
+                .addOnCompleteListener(this, title -> {
+                    if (!sameReaderSession(uid)) return;
+                    if (!title.isSuccessful() || !title.getResult().exists()
+                            || Boolean.TRUE.equals(title.getResult().getBoolean("isHidden"))) {
+                        Toast.makeText(this, "Đầu sách không còn được công khai.",
                                 Toast.LENGTH_LONG).show();
                         return;
                     }
-                    firestore.collection("BookTitles").document(titleId).get(Source.SERVER)
-                            .addOnCompleteListener(this, titleResult -> {
-                                FirebaseUser signedIn = auth.getCurrentUser();
-                                if (!isSessionReady() || signedIn == null
-                                        || !uid.equals(signedIn.getUid())) return;
-                                if (!titleResult.isSuccessful() || !titleResult.getResult().exists()
-                                        || Boolean.TRUE.equals(
-                                                titleResult.getResult().getBoolean("isHidden"))) {
-                                    Toast.makeText(this, "Đầu sách không còn được công khai.",
-                                            Toast.LENGTH_LONG).show();
-                                    return;
-                                }
-                                startActivity(new Intent(this, BookDetailActivity.class)
-                                        .putExtra(BookDetailActivity.EXTRA_BOOK_ID, titleId));
-                            });
+                    startActivity(new Intent(this, BookDetailActivity.class)
+                            .putExtra(BookDetailActivity.EXTRA_BOOK_ID, titleId));
                 });
     }
 
