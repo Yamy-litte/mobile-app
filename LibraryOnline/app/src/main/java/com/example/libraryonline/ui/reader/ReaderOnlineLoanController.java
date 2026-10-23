@@ -171,6 +171,35 @@ final class ReaderOnlineLoanController {
             Long days = doc.getLong("loanDays");
             ((TextView) item.findViewById(R.id.readerOnlineItemDays))
                     .setText("Thời hạn mượn yêu cầu: " + (days == null ? "—" : days) + " ngày");
+            if (OnlineLoanRequestRepository.PENDING.equals(status)) {
+                android.widget.Button cancel = item.findViewById(R.id.readerOnlineItemCancel);
+                cancel.setVisibility(View.VISIBLE);
+                cancel.setEnabled(!snapshot.getMetadata().isFromCache()
+                        && !snapshot.getMetadata().hasPendingWrites());
+                cancel.setOnClickListener(v -> {
+                    if (!current(authorizedUid) || !cancel.isEnabled()) return;
+                    String uid = authorizedUid;
+                    new androidx.appcompat.app.AlertDialog.Builder(activity)
+                            .setTitle("Hủy yêu cầu mượn Online?")
+                            .setMessage("Yêu cầu đang chờ Admin duyệt sẽ được hủy. Không ảnh hưởng tồn kho.")
+                            .setNegativeButton("Giữ yêu cầu", null)
+                            .setPositiveButton("Hủy yêu cầu", (dialog, which) -> {
+                                if (!current(uid)) return;
+                                cancel.setEnabled(false);
+                                repository.cancelPending(uid, doc.getString("bookTitleId"))
+                                        .addOnCompleteListener(activity, task -> {
+                                            if (!current(uid)) return;
+                                            if (!task.isSuccessful()) {
+                                                cancel.setEnabled(true);
+                                                Toast.makeText(activity, "Không thể hủy: "
+                                                        + (task.getException() == null
+                                                          ? "Đơn đã thay đổi." : task.getException().getMessage()),
+                                                        Toast.LENGTH_LONG).show();
+                                            }
+                                        });
+                            }).show();
+                });
+            }
             if (OnlineLoanRequestRepository.APPROVED.equals(status)) {
                 Timestamp hold = doc.getTimestamp("holdUntil");
                 item.findViewById(R.id.readerOnlineItemApproved).setVisibility(View.VISIBLE);
