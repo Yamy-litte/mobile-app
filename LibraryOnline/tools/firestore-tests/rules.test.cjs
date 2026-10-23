@@ -374,6 +374,11 @@ test("Online handover checks linked copy and notification; Reader cannot forge c
   const title=await getDoc(doc(d,"BookTitles/book"));
   require("node:assert/strict").equal(title.data().availableCopies,0);
   require("node:assert/strict").equal((await getDoc(request)).data().status,"Collected");
+  const recorded=await assertSucceeds(getDoc(doc(db("reader"),"OnlineLoanReceipts/reader_book_v1")));
+  require("node:assert/strict").equal(recorded.data().status,"Open");
+  await assertFails(getDoc(doc(db("other"),"OnlineLoanReceipts/reader_book_v1")));
+  await assertFails(updateDoc(doc(db("reader"),"OnlineLoanReceipts/reader_book_v1"),
+    {status:"Returned"}));
   await assertFails(updateDoc(request,{status:"Approved"}));
 });
 
@@ -419,6 +424,9 @@ test("Online return restores availability once; Reader can request again only af
   });
   await assertSucceeds(batch.commit());
   require("node:assert/strict").equal((await getDoc(doc(d,"BookTitles/book"))).data().availableCopies,1);
+  require("node:assert/strict").equal(
+    (await getDoc(doc(db("reader"),"OnlineLoanReceipts/reader_book_v1"))).data().status,
+    "Returned");
   const again=writeBatch(d);
   again.update(request,{status:"Returned",updatedAt:serverTimestamp()});
   again.update(doc(d,"BookTitles/book"),{availableCopies:2});
