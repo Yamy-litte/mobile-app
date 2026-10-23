@@ -65,62 +65,83 @@ public final class OnlineLoanRequestRepository {
         final DocumentReference titleRef = db.collection("BookTitles").document(bookId);
         final DocumentReference userRef = db.collection("Users").document(uid);
         final DocumentReference configRef = db.collection("SystemConfigs").document("default");
-        return db.runTransaction(tx -> {
-            // All reads occur before any write in this Firestore transaction.
-            DocumentSnapshot user = tx.get(userRef);
-            DocumentSnapshot title = tx.get(titleRef);
-            DocumentSnapshot config = tx.get(configRef);
-            DocumentSnapshot previous = tx.get(requestRef);
-            if (!user.exists() || !"Reader".equals(user.getString("role"))
-                    || !"HoatDong".equals(user.getString("cardStatus")))
-                throw new IllegalArgumentException("Thẻ độc giả chưa hoạt động hoặc đang bị khóa.");
-            int maxDays = config.exists() && config.getLong("maxLoanDays") != null
-                    ? config.getLong("maxLoanDays").intValue() : 14;
-            if (loanDays > maxDays)
-                throw new IllegalArgumentException("Vượt số ngày mượn tối đa: " + maxDays);
-            if (!title.exists() || Boolean.TRUE.equals(title.getBoolean("isHidden"))
-                    || title.getLong("availableCopies") == null
-                    || title.getLong("availableCopies") < 1)
-                throw new IllegalArgumentException(
-                        "Đầu sách đã ẩn hoặc hết cuốn có thể đăng ký mượn Online.");
 
-            Map<String, Object> changes = new HashMap<>();
-            changes.put("loanDays", loanDays);
-            changes.put("status", PENDING);
-            changes.put("updatedAt", FieldValue.serverTimestamp());
-            changes.put("createdAt", FieldValue.serverTimestamp());
-            if (!previous.exists()) {
-                changes.put("requestId", requestRef.getId());
-                changes.put("userId", uid);
-                changes.put("bookTitleId", bookId);
-                changes.put("bookTitle", title.getString("title"));
-                changes.put("attempt", 1);
-                tx.set(requestRef, changes);
-            } else if (REJECTED.equals(previous.getString("status"))
-                    || EXPIRED.equals(previous.getString("status"))
-                    || RETURNED.equals(previous.getString("status"))
-                    || CANCELLED.equals(previous.getString("status"))) {
-                long attempt = previous.getLong("attempt") == null ? 1 : previous.getLong("attempt");
-                changes.put("attempt", attempt + 1);
-                changes.put("copyId", FieldValue.delete());
-                changes.put("holdUntil", FieldValue.delete());
-                changes.put("reviewedBy", FieldValue.delete());
-                changes.put("reviewedAt", FieldValue.delete());
-                changes.put("rejectionReason", FieldValue.delete());
-                changes.put("notificationId", FieldValue.delete());
-                changes.put("collectedAt", FieldValue.delete());
-                changes.put("collectedBy", FieldValue.delete());
-                changes.put("dueAt", FieldValue.delete());
-                changes.put("returnedAt", FieldValue.delete());
-                changes.put("returnedBy", FieldValue.delete());
-                changes.put("receiptId", FieldValue.delete());
-                tx.update(requestRef, changes);
-            } else {
-                throw new IllegalArgumentException(
-                        "Bạn đã có yêu cầu mượn đầu sách này đang chờ hoặc đã duyệt.");
-            }
-            return (Void) null;
-        });
+        // The old deployed Rules may deny get(requestRef) when the document
+        // does not yet exist. First discover this Reader's requests with a
+        // userId-constrained query. Existing requests are read again inside
+        // the transaction; a new request is created without reading the
+        // missing document. Strict Firestore Rules still reject duplicate
+        // writes/races and validate all fields on create.
+        return db.collection(REQUESTS).whereEqualTo("userId", uid).get(Source.SERVER)
+                .onSuccessTask(DIRECT, matching -> {
+                    boolean found = false;
+                    for (DocumentSnapshot doc : matching.getDocuments()) {
+                        if (requestRef.getId().equals(doc.getId())) {
+                            found = true;
+                            break;
+                        }
+                    }
+                    final boolean readPrevious = found;
+                    return db.runTransaction(tx -> {
+                        // Firestore requires every transaction read to precede its writes.
+                        DocumentSnapshot user = tx.get(userRef);
+                        DocumentSnapshot title = tx.get(titleRef);
+                        DocumentSnapshot config = tx.get(configRef);
+                        DocumentSnapshot previous = readPrevious ? tx.get(requestRef) : null;
+                        if (!user.exists() || !"Reader".equals(user.getString("role"))
+                                || !"HoatDong".equals(user.getString("cardStatus")))
+                            throw new IllegalArgumentException(
+                                    "Thẻ độc giả chưa hoạt động hoặc đang bị khóa.");
+                        int maxDays = config.exists() && config.getLong("maxLoanDays") != null
+                                ? config.getLong("maxLoanDays").intValue() : 14;
+                        if (loanDays > maxDays)
+                            throw new IllegalArgumentException(
+                                    "Vượt số ngày mượn tối đa: " + maxDays);
+                        if (!title.exists() || Boolean.TRUE.equals(title.getBoolean("isHidden"))
+                                || title.getLong("availableCopies") == null
+                                || title.getLong("availableCopies") < 1)
+                            throw new IllegalArgumentException(
+                                    "Đầu sách đã ẩn hoặc hết cuốn có thể đăng ký mượn Online.");
+                        Map<String, Object> changes = new HashMap<>();
+                        changes.put("loanDays", loanDays);
+                        changes.put("status", PENDING);
+                        changes.put("updatedAt", FieldValue.serverTimestamp());
+                        changes.put("createdAt", FieldValue.serverTimestamp());
+                        if (!readPrevious) {
+                            changes.put("requestId", requestRef.getId());
+                            changes.put("userId", uid);
+                            changes.put("bookTitleId", bookId);
+                            changes.put("bookTitle", title.getString("title"));
+                            changes.put("attempt", 1);
+                            tx.set(requestRef, changes);
+                        } else if (previous != null && previous.exists()
+                                && (REJECTED.equals(previous.getString("status"))
+                                || EXPIRED.equals(previous.getString("status"))
+                                || RETURNED.equals(previous.getString("status"))
+                                || CANCELLED.equals(previous.getString("status")))) {
+                            long attempt = previous.getLong("attempt") == null
+                                    ? 1 : previous.getLong("attempt");
+                            changes.put("attempt", attempt + 1);
+                            changes.put("copyId", FieldValue.delete());
+                            changes.put("holdUntil", FieldValue.delete());
+                            changes.put("reviewedBy", FieldValue.delete());
+                            changes.put("reviewedAt", FieldValue.delete());
+                            changes.put("rejectionReason", FieldValue.delete());
+                            changes.put("notificationId", FieldValue.delete());
+                            changes.put("collectedAt", FieldValue.delete());
+                            changes.put("collectedBy", FieldValue.delete());
+                            changes.put("dueAt", FieldValue.delete());
+                            changes.put("returnedAt", FieldValue.delete());
+                            changes.put("returnedBy", FieldValue.delete());
+                            changes.put("receiptId", FieldValue.delete());
+                            tx.update(requestRef, changes);
+                        } else {
+                            throw new IllegalArgumentException(
+                                    "Đã có yêu cầu cho đầu sách này. Hãy tải lại để xem trạng thái.");
+                        }
+                        return (Void) null;
+                    });
+                });
     }
 
     /** Reader can withdraw an unreviewed request; no copy is held at this stage. */
