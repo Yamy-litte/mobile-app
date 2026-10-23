@@ -626,7 +626,7 @@ service cloud.firestore {
         && getAfter(receiptPath).data.originalDueAt == old.dueAt;
     }
 
-    function validReaderExtensionReceipt() {
+    function validReaderExtensionReceipt(receiptId) {
       let old = resource.data;
       let next = request.resource.data;
       let requestPath =
@@ -648,7 +648,7 @@ service cloud.firestore {
         && exists(requestPath)
         && get(requestPath).data.status == 'Collected'
         && get(requestPath).data.userId == old.userId
-        && get(requestPath).data.receiptId == request.resource.id
+        && get(requestPath).data.receiptId == receiptId
         && getAfter(requestPath).data.dueAt == next.dueAt
         && getAfter(requestPath).data.extensionCount == 1
         && getAfter(requestPath).data.originalDueAt == old.dueAt
@@ -786,7 +786,7 @@ service cloud.firestore {
         && getAfter(/databases/$(database)/documents/OnlineLoanRequests/$(resource.data.requestId)).data.status == 'Returned'
         && getAfter(/databases/$(database)/documents/OnlineLoanRequests/$(resource.data.requestId)).data.receiptId == receiptId
         && getAfter(/databases/$(database)/documents/OnlineLoanRequests/$(resource.data.requestId)).data.returnedAt == request.time
-        || validReaderExtensionReceipt();
+        || validReaderExtensionReceipt(receiptId);
       allow delete: if false;
     }
 
