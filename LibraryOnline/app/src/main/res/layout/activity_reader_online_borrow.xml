@@ -67,6 +67,8 @@
                 android:layout_width="match_parent" android:layout_height="wrap_content"
                 android:layout_marginTop="8dp" android:padding="8dp" android:minHeight="48dp"
                 android:inputType="number" android:singleLine="true"
+                android:background="@drawable/bg_reader_search"
+                android:textColor="@color/text_primary" android:textColorHint="@color/text_secondary"
                 android:hint="Hoặc nhập số ngày khác theo cấu hình"
                 android:textSize="14sp" android:importantForAutofill="no"/>
             <TextView android:id="@+id/onlineBorrowSelection"
