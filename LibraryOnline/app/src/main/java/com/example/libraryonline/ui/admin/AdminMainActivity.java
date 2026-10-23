@@ -136,6 +136,8 @@ public class AdminMainActivity extends com.example.libraryonline.ui.auth.Session
         findViewById(R.id.actionAdminBorrow).setOnClickListener(v -> openCounter());
         findViewById(R.id.actionAdminReturn).setOnClickListener(v -> openCounter());
         findViewById(R.id.actionAdminOnline).setOnClickListener(v -> openOnlineRequests());
+        findViewById(R.id.adminHomeReviewOnline).setOnClickListener(v -> openOnlineRequests());
+        findViewById(R.id.adminHomeStartHandover).setOnClickListener(v -> openCounter());
         findViewById(R.id.adminHubOnlineLoans).setOnClickListener(v -> openOnlineRequests());
         onlineLoanController = new AdminOnlineLoanController(this);
         findViewById(R.id.buttonAdminAccountBack).setOnClickListener(
@@ -427,6 +429,27 @@ public class AdminMainActivity extends com.example.libraryonline.ui.auth.Session
                     save.setEnabled(true);
                     showAdminProfileStatus("Không đọc được hồ sơ hiện tại. Kiểm tra kết nối mạng.", true);
                 });
+    }
+
+    /** Counts come from the existing Admin Online queue listener; no duplicate query. */
+    void updateHomeOnlineWork(int pending, int approved, int collected, boolean fromCache) {
+        if (!isSessionReady()) return;
+        ((TextView) findViewById(R.id.adminHomeOnlinePending))
+                .setText(Integer.toString(pending));
+        ((TextView) findViewById(R.id.adminHomeOnlineApproved))
+                .setText(Integer.toString(approved));
+        ((TextView) findViewById(R.id.adminHomeOnlineBorrowed))
+                .setText(Integer.toString(collected));
+        ((TextView) findViewById(R.id.adminHomeOnlineSource)).setText(fromCache
+                ? "Dữ liệu Firestore đã lưu · Đang chờ đồng bộ với máy chủ."
+                : "Đã cập nhật theo dữ liệu Firestore.");
+    }
+
+    void homeOnlineWorkUnavailable(String reason) {
+        for (int id : new int[] {R.id.adminHomeOnlinePending, R.id.adminHomeOnlineApproved,
+                R.id.adminHomeOnlineBorrowed})
+            ((TextView) findViewById(id)).setText("—");
+        ((TextView) findViewById(R.id.adminHomeOnlineSource)).setText(reason);
     }
 
     private void openOnlineRequests() {
