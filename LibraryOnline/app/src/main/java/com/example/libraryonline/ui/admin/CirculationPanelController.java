@@ -1,6 +1,7 @@
 package com.example.libraryonline.ui.admin;
 
 import android.app.Activity;
+import android.view.View;
 import android.widget.Button;
 import android.widget.EditText;
 import android.widget.TextView;
@@ -27,10 +28,24 @@ final class CirculationPanelController implements AutoCloseable {
     private final Button borrowButton;
     private final Button returnButton;
     private final CounterOnlineLoanController online;
+    private final View readerPanel, copyPanel, onlinePanel, onlineActions, directPanel, penaltyPanel;
+    private final Button modeOnline, modeDirect, modePenalty;
 
     CirculationPanelController(Activity activity) {
         this.activity = activity;
         repository = new CirculationRepository(activity);
+        readerPanel = activity.findViewById(R.id.circulationReaderPanel);
+        copyPanel = activity.findViewById(R.id.circulationCopyPanel);
+        onlinePanel = activity.findViewById(R.id.circulationOnlinePanel);
+        onlineActions = activity.findViewById(R.id.circulationOnlineActions);
+        directPanel = activity.findViewById(R.id.circulationDirectPanel);
+        penaltyPanel = activity.findViewById(R.id.circulationPenaltyPanel);
+        modeOnline = activity.findViewById(R.id.circulationModeOnline);
+        modeDirect = activity.findViewById(R.id.circulationModeDirect);
+        modePenalty = activity.findViewById(R.id.circulationModePenalty);
+        modeOnline.setOnClickListener(v -> showMode("online"));
+        modeDirect.setOnClickListener(v -> showMode("direct"));
+        modePenalty.setOnClickListener(v -> showMode("penalty"));
         readerBarcode = activity.findViewById(R.id.inputCirculationReaderBarcode);
         copyBarcode = activity.findViewById(R.id.inputCirculationCopyBarcode);
         loanDays = activity.findViewById(R.id.inputCirculationLoanDays);
@@ -58,6 +73,26 @@ final class CirculationPanelController implements AutoCloseable {
         borrowButton.setOnClickListener(v -> borrow());
         returnButton.setOnClickListener(v -> returnCopy());
         collectFineButton.setOnClickListener(v -> collectFine());
+        showMode(activity instanceof AdminMainActivity
+                ? ((AdminMainActivity) activity).circulationMode() : "online");
+    }
+
+    private void showMode(String mode) {
+        if (!"direct".equals(mode) && !"penalty".equals(mode)) mode = "online";
+        boolean onlineMode = "online".equals(mode);
+        boolean directMode = "direct".equals(mode);
+        boolean fineMode = "penalty".equals(mode);
+        modeOnline.setSelected(onlineMode);
+        modeDirect.setSelected(directMode);
+        modePenalty.setSelected(fineMode);
+        readerPanel.setVisibility(fineMode ? View.GONE : View.VISIBLE);
+        copyPanel.setVisibility(fineMode ? View.GONE : View.VISIBLE);
+        onlinePanel.setVisibility(onlineMode ? View.VISIBLE : View.GONE);
+        onlineActions.setVisibility(onlineMode ? View.VISIBLE : View.GONE);
+        directPanel.setVisibility(directMode ? View.VISIBLE : View.GONE);
+        penaltyPanel.setVisibility(fineMode ? View.VISIBLE : View.GONE);
+        if (activity instanceof AdminMainActivity)
+            ((AdminMainActivity) activity).setCirculationMode(mode);
     }
 
     private void borrow() {
@@ -104,7 +139,12 @@ final class CirculationPanelController implements AutoCloseable {
         }
         runOperation(() -> {
             CirculationRepository.OperationResult operation = repository.returnCopy(reader, copy, uid);
-            if (operation.relatedId != null) penaltyId.setText(operation.relatedId);
+            if (operation.relatedId != null) activity.runOnUiThread(() -> {
+                if (!activity.isFinishing() && !activity.isDestroyed()) {
+                    penaltyId.setText(operation.relatedId);
+                    showMode("penalty");
+                }
+            });
             return operation.message;
         });
     }
