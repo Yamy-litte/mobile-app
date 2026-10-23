@@ -160,78 +160,60 @@ public final class OnlineLoanRequestRepository {
         });
     }
 
+    /**
+     * Reserve one UNIT of this title, not a physical BookCopy.
+     * The BookTitles counter is the source of truth for all uncommitted stock.
+     * Transactions touching this title serialize, so simultaneous approvals
+     * cannot exceed availableCopies. copyId is assigned only at handover.
+     */
     public Task<Void> approve(String requestId, String adminUid) {
-        final DocumentReference requestRef = db.collection(REQUESTS).document(requestId);
-        // Query is a candidate discovery only; the transaction rechecks the selected copy.
+        DocumentReference requestRef = db.collection(REQUESTS).document(requestId);
         return requestRef.get(Source.SERVER).onSuccessTask(DIRECT, request -> {
             if (!request.exists() || !PENDING.equals(request.getString("status")))
                 return Tasks.forException(new IllegalArgumentException("Yêu cầu đã được xử lý."));
             String titleId = request.getString("bookTitleId");
-            if (titleId == null)
-                return Tasks.forException(new IllegalArgumentException("Thiếu đầu sách."));
-            return db.collection("BookCopies").whereEqualTo("bookTitleId", titleId)
-                    .get(Source.SERVER).onSuccessTask(DIRECT, copies -> {
-                        DocumentSnapshot candidate = null;
-                        for (DocumentSnapshot copy : copies.getDocuments()) {
-                            if ("SanSang".equals(copy.getString("copyStatus"))
-                                    && !Boolean.TRUE.equals(copy.getBoolean("isHidden"))
-                                    && copy.get("priorityUserId") == null) {
-                                candidate = copy;
-                                break;
-                            }
-                        }
-                        if (candidate == null)
-                            return Tasks.forException(new IllegalArgumentException(
-                                    "Không còn cuốn sẵn sàng. Chưa duyệt yêu cầu."));
-                        final DocumentReference copyRef = candidate.getReference();
-                        final DocumentReference titleRef =
-                                db.collection("BookTitles").document(titleId);
-                        final DocumentReference userRef =
-                                db.collection("Users").document(request.getString("userId"));
-                        return db.runTransaction(tx -> {
-                            DocumentSnapshot current = tx.get(requestRef);
-                            DocumentSnapshot title = tx.get(titleRef);
-                            DocumentSnapshot copy = tx.get(copyRef);
-                            DocumentSnapshot user = tx.get(userRef);
-                            if (!PENDING.equals(current.getString("status")))
-                                throw new IllegalArgumentException("Yêu cầu không còn chờ duyệt.");
-                            if (!"Reader".equals(user.getString("role"))
-                                    || !"HoatDong".equals(user.getString("cardStatus")))
-                                throw new IllegalArgumentException("Thẻ độc giả không còn hoạt động.");
-                            if (!title.exists() || Boolean.TRUE.equals(title.getBoolean("isHidden"))
-                                    || title.getLong("availableCopies") == null
-                                    || title.getLong("availableCopies") < 1
-                                    || !"SanSang".equals(copy.getString("copyStatus"))
-                                    || Boolean.TRUE.equals(copy.getBoolean("isHidden"))
-                                    || copy.get("priorityUserId") != null)
-                                throw new IllegalArgumentException("Sách vừa thay đổi. Hãy tải lại.");
-                            String reader = current.getString("userId");
-                            long attempt = current.getLong("attempt") == null
-                                    ? 1 : current.getLong("attempt");
-                            Date deadline = new Date(System.currentTimeMillis() + HOLD_MS);
-                            Timestamp holdUntil = new Timestamp(deadline);
-                            Map<String, Object> accepted = new HashMap<>();
-                            accepted.put("status", APPROVED);
-                            accepted.put("copyId", copyRef.getId());
-                            accepted.put("holdUntil", holdUntil);
-                            accepted.put("reviewedBy", adminUid);
-                            accepted.put("notificationId",
-                                    notification(requestRef.getId(), attempt, APPROVED).getId());
-                            accepted.put("reviewedAt", FieldValue.serverTimestamp());
-                            accepted.put("updatedAt", FieldValue.serverTimestamp());
-                            tx.update(requestRef, accepted);
-                            tx.update(copyRef, "copyStatus", "ChoLay",
-                                    "priorityUserId", reader, "updatedAt", FieldValue.serverTimestamp());
-                            tx.update(titleRef, "availableCopies", title.getLong("availableCopies") - 1,
-                                    "updatedAt", FieldValue.serverTimestamp());
-                            tx.set(notification(requestRef.getId(), attempt, APPROVED),
-                                    notice(requestRef.getId(), reader, APPROVED, attempt,
-                                            "Yêu cầu mượn sách đã được duyệt",
-                                            "Cuốn " + current.getString("bookTitle")
-                                                    + " đã được giữ. Vui lòng đến thư viện trong 24 giờ."));
-                            return (Void) null;
-                        });
-                    });
+            String userId = request.getString("userId");
+            if (titleId == null || userId == null)
+                return Tasks.forException(new IllegalArgumentException("Thiếu đầu sách hoặc độc giả."));
+            DocumentReference titleRef = db.collection("BookTitles").document(titleId);
+            DocumentReference userRef = db.collection("Users").document(userId);
+            return db.runTransaction(tx -> {
+                DocumentSnapshot current = tx.get(requestRef);
+                DocumentSnapshot title = tx.get(titleRef);
+                DocumentSnapshot user = tx.get(userRef);
+                if (!current.exists() || !PENDING.equals(current.getString("status")))
+                    throw new IllegalArgumentException("Yêu cầu không còn chờ duyệt.");
+                if (!user.exists() || !"Reader".equals(user.getString("role"))
+                        || !"HoatDong".equals(user.getString("cardStatus")))
+                    throw new IllegalArgumentException("Thẻ độc giả không còn hoạt động.");
+                Long free = title.getLong("availableCopies");
+                if (!title.exists() || Boolean.TRUE.equals(title.getBoolean("isHidden"))
+                        || free == null || free < 1)
+                    throw new IllegalArgumentException(
+                            "Đã hết suất có thể duyệt của đầu sách này. Không duyệt vượt tồn kho.");
+                long attempt = current.getLong("attempt") == null ? 1 : current.getLong("attempt");
+                Timestamp holdUntil = new Timestamp(new Date(System.currentTimeMillis() + HOLD_MS));
+                Map<String, Object> accepted = new HashMap<>();
+                accepted.put("status", APPROVED);
+                accepted.put("copyId", FieldValue.delete()); // no copy selected during review
+                accepted.put("holdUntil", holdUntil);
+                accepted.put("reviewedBy", adminUid);
+                accepted.put("reviewedAt", FieldValue.serverTimestamp());
+                accepted.put("updatedAt", FieldValue.serverTimestamp());
+                accepted.put("notificationId",
+                        notification(requestId, attempt, APPROVED).getId());
+                tx.update(requestRef, accepted);
+                // Atomically reserve capacity; other approvals and inventory retire
+                // transactions must use this same shared BookTitles document.
+                tx.update(titleRef, "availableCopies", free - 1,
+                        "updatedAt", FieldValue.serverTimestamp());
+                tx.set(notification(requestId, attempt, APPROVED),
+                        notice(requestId, userId, APPROVED, attempt,
+                                "Yêu cầu mượn sách đã được duyệt",
+                                "Đã giữ một suất mượn " + current.getString("bookTitle")
+                                    + ". Vui lòng đến thư viện trong 24 giờ để quét nhận cuốn sách."));
+                return (Void) null;
+            });
         });
     }
 
@@ -267,6 +249,7 @@ public final class OnlineLoanRequestRepository {
      * Expire an approved hold as a single transaction. Called when an Admin opens
      * the requests screen: it is NOT a background scheduler while all apps are closed.
      */
+    /** Release exactly one title-level approved slot, or a legacy assigned copy. */
     public Task<Void> expire(String requestId) {
         DocumentReference requestRef = db.collection(REQUESTS).document(requestId);
         return db.runTransaction(tx -> {
@@ -275,15 +258,18 @@ public final class OnlineLoanRequestRepository {
                 return (Void) null;
             Timestamp until = request.getTimestamp("holdUntil");
             if (until == null || until.toDate().after(new Date())) return (Void) null;
-            String copyId = request.getString("copyId");
             String titleId = request.getString("bookTitleId");
-            DocumentReference copyRef = db.collection("BookCopies").document(copyId);
+            if (titleId == null) throw new IllegalArgumentException("Đơn thiếu đầu sách.");
+            String legacyCopyId = request.getString("copyId");
             DocumentReference titleRef = db.collection("BookTitles").document(titleId);
-            DocumentSnapshot copy = tx.get(copyRef);
+            DocumentReference copyRef = legacyCopyId == null ? null
+                    : db.collection("BookCopies").document(legacyCopyId);
             DocumentSnapshot title = tx.get(titleRef);
-            if (!"ChoLay".equals(copy.getString("copyStatus"))
-                    || !request.getString("userId").equals(copy.getString("priorityUserId")))
-                throw new IllegalArgumentException("Sách đã thay đổi; cần đối soát trước khi hết hạn.");
+            DocumentSnapshot copy = copyRef == null ? null : tx.get(copyRef);
+            if (copyRef != null && (!copy.exists()
+                    || !"ChoLay".equals(copy.getString("copyStatus"))
+                    || !request.getString("userId").equals(copy.getString("priorityUserId"))))
+                throw new IllegalArgumentException("Cuốn giữ cũ đã thay đổi; cần đối soát.");
             if (!title.exists() || title.getLong("availableCopies") == null
                     || title.getLong("totalCopies") == null
                     || title.getLong("availableCopies") >= title.getLong("totalCopies"))
@@ -291,14 +277,14 @@ public final class OnlineLoanRequestRepository {
             long attempt = request.getLong("attempt") == null ? 1 : request.getLong("attempt");
             tx.update(requestRef, "status", EXPIRED, "updatedAt", FieldValue.serverTimestamp(),
                     "notificationId", notification(requestId, attempt, EXPIRED).getId());
-            tx.update(copyRef, "copyStatus", "SanSang", "priorityUserId", null,
-                    "updatedAt", FieldValue.serverTimestamp());
+            if (copyRef != null) tx.update(copyRef, "copyStatus", "SanSang",
+                    "priorityUserId", null, "updatedAt", FieldValue.serverTimestamp());
             tx.update(titleRef, "availableCopies", title.getLong("availableCopies") + 1,
                     "updatedAt", FieldValue.serverTimestamp());
             tx.set(notification(requestId, attempt, EXPIRED),
                     notice(requestId, request.getString("userId"), EXPIRED, attempt,
                             "Yêu cầu mượn Online đã hết hạn",
-                            "Bạn chưa đến nhận sách trong 24 giờ. Cuốn sách đã được trả về kho."));
+                            "Bạn chưa đến nhận sách trong 24 giờ. Suất đã giữ được trả về kho."));
             return (Void) null;
         });
     }
@@ -317,12 +303,20 @@ public final class OnlineLoanRequestRepository {
         return requestRef.get(Source.SERVER).onSuccessTask(DIRECT, request -> {
             if (!request.exists() || !APPROVED.equals(request.getString("status")))
                 return Tasks.forException(new IllegalArgumentException("Đơn không còn ở trạng thái chờ lấy."));
-            String userId = request.getString("userId"), copyId = request.getString("copyId");
-            if (userId == null || copyId == null)
-                return Tasks.forException(new IllegalArgumentException("Đơn không đủ thông tin để giao."));
-            DocumentReference userRef = db.collection("Users").document(userId);
-            DocumentReference copyRef = db.collection("BookCopies").document(copyId);
-            return db.runTransaction(tx -> {
+            String userId = request.getString("userId");
+            if (userId == null)
+                return Tasks.forException(new IllegalArgumentException("Đơn thiếu độc giả."));
+            // Resolve the real BookCopy only when staff scans the physical barcode.
+            // Server-side lookup is candidate discovery; the transaction rechecks it.
+            return db.collection("BookCopies").whereEqualTo("barcode", copyBarcode.trim())
+                    .get(Source.SERVER).onSuccessTask(DIRECT, copies -> {
+                if (copies.size() != 1)
+                    return Tasks.forException(new IllegalArgumentException(
+                            "Không tìm thấy một cuốn duy nhất với barcode vừa quét."));
+                DocumentReference copyRef = copies.getDocuments().get(0).getReference();
+                String copyId = copyRef.getId();
+                DocumentReference userRef = db.collection("Users").document(userId);
+                return db.runTransaction(tx -> {
                 DocumentSnapshot current = tx.get(requestRef);
                 DocumentSnapshot user = tx.get(userRef);
                 DocumentSnapshot copy = tx.get(copyRef);
@@ -341,13 +335,20 @@ public final class OnlineLoanRequestRepository {
                         java.util.Locale.ROOT).format(new Date(now));
                 if (expiry != null && !expiry.trim().isEmpty() && expiry.compareTo(today) < 0)
                     throw new IllegalArgumentException("Thẻ độc giả đã hết hạn.");
-                if (!copy.exists() || !"ChoLay".equals(copy.getString("copyStatus"))
-                        || Boolean.TRUE.equals(copy.getBoolean("isHidden"))
-                        || !userId.equals(copy.getString("priorityUserId"))
-                        || !copyId.equals(current.getString("copyId"))
+                String existingCopyId = current.getString("copyId");
+                boolean legacyAssigned = existingCopyId != null;
+                if (!copy.exists() || Boolean.TRUE.equals(copy.getBoolean("isHidden"))
                         || !current.getString("bookTitleId").equals(copy.getString("bookTitleId"))
                         || !copyBarcode.trim().equals(copy.getString("barcode")))
-                    throw new IllegalArgumentException("Mã cuốn hoặc quyền giữ sách không khớp.");
+                    throw new IllegalArgumentException("Cuốn quét không thuộc đầu sách đã duyệt.");
+                if (legacyAssigned && (!existingCopyId.equals(copyId)
+                        || !"ChoLay".equals(copy.getString("copyStatus"))
+                        || !userId.equals(copy.getString("priorityUserId"))))
+                    throw new IllegalArgumentException("Đơn cũ đã giữ một cuốn khác. Quét đúng mã cuốn đó.");
+                if (!legacyAssigned && (!"SanSang".equals(copy.getString("copyStatus"))
+                        || copy.get("priorityUserId") != null))
+                    throw new IllegalArgumentException(
+                            "Cuốn không còn sẵn sàng. Hãy quét cuốn khác của đúng đầu sách.");
                 Long days = current.getLong("loanDays");
                 if (days == null || days < 1 || days > 60)
                     throw new IllegalArgumentException("Thời hạn mượn không hợp lệ.");
@@ -360,6 +361,7 @@ public final class OnlineLoanRequestRepository {
                 Timestamp dueAt = new Timestamp(new Date(now + days * 86_400_000L));
                 Map<String, Object> collected = new HashMap<>();
                 collected.put("status", COLLECTED);
+                collected.put("copyId", copyId); // first assignment happens HERE
                 collected.put("receiptId", receiptId);
                 collected.put("collectedBy", adminUid);
                 collected.put("collectedAt", FieldValue.serverTimestamp());
@@ -391,6 +393,7 @@ public final class OnlineLoanRequestRepository {
                                         "dd/MM/yyyy HH:mm", new java.util.Locale("vi", "VN"))
                                         .format(dueAt.toDate()) + "."));
                 return (Void) null;
+                });
             });
         });
     }
