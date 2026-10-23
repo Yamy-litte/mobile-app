@@ -67,6 +67,11 @@ public class InventoryChangesTest {
         assertThrows(IllegalArgumentException.class,
                 ()->InventoryChanges.restore(b,Arrays.asList(c),"unknown"));
     }
+    @Test public void approvedOnlineSlotProtectsPhysicalReadyCopyFromRetirement() {
+        BookTitle b=title();b.availableCopies=0;b.reservedOnlineCopies=1;
+        assertThrows(IllegalArgumentException.class,
+                ()->InventoryChanges.transition(b,Arrays.asList(copy()),"old","ThanhLy"));
+    }
     @Test public void inconsistentCountersBlockStockChanges(){
         BookTitle b=title();b.availableCopies=0;
         assertThrows(IllegalArgumentException.class,()->InventoryChanges.transition(b,Arrays.asList(copy()),"old","ThanhLy"));
