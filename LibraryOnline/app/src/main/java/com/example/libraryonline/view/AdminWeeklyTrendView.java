@@ -14,7 +14,7 @@ import com.example.libraryonline.R;
 import java.util.Arrays;
 import java.util.Locale;
 
-/** Renders the seven weekdays from real checkout dates in the local SQLite cache. */
+/** Renders weekday checkout counts merged from SQLite and Firestore. */
 public final class AdminWeeklyTrendView extends View {
     private static final String[] DAYS = {"T2", "T3", "T4", "T5", "T6", "T7", "CN"};
     private final Paint paint = new Paint(Paint.ANTI_ALIAS_FLAG);
@@ -29,7 +29,7 @@ public final class AdminWeeklyTrendView extends View {
         primary = ContextCompat.getColor(context, R.color.admin_screen_primary);
         muted = ContextCompat.getColor(context, R.color.admin_screen_muted);
         grid = ContextCompat.getColor(context, R.color.admin_screen_border);
-        setContentDescription("Biểu đồ mượn trong tuần, đang tải dữ liệu trên thiết bị.");
+        setContentDescription("Biểu đồ mượn trong tuần, đang tải giao dịch.");
     }
 
     public void setCounts(int[] values) {
@@ -40,7 +40,7 @@ public final class AdminWeeklyTrendView extends View {
         for (int n : counts) total += n;
         loaded = true;
         setContentDescription(String.format(Locale.getDefault(),
-                "Biểu đồ tuần, tổng %d lượt mượn đã ghi nhận trên thiết bị", total));
+                "Biểu đồ tuần, tổng %d lượt mượn thực tế", total));
         invalidate();
     }
 
@@ -81,7 +81,7 @@ public final class AdminWeeklyTrendView extends View {
         }
         if (total == 0) {
             paint.setTextSize(dp(12));
-            canvas.drawText("Chưa có lượt mượn trong tuần trên thiết bị",
+            canvas.drawText("Chưa có lượt mượn trong tuần",
                     width / 2f, (top + bottom) / 2f, paint);
             return;
         }
