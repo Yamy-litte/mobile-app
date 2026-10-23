@@ -340,11 +340,11 @@ public final class ReaderOnlineBorrowActivity extends SessionActivity {
                     : reason == null
                     ? "Đủ điều kiện sơ bộ. Nhấn Xác nhận để gửi lên Firestore."
                     : reason);
-            validation.setTextColor(androidx.core.content.ContextCompat.getColor(this,
-                    reason == null ? R.color.library_success : R.color.text_secondary));
+            validation.setSelected(reason == null && !submitting);
         }
         // Never silently disable the button for a missing network or rule permission.
         confirm.setEnabled(!submitting);
+        findViewById(R.id.onlineBorrowRetry).setEnabled(!submitting);
         boolean existing = OnlineLoanRequestRepository.PENDING.equals(requestStatus)
                 || OnlineLoanRequestRepository.APPROVED.equals(requestStatus)
                 || OnlineLoanRequestRepository.COLLECTED.equals(requestStatus);
