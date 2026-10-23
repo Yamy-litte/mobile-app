@@ -63,10 +63,12 @@ Không cấp quyền thêm cho Reader được ghi BookCopies/BookTitles, không
 
 ## Khắc phục khi bấm Gửi yêu cầu mà không thấy phản hồi (23/10/2026)
 
-Đã sửa hai nguyên nhân ở mã nguồn:
+Đã sửa luồng và thông báo ở mã nguồn:
 
-1. Reader dùng `tx.get(OnlineLoanRequests/{uid}_{bookId})` để kiểm tra trùng trước khi tạo. Yêu cầu lần đầu **chưa tồn tại**, do đó Rules cũ chỉ kiểm tra `resource.data.userId` có thể từ chối GET. Rules mới tách `allow get` và `allow list`: cho phép kiểm tra **chính ID của Reader** khi văn bản chưa tồn tại, không cấp quyền đọc đơn hiện có của người khác.
-2. Nút `onlineBorrowConfirm` cũ bị vô hiệu hóa âm thầm nếu không có internet/quyền Firestore hoặc chưa đọc cấu hình, quota. Giao diện mới có `onlineBorrowValidation`, `onlineBorrowRetry` và báo lý do cụ thể bằng Toast. Chỉ ghi sau khi tất cả kiểm tra hợp lệ; chỉ chuyển đến tab Mượn sách sau khi transaction Firestore báo thành công.
+1. Trước đây Reader dùng `tx.get(OnlineLoanRequests/{uid}_{bookId})` ngay khi gửi yêu cầu lần đầu. Document lúc này **chưa tồn tại**, Rules cũ chỉ kiểm tra `resource.data.userId` nên có thể từ chối GET.
+2. Android mới dùng **truy vấn owner** `whereEqualTo("userId", uid)` để tải danh sách và xác định đơn đã có hay chưa. Khi lần đầu tạo, transaction đọc User/BookTitle/Config rồi **set document mới mà không GET một document chưa tồn tại**. Khi gửi lại đơn cũ, transaction vẫn GET và kiểm tra trạng thái/attempt. Firestore Rules vẫn chặn ghi trùng. Cách này giúp **gửi Pending lần đầu hoạt động với cả Rules cũ**, miễn là query owner, Reader, sách và config đều hợp lệ.
+3. Rules mới cũng tách `allow get` và `allow list` để cho phép GET của chính Reader đối với document chưa tồn tại, **không mở quyền đọc đơn hiện có của người khác**.
+4. Nút `onlineBorrowConfirm` cũ bị vô hiệu hóa âm thầm nếu không có Internet/quyền Firestore hoặc chưa đọc cấu hình, quota. Giao diện mới có `onlineBorrowValidation`, `onlineBorrowRetry` và báo lý do cụ thể bằng Toast. Chỉ ghi sau khi tất cả kiểm tra hợp lệ; chỉ chuyển đến tab Mượn sách sau khi transaction Firestore báo thành công.
 
 Nếu vẫn gặp `PERMISSION_DENIED`: cần chạy Firebase Emulator Rules tests và **deploy `firestore.rules` mới** vào đúng Firebase project. `git pull` chỉ cập nhật mã trên máy, không cập nhật Rules trên Firebase. Lỗi này không khắc phục được chỉ bằng Build lại APK.
 
