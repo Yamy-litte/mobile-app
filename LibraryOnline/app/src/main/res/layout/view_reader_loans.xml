@@ -49,6 +49,12 @@
             </LinearLayout>
         </HorizontalScrollView>
 
+        <TextView
+            style="@style/ReaderLoansCaption"
+            android:layout_marginTop="8dp"
+            android:textSize="12sp"
+            android:text="Số lượng trên các mục là đơn Online. Sách mượn tại quầy được liệt kê riêng ở mục Đang mượn." />
+
         <LinearLayout android:id="@+id/readerLoansOnlineSection"
             style="@style/ReaderLoansSection">
             <TextView android:id="@+id/readerLoansSectionHeading"
