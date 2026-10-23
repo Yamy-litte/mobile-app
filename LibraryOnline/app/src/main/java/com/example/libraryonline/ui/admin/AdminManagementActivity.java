@@ -416,7 +416,8 @@ public class AdminManagementActivity extends SessionActivity {
                 android.database.sqlite.SQLiteDatabase db = helper.getReadableDatabase();
                 receipts = scalar(db, "SELECT COUNT(*) FROM LoanReceipts WHERE userId=?", uid);
                 activeLoans = scalar(db, "SELECT COUNT(*) FROM LoanDetails d JOIN LoanReceipts r ON r.loanReceiptId=d.loanReceiptId WHERE r.userId=? AND d.returnDate IS NULL", uid);
-                unpaid = scalar(db, "SELECT COUNT(*) FROM Penalties WHERE userId=? AND penaltyStatus IN ('Unpaid','Partial')", uid);
+                unpaid = scalar(db, "SELECT COUNT(*) FROM Penalties WHERE userId=? AND penaltyType='LateReturn' "
+                        + "AND penaltyStatus IN ('Unpaid','Partial')", uid);
             } catch (Exception ignored) {}
             final int r = receipts, a = activeLoans, p = unpaid;
             runOnUiThread(() -> {
@@ -699,10 +700,12 @@ public class AdminManagementActivity extends SessionActivity {
         String to = formatter.format(until.getTime());
         result.periodLabel = period == 0 ? "Ngày " + today
                 : period == 1 ? "Tuần bắt đầu " + from : "Tháng " + from.substring(0, 7);
-        String restriction = "paymentStatus='Confirmed' AND substr(receivedAt,1,10)>=? "
-                + "AND substr(receivedAt,1,10)<?";
+        String restriction = "pp.paymentStatus='Confirmed' AND p.penaltyType='LateReturn' "
+                + "AND substr(pp.receivedAt,1,10)>=? "
+                + "AND substr(pp.receivedAt,1,10)<?";
         try (android.database.Cursor c = db.rawQuery(
-                "SELECT COALESCE(SUM(amountReceived),0),COUNT(*) FROM PenaltyPayments WHERE "
+                "SELECT COALESCE(SUM(pp.amountReceived),0),COUNT(*) FROM PenaltyPayments pp "
+                        + "JOIN Penalties p ON p.penaltyId=pp.penaltyId WHERE "
                         + restriction, new String[]{from, to})) {
             if (c.moveToFirst()) {
                 result.collected = c.getLong(0);
@@ -710,7 +713,8 @@ public class AdminManagementActivity extends SessionActivity {
             }
         }
         result.outstanding = sum(db, "SELECT COALESCE(SUM(amountDue-amountPaid),0) "
-                + "FROM Penalties WHERE penaltyStatus IN ('Unpaid','Partial')", null);
+                + "FROM Penalties WHERE penaltyType='LateReturn' "
+                + "AND penaltyStatus IN ('Unpaid','Partial')", null);
 
         Calendar days = Calendar.getInstance();
         days.add(Calendar.DAY_OF_MONTH, -6);
@@ -720,9 +724,12 @@ public class AdminManagementActivity extends SessionActivity {
             days.add(Calendar.DAY_OF_MONTH, 1);
         }
         try (android.database.Cursor c = db.rawQuery(
-                "SELECT substr(receivedAt,1,10),SUM(amountReceived) FROM PenaltyPayments "
-                        + "WHERE paymentStatus='Confirmed' AND substr(receivedAt,1,10)>=? "
-                        + "AND substr(receivedAt,1,10)<=? GROUP BY substr(receivedAt,1,10)",
+                "SELECT substr(pp.receivedAt,1,10),SUM(pp.amountReceived) "
+                        + "FROM PenaltyPayments pp JOIN Penalties p ON p.penaltyId=pp.penaltyId "
+                        + "WHERE pp.paymentStatus='Confirmed' AND p.penaltyType='LateReturn' "
+                        + "AND substr(pp.receivedAt,1,10)>=? "
+                        + "AND substr(pp.receivedAt,1,10)<=? "
+                        + "GROUP BY substr(pp.receivedAt,1,10)",
                 new String[]{keys[0], keys[6]})) {
             while (c.moveToNext()) {
                 String key = c.getString(0);
@@ -739,7 +746,8 @@ public class AdminManagementActivity extends SessionActivity {
                 "SELECT COALESCE(NULLIF(u.fullName,''),'Độc giả'),pp.amountReceived,pp.receivedAt "
                         + "FROM PenaltyPayments pp JOIN Penalties p ON p.penaltyId=pp.penaltyId "
                         + "LEFT JOIN Users u ON u.userId=p.userId "
-                        + "WHERE pp.paymentStatus='Confirmed' ORDER BY pp.receivedAt DESC LIMIT 5", null)) {
+                        + "WHERE pp.paymentStatus='Confirmed' AND p.penaltyType='LateReturn' "
+                        + "ORDER BY pp.receivedAt DESC LIMIT 5", null)) {
             while (c.moveToNext())
                 result.recentPayments.add(c.getString(0) + " · Đã thu " + amount.format(c.getLong(1))
                         + " đ · " + c.getString(2));
@@ -747,7 +755,8 @@ public class AdminManagementActivity extends SessionActivity {
         try (android.database.Cursor c = db.rawQuery(
                 "SELECT COALESCE(NULLIF(u.fullName,''),'Độc giả'),p.amountDue-p.amountPaid,p.daysLate "
                         + "FROM Penalties p LEFT JOIN Users u ON u.userId=p.userId "
-                        + "WHERE p.penaltyStatus IN ('Unpaid','Partial') ORDER BY p.createdAt DESC LIMIT 5", null)) {
+                        + "WHERE p.penaltyType='LateReturn' AND p.penaltyStatus IN ('Unpaid','Partial') "
+                        + "ORDER BY p.createdAt DESC LIMIT 5", null)) {
             while (c.moveToNext())
                 result.unpaidPenalties.add(c.getString(0) + " · Còn nợ " +
                         amount.format(c.getLong(1)) + " đ · " + c.getInt(2) + " ngày trễ");

@@ -42,8 +42,8 @@
                 android:contentDescription="Quy trình mượn và trả sách trực tiếp"/>
             <Button android:id="@+id/circulationModePenalty"
                 style="@style/CirculationModeButton"
-                android:text="Thu phạt"
-                android:contentDescription="Thu tiền phạt qua mã khoản phạt"/>
+                android:text="Phạt trả muộn"
+                android:contentDescription="Thu tiền phạt trả sách quá hạn"/>
         </LinearLayout>
 
         <!-- Step 1: reader identification shared by Online and direct circulation. -->
@@ -231,10 +231,10 @@
                 android:text="NGHIỆP VỤ TÀI CHÍNH"/>
             <TextView style="@style/CirculationSectionTitle"
                 android:layout_marginTop="5dp"
-                android:text="Thu tiền phạt"/>
+                android:text="Phạt trả sách quá hạn"/>
             <TextView style="@style/CirculationCaption"
                 android:layout_marginTop="5dp"
-                android:text="Chỉ ghi nhận sau khi thủ thư đã nhận tiền và kiểm tra đúng mã khoản phạt."/>
+                android:text="Chỉ thu phạt trả sách quá hạn khi thủ thư đã nhận tiền và kiểm tra đúng mã khoản phạt."/>
             <EditText android:id="@+id/inputCirculationPenaltyId"
                 android:layout_width="match_parent"
                 android:layout_height="52dp"

@@ -1,3 +1,5 @@
+> **TÀI LIỆU LỊCH SỬ — ĐÃ ĐƯỢC THAY THẾ VỀ PHẦN MẤT SÁCH (23/10/2026).** Quyết định mới nhất: bỏ toàn bộ xử lý mất sách, chỉ giữ phạt trả muộn. Xem [2026-10-23-scope-late-return-only.md](2026-10-23-scope-late-return-only.md). Không triển khai state machine báo mất dưới đây. Dữ liệu legacy vẫn được giữ nguyên.
+
 # Phạm vi cập nhật — không Đặt trước, quy trình Báo mất sách
 
 Ngày thống nhất: 2026-10-22. Căn cứ: yêu cầu trực tiếp của người dùng thay thế các phần Đặt trước và Báo mất trong đặc tả cũ. Đây là tài liệu **định nghĩa hành vi cần triển khai**, không phải bằng chứng tính năng đã hoạt động.
