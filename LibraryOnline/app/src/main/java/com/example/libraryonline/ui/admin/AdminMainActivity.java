@@ -41,6 +41,7 @@ public class AdminMainActivity extends com.example.libraryonline.ui.auth.Session
 
     private LibraryBarcodeScanner barcodeScanner;
     private String scanTarget, scanRequestId, scanOwnerUid, scannedValue;
+    private String circulationMode = "online";
     private FirebaseFirestore firestore;
     private FirebaseAuth auth;
     private FirebaseAuth secondaryAuth;
@@ -74,6 +75,7 @@ public class AdminMainActivity extends com.example.libraryonline.ui.auth.Session
             scanRequestId = savedInstanceState.getString("scanRequestId");
             scanOwnerUid = savedInstanceState.getString("scanOwnerUid");
             scannedValue = savedInstanceState.getString("scannedValue");
+            circulationMode = savedInstanceState.getString("circulationMode", "online");
         }
         androidx.core.view.WindowCompat.setDecorFitsSystemWindows(getWindow(), false);
         setContentView(R.layout.activity_admin_main);
@@ -497,6 +499,7 @@ public class AdminMainActivity extends com.example.libraryonline.ui.auth.Session
         state.putString("scanRequestId", scanRequestId);
         state.putString("scanOwnerUid", scanOwnerUid);
         state.putString("scannedValue", scannedValue);
+        state.putString("circulationMode", circulationMode);
         super.onSaveInstanceState(state);
     }
 
@@ -1499,6 +1502,15 @@ public class AdminMainActivity extends com.example.libraryonline.ui.auth.Session
         ((TextView) card.findViewById(R.id.requestPhone))
                 .setText("Số điện thoại: " + value(doc, "phone", "Chưa cung cấp"));
         return card;
+    }
+
+    String circulationMode() {
+        return circulationMode;
+    }
+
+    void setCirculationMode(String mode) {
+        if ("online".equals(mode) || "direct".equals(mode) || "penalty".equals(mode))
+            circulationMode = mode;
     }
 
     /**

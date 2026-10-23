@@ -47,7 +47,7 @@ final class CounterOnlineLoanController implements AutoCloseable {
     private final Handler handler = new Handler(Looper.getMainLooper());
     private final EditText readerBarcode, copyBarcode;
     private final LinearLayout requestsList;
-    private final TextView readerInfo, summary, verification;
+    private final TextView readerInfo, summary, verification, readerGuide;
     private final Button handover, returnBook;
     private final List<DocumentSnapshot> requests = new ArrayList<>();
 
@@ -65,6 +65,7 @@ final class CounterOnlineLoanController implements AutoCloseable {
         this.copyBarcode = copyBarcode;
         this.requestsList = activity.findViewById(R.id.containerCounterOnlineLoans);
         this.readerInfo = activity.findViewById(R.id.textCounterOnlineReader);
+        this.readerGuide = activity.findViewById(R.id.circulationReaderGuide);
         this.summary = activity.findViewById(R.id.textCounterOnlineSummary);
         this.verification = activity.findViewById(R.id.textCounterOnlineVerification);
         this.handover = activity.findViewById(R.id.buttonCounterOnlineCollect);
@@ -97,11 +98,19 @@ final class CounterOnlineLoanController implements AutoCloseable {
                 && !activity.isFinishing() && !activity.isDestroyed();
     }
 
-    private void setMessage(String value) { verification.setText(value); }
+    private void setMessage(String value) {
+        verification.setText(value);
+        verification.setSelected(false);
+    }
 
     private void blockActions() {
         handover.setEnabled(false);
         returnBook.setEnabled(false);
+        String state = selected == null ? "" : selected.getString("status");
+        handover.setVisibility(OnlineLoanRequestRepository.APPROVED.equals(state)
+                ? View.VISIBLE : View.GONE);
+        returnBook.setVisibility(OnlineLoanRequestRepository.COLLECTED.equals(state)
+                ? View.VISIBLE : View.GONE);
     }
 
     private void scheduleReaderLookup() {
@@ -122,6 +131,8 @@ final class CounterOnlineLoanController implements AutoCloseable {
         blockActions();
         if (copyBarcode.length() > 0) copyBarcode.setText("");
         summary.setText("");
+        readerGuide.setSelected(false);
+        readerGuide.setText("Chưa có thẻ hợp lệ được xác minh.");
         String code = readerBarcode.getText().toString().trim();
         if (code.isEmpty()) {
             readerInfo.setText("Quét mã thẻ để tải các yêu cầu đã duyệt.");
@@ -165,6 +176,8 @@ final class CounterOnlineLoanController implements AutoCloseable {
                     }
                     readerUid = user.getId();
                     verifiedCardCode = barcode;
+                    readerGuide.setText("✓ Thẻ độc giả hợp lệ · Đang tải yêu cầu");
+                    readerGuide.setSelected(true);
                     String name = user.getString("fullName");
                     readerInfo.setText("Độc giả: "
                             + (name == null || name.trim().isEmpty() ? readerUid : name)
@@ -239,6 +252,8 @@ final class CounterOnlineLoanController implements AutoCloseable {
                     + "\n" + (doc.getString("copyId") == null
                         ? "Đã giữ suất của đầu sách · Chọn cuốn khi quét tại quầy"
                         : "Cuốn đã được giao/giữ (ID): " + value(doc, "copyId")));
+            ((TextView) row.findViewById(R.id.counterOnlineStage)).setText(
+                    OnlineLoanRequestRepository.APPROVED.equals(state) ? "CHỜ GIAO" : "ĐANG MƯỢN");
             ((TextView) row.findViewById(R.id.counterOnlineBookStatus)).setText(
                     OnlineLoanRequestRepository.APPROVED.equals(state)
                             ? "Đã duyệt suất · Chờ lấy · Nhận trước: "
@@ -246,6 +261,8 @@ final class CounterOnlineLoanController implements AutoCloseable {
                             : "Đã giao · Hạn trả: " + time(doc.getTimestamp("dueAt")));
             Button select = row.findViewById(R.id.counterOnlineSelect);
             boolean chosen = doc.getId().equals(selectedId);
+            row.setSelected(chosen);
+            row.setOnClickListener(v -> choose(doc.getId()));
             select.setText(chosen ? "Đang chọn yêu cầu này"
                     : OnlineLoanRequestRepository.APPROVED.equals(state)
                         ? "Chọn để giao sách" : "Chọn để trả sách");
@@ -290,13 +307,14 @@ final class CounterOnlineLoanController implements AutoCloseable {
         blockActions();
         if (selected == null) return;
         setMessage("Đã chọn: " + value(selected, "bookTitle")
-                + ". Quét đúng cuốn sách vật lý đã được giữ.");
+                + ". Quét cuốn vật lý phù hợp với đầu sách của yêu cầu.");
         if (copyBarcode.length() > 0) scheduleCopyLookup();
         // Update the selected marker without refetching data.
         for (int i = 0; i < requestsList.getChildCount(); i++) {
             Button select = requestsList.getChildAt(i).findViewById(R.id.counterOnlineSelect);
             if (select != null) {
                 boolean selectedHere = requests.get(i).getId().equals(id);
+                requestsList.getChildAt(i).setSelected(selectedHere);
                 select.setSelected(selectedHere);
                 select.setText(selectedHere ? "Đang chọn yêu cầu này"
                         : "Chọn " + (OnlineLoanRequestRepository.APPROVED.equals(
@@ -419,16 +437,18 @@ final class CounterOnlineLoanController implements AutoCloseable {
                 return;
             }
             handover.setEnabled(true);
-            setMessage("Đã đối chiếu đúng đầu sách, mã cuốn vật lý và đúng độc giả."
+            setMessage("✓ Đúng đầu sách, mã cuốn vật lý và độc giả."
                     + " Có thể xác nhận giao · " + value(selected, "bookTitle") + ".");
+            verification.setSelected(true);
         } else if (OnlineLoanRequestRepository.COLLECTED.equals(state)) {
             if (!"DaMuon".equals(matchedCopy.getString("copyStatus"))) {
                 setMessage("Cuốn không ở trạng thái DaMuon. Không thể nhận trả Online.");
                 return;
             }
             returnBook.setEnabled(true);
-            setMessage("Đã đối chiếu đúng cuốn đang mượn của độc giả."
+            setMessage("✓ Đúng cuốn đang mượn và đúng độc giả."
                     + " Có thể xác nhận nhận trả sách.");
+            verification.setSelected(true);
         }
     }
 
@@ -474,6 +494,7 @@ final class CounterOnlineLoanController implements AutoCloseable {
                             selectedId = null;
                             matchedCopy = null;
                             freshCopy = false;
+                            blockActions();
                             setMessage(returning
                                     ? "Đã ghi nhận trả sách Online. Tồn kho được cập nhật."
                                     : "Đã giao sách Online. Hạn trả tính từ thời điểm giao.");

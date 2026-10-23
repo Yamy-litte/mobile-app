@@ -1,191 +1,272 @@
 <?xml version="1.0" encoding="utf-8"?>
-<ScrollView
-    xmlns:android="http://schemas.android.com/apk/res/android"
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
     android:id="@+id/adminCirculation"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
+    android:background="@color/background"
     android:fillViewport="true"
     android:visibility="gone">
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="vertical"
-        android:padding="24dp">
-        <TextView
-            style="@style/CatalogueHeading"
-            android:text="@string/circulation_heading" />
-        <TextView
-            style="@style/CatalogueBody"
-            android:layout_marginTop="8dp"
-            android:text="@string/circulation_manual_notice" />
+        android:paddingStart="16dp"
+        android:paddingEnd="16dp"
+        android:paddingTop="16dp"
+        android:paddingBottom="30dp">
 
-        <TextView
-            style="@style/CatalogueHeading"
-            android:layout_marginTop="24dp"
-            android:text="@string/circulation_reader_barcode_label" />
-        <EditText
-            android:id="@+id/inputCirculationReaderBarcode"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:singleLine="true"
-            android:inputType="text"
-            android:hint="@string/circulation_reader_barcode_hint"
-            android:autofillHints="none" />
-<Button android:id="@+id/scanCirculationReaderBarcode"
-            android:layout_width="match_parent" android:layout_height="48dp"
-            android:layout_marginTop="6dp" android:backgroundTint="@color/library_blue"
-            android:textColor="@color/surface" android:textAllCaps="false"
-            android:text="Quét mã thẻ bằng camera" />
+        <TextView style="@style/CirculationEyebrow"
+            android:text="BÀN THỦ THƯ  /  GIAO DỊCH"/>
+        <TextView style="@style/CirculationTitle"
+            android:layout_marginTop="5dp"
+            android:text="Mượn &amp; Trả sách"/>
+        <TextView style="@style/CirculationCaption"
+            android:layout_marginTop="5dp"
+            android:text="Quét thẻ, đối chiếu sách, xác nhận giao dịch. Mỗi lượt đều được kiểm tra trước khi lưu." />
 
-        <!-- Show this Reader's approved requests immediately after scanning a card. -->
+        <!-- Service selection keeps independent Online/SQLite/fine actions out of sight. -->
         <LinearLayout
-            android:id="@+id/panelCounterOnlineLoans"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="16dp"
-            android:padding="16dp"
-            android:background="@drawable/bg_admin_screen_card"
-            android:orientation="vertical">
-            <TextView
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:text="Yêu cầu mượn Online của độc giả"
-                android:textSize="17sp"
-                android:textStyle="bold"
-                android:textColor="@color/text_primary" />
-            <TextView
-                android:id="@+id/textCounterOnlineReader"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="8dp"
-                android:text="Quét mã thẻ để tải yêu cầu đã được duyệt."
-                android:textSize="13sp"
-                android:textColor="@color/text_secondary"
-                android:accessibilityLiveRegion="polite"/>
-            <TextView
-                android:id="@+id/textCounterOnlineSummary"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
+            android:layout_marginTop="18dp"
+            android:padding="5dp"
+            android:orientation="horizontal"
+            android:background="@drawable/bg_admin_screen_card">
+            <Button android:id="@+id/circulationModeOnline"
+                style="@style/CirculationModeButton"
+                android:text="Đơn Online"
+                android:contentDescription="Giao và nhận trả sách từ yêu cầu Online đã được duyệt"/>
+            <Button android:id="@+id/circulationModeDirect"
+                style="@style/CirculationModeButton"
+                android:text="Tại quầy"
+                android:contentDescription="Quy trình mượn và trả sách trực tiếp"/>
+            <Button android:id="@+id/circulationModePenalty"
+                style="@style/CirculationModeButton"
+                android:text="Thu phạt"
+                android:contentDescription="Thu tiền phạt qua mã khoản phạt"/>
+        </LinearLayout>
+
+        <!-- Step 1: reader identification shared by Online and direct circulation. -->
+        <LinearLayout
+            android:id="@+id/circulationReaderPanel"
+            style="@style/CirculationCard">
+            <TextView style="@style/CirculationEyebrow"
+                android:text="BƯỚC 01 / XÁC MINH ĐỘC GIẢ"/>
+            <TextView style="@style/CirculationSectionTitle"
+                android:layout_marginTop="5dp"
+                android:text="Thẻ thư viện"/>
+            <TextView style="@style/CirculationCaption"
                 android:layout_marginTop="4dp"
-                android:textSize="13sp"
-                android:textColor="@color/text_secondary"/>
+                android:text="Quét mã trên thẻ độc giả hoặc nhập mã nếu camera không nhận."/>
             <LinearLayout
-                android:id="@+id/containerCounterOnlineLoans"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:gravity="center_vertical"
+                android:layout_marginTop="12dp">
+                <EditText android:id="@+id/inputCirculationReaderBarcode"
+                    style="@style/CirculationField"
+                    android:inputType="text"
+                    android:hint="@string/circulation_reader_barcode_hint"
+                    android:imeOptions="actionDone"
+                    android:autofillHints="none" />
+                <Button android:id="@+id/scanCirculationReaderBarcode"
+                    style="@style/CirculationScanButton"
+                    android:text="Quét thẻ"
+                    android:contentDescription="Mở camera quét mã thẻ thư viện" />
+            </LinearLayout>
+            <TextView android:id="@+id/circulationReaderGuide"
+                style="@style/CirculationCaption"
+                android:textColor="@color/circulation_verification_text"
                 android:layout_marginTop="8dp"
-                android:orientation="vertical"/>
+                android:text="Dữ liệu được đối chiếu trước khi giao hoặc nhận trả sách."
+                android:accessibilityLiveRegion="polite" />
         </LinearLayout>
 
-        <TextView
-            style="@style/CatalogueHeading"
-            android:layout_marginTop="16dp"
-            android:text="@string/circulation_copy_barcode_label" />
-        <EditText
-            android:id="@+id/inputCirculationCopyBarcode"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:singleLine="true"
-            android:inputType="text"
-            android:hint="@string/circulation_copy_barcode_hint"
-            android:autofillHints="none" />
-<Button android:id="@+id/scanCirculationCopyBarcode"
-            android:layout_width="match_parent" android:layout_height="48dp"
-            android:layout_marginTop="6dp" android:backgroundTint="@color/library_blue"
-            android:textColor="@color/surface" android:textAllCaps="false"
-            android:text="Quét mã cuốn bằng camera" />
+        <!-- Only requests of the scanned reader appear, with status/loan duration. -->
+        <LinearLayout android:id="@+id/circulationOnlinePanel"
+            style="@style/CirculationCard">
+            <TextView style="@style/CirculationEyebrow"
+                android:text="BƯỚC 02 / CHỌN YÊU CẦU"/>
+            <TextView style="@style/CirculationSectionTitle"
+                android:layout_marginTop="5dp"
+                android:text="Yêu cầu đã duyệt &amp; sách đang mượn"/>
+            <TextView style="@style/CirculationCaption"
+                android:layout_marginTop="4dp"
+                android:text="Chỉ hiển thị yêu cầu của thẻ vừa quét; chọn cuốn cần giao hoặc nhận trả."/>
 
-        <TextView
-            android:id="@+id/textCounterOnlineVerification"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="10dp"
-            android:text="Chọn yêu cầu đã duyệt rồi quét đúng cuốn sách được giữ."
-            android:textSize="13sp"
-            android:textColor="@color/text_secondary"
-            android:accessibilityLiveRegion="polite"/>
-        <Button
-            android:id="@+id/buttonCounterOnlineCollect"
-            android:layout_width="match_parent"
-            android:layout_height="48dp"
-            android:layout_marginTop="8dp"
-            android:backgroundTint="@color/library_blue"
-            android:textColor="@color/surface"
-            android:textAllCaps="false"
-            android:text="Xác nhận giao sách Online"
-            android:enabled="false"/>
-        <Button
-            android:id="@+id/buttonCounterOnlineReturn"
-            android:layout_width="match_parent"
-            android:layout_height="48dp"
-            android:layout_marginTop="8dp"
-            android:backgroundTint="@color/library_blue"
-            android:textColor="@color/surface"
-            android:textAllCaps="false"
-            android:text="Xác nhận nhận trả sách Online"
-            android:enabled="false"/>
-        <TextView
-            style="@style/CatalogueHeading"
-            android:layout_marginTop="16dp"
-            android:text="@string/circulation_loan_days_label" />
-        <EditText
-            android:id="@+id/inputCirculationLoanDays"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:singleLine="true"
-            android:inputType="number"
-            android:text="@string/circulation_default_days"
-            android:hint="@string/circulation_loan_days_hint"
-            android:autofillHints="none" />
-
-        <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="16dp"
-            android:orientation="horizontal">
-            <Button
-                android:id="@+id/buttonCirculationBorrow"
-                android:layout_width="0dp"
+            <LinearLayout android:id="@+id/panelCounterOnlineLoans"
+                android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:text="@string/circulation_borrow" />
-            <Button
-                android:id="@+id/buttonCirculationReturn"
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_marginStart="12dp"
-                android:layout_weight="1"
-                android:text="@string/circulation_return" />
+                android:orientation="vertical">
+                <TextView android:id="@+id/textCounterOnlineReader"
+                    style="@style/CirculationCaption"
+                    android:layout_marginTop="12dp"
+                    android:text="Chưa quét thẻ · Quét mã thẻ để tải đơn của độc giả"
+                    android:accessibilityLiveRegion="polite"/>
+                <TextView android:id="@+id/textCounterOnlineSummary"
+                    style="@style/CirculationCaption"
+                    android:layout_marginTop="6dp"
+                    android:text="Các đơn đã duyệt sẽ xuất hiện tại đây."/>
+                <LinearLayout android:id="@+id/containerCounterOnlineLoans"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="4dp"
+                    android:orientation="vertical"/>
+            </LinearLayout>
         </LinearLayout>
 
+        <!-- Step 3: same barcode input for Online checkout and direct counter operations. -->
+        <LinearLayout android:id="@+id/circulationCopyPanel"
+            style="@style/CirculationCard">
+            <TextView style="@style/CirculationEyebrow"
+                android:text="BƯỚC 03 / ĐỐI CHIẾU SÁCH"/>
+            <TextView style="@style/CirculationSectionTitle"
+                android:layout_marginTop="5dp"
+                android:text="Quét cuốn sách thực tế"/>
+            <TextView style="@style/CirculationCaption"
+                android:layout_marginTop="4dp"
+                android:text="Quét mã vạch dán trên gáy cuốn sách. Mã ISBN của đầu sách không thay thế barcode cuốn."/>
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:gravity="center_vertical"
+                android:layout_marginTop="12dp">
+                <EditText android:id="@+id/inputCirculationCopyBarcode"
+                    style="@style/CirculationField"
+                    android:inputType="text"
+                    android:hint="@string/circulation_copy_barcode_hint"
+                    android:imeOptions="actionDone"
+                    android:autofillHints="none" />
+                <Button android:id="@+id/scanCirculationCopyBarcode"
+                    style="@style/CirculationScanButton"
+                    android:text="Quét cuốn"
+                    android:contentDescription="Mở camera quét barcode cuốn sách vật lý"/>
+            </LinearLayout>
+            <TextView android:id="@+id/circulationCopyGuide"
+                style="@style/CirculationCaption"
+                android:layout_marginTop="8dp"
+                android:text="Chỉ xác nhận khi cuốn quét phù hợp với giao dịch."/>
+        </LinearLayout>
 
-        <TextView
-            style="@style/CatalogueHeading"
-            android:layout_marginTop="24dp"
-            android:text="@string/circulation_penalty_id_label" />
-        <EditText
-            android:id="@+id/inputCirculationPenaltyId"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:singleLine="true"
-            android:inputType="text"
-            android:hint="@string/circulation_penalty_id_hint"
-            android:autofillHints="none" />
-        <Button
-            android:id="@+id/buttonCirculationCollectFine"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="12dp"
-            android:text="@string/circulation_collect_fine" />
-        <TextView
-            android:id="@+id/textCirculationResult"
-            style="@style/CatalogueBody"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="20dp"
-            android:padding="16dp"
-            android:background="@drawable/bg_admin_card"
-            android:text="@string/circulation_idle"
-            android:textIsSelectable="true" />
+        <!-- One relevant Online action is visible according to selected status. -->
+        <LinearLayout android:id="@+id/circulationOnlineActions"
+            style="@style/CirculationCard">
+            <TextView style="@style/CirculationEyebrow"
+                android:text="BƯỚC 04 / XÁC NHẬN"/>
+            <TextView style="@style/CirculationSectionTitle"
+                android:layout_marginTop="5dp"
+                android:text="Kiểm tra trước khi ghi nhận"/>
+            <TextView android:id="@+id/textCounterOnlineVerification"
+                style="@style/CirculationCaption"
+                android:textColor="@color/circulation_verification_text"
+                android:layout_marginTop="8dp"
+                android:padding="12dp"
+                android:background="@drawable/bg_admin_screen_readonly"
+                android:text="Quét thẻ, chọn yêu cầu rồi quét cuốn sách tương ứng."
+                android:accessibilityLiveRegion="polite" />
+            <Button android:id="@+id/buttonCounterOnlineCollect"
+                style="@style/CirculationPrimaryButton"
+                android:layout_marginTop="12dp"
+                android:text="Xác nhận giao sách Online"
+                android:enabled="false"
+                android:visibility="gone"/>
+            <Button android:id="@+id/buttonCounterOnlineReturn"
+                style="@style/CirculationPrimaryButton"
+                android:layout_marginTop="12dp"
+                android:text="Xác nhận nhận trả sách Online"
+                android:enabled="false"
+                android:visibility="gone"/>
+            <TextView style="@style/CirculationCaption"
+                android:layout_marginTop="8dp"
+                android:text="Việc quét chỉ xác minh mã. Dữ liệu chỉ được lưu sau khi Admin xác nhận."/>
+        </LinearLayout>
+
+        <!-- Direct SQLite workflow: kept intact but hidden when Online is selected. -->
+        <LinearLayout android:id="@+id/circulationDirectPanel"
+            style="@style/CirculationCard"
+            android:visibility="gone">
+            <TextView style="@style/CirculationEyebrow"
+                android:text="MƯỢN / TRẢ TRỰC TIẾP"/>
+            <TextView style="@style/CirculationSectionTitle"
+                android:layout_marginTop="5dp"
+                android:text="Giao dịch tại quầy"/>
+            <TextView style="@style/CirculationCaption"
+                android:layout_marginTop="4dp"
+                android:text="Dành cho sách độc giả tự chọn tại kệ. Không dùng cho yêu cầu Online đã duyệt."/>
+            <TextView style="@style/CirculationCaption"
+                android:layout_marginTop="12dp"
+                android:text="Số ngày mượn (chỉ áp dụng khi cho mượn trực tiếp)"/>
+            <EditText android:id="@+id/inputCirculationLoanDays"
+                android:layout_width="match_parent"
+                android:layout_height="52dp"
+                android:layout_marginTop="7dp"
+                android:background="@drawable/bg_admin_screen_field"
+                android:paddingStart="14dp"
+                android:paddingEnd="14dp"
+                android:singleLine="true"
+                android:inputType="number"
+                android:text="@string/circulation_default_days"
+                android:hint="@string/circulation_loan_days_hint"
+                android:textColor="@color/text_primary"
+                android:autofillHints="none"/>
+            <Button android:id="@+id/buttonCirculationBorrow"
+                style="@style/CirculationPrimaryButton"
+                android:layout_marginTop="12dp"
+                android:text="@string/circulation_borrow"/>
+            <Button android:id="@+id/buttonCirculationReturn"
+                style="@style/CirculationSecondaryButton"
+                android:layout_marginTop="8dp"
+                android:text="@string/circulation_return"/>
+            <TextView style="@style/CirculationCaption"
+                android:layout_marginTop="8dp"
+                android:text="Mỗi lần xác nhận xử lý một mã cuốn. Mượn/Trả trực tiếp dùng dữ liệu trên máy Admin."/>
+        </LinearLayout>
+
+        <LinearLayout android:id="@+id/circulationPenaltyPanel"
+            style="@style/CirculationCard"
+            android:visibility="gone">
+            <TextView style="@style/CirculationEyebrow"
+                android:text="NGHIỆP VỤ TÀI CHÍNH"/>
+            <TextView style="@style/CirculationSectionTitle"
+                android:layout_marginTop="5dp"
+                android:text="Thu tiền phạt"/>
+            <TextView style="@style/CirculationCaption"
+                android:layout_marginTop="5dp"
+                android:text="Chỉ ghi nhận sau khi thủ thư đã nhận tiền và kiểm tra đúng mã khoản phạt."/>
+            <EditText android:id="@+id/inputCirculationPenaltyId"
+                android:layout_width="match_parent"
+                android:layout_height="52dp"
+                android:layout_marginTop="14dp"
+                android:paddingStart="14dp"
+                android:paddingEnd="14dp"
+                android:background="@drawable/bg_admin_screen_field"
+                android:singleLine="true"
+                android:inputType="text"
+                android:hint="@string/circulation_penalty_id_hint"
+                android:textColor="@color/text_primary"
+                android:autofillHints="none"/>
+            <Button android:id="@+id/buttonCirculationCollectFine"
+                style="@style/CirculationPrimaryButton"
+                android:layout_marginTop="12dp"
+                android:text="@string/circulation_collect_fine"/>
+        </LinearLayout>
+
+        <LinearLayout style="@style/CirculationCard">
+            <TextView style="@style/CirculationEyebrow"
+                android:text="NHẬT KÝ THAO TÁC"/>
+            <TextView style="@style/CirculationSectionTitle"
+                android:layout_marginTop="5dp"
+                android:text="Kết quả giao dịch"/>
+            <TextView android:id="@+id/textCirculationResult"
+                style="@style/CirculationCaption"
+                android:layout_marginTop="9dp"
+                android:padding="12dp"
+                android:background="@drawable/bg_admin_screen_readonly"
+                android:text="@string/circulation_idle"
+                android:textIsSelectable="true"
+                android:accessibilityLiveRegion="polite"/>
+        </LinearLayout>
     </LinearLayout>
 </ScrollView>
