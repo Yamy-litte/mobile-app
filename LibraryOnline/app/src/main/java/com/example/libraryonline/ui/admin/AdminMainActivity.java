@@ -688,6 +688,8 @@ public class AdminMainActivity extends com.example.libraryonline.ui.auth.Session
     }
 
     private void loadLocalDashboard(long request) {
+        ((AdminWeeklyTrendView) findViewById(R.id.adminWeeklyTrend))
+                .showMessage("Đang tải lượt mượn từ SQLite và Firebase...");
         int[] ids = {R.id.textAdminTodayBorrow, R.id.textAdminTodayReturn,
                 R.id.textAdminTodayWaiting, R.id.textAdminTodayOverdue};
         for (int id : ids) ((TextView) findViewById(id)).setText(R.string.admin_dash);
@@ -730,9 +732,12 @@ public class AdminMainActivity extends com.example.libraryonline.ui.auth.Session
             status.setText(dashboardLocalFinished && dashboardCloudFinished
                     ? "Không đọc được thống kê mượn/trả từ SQLite hoặc Firebase."
                     : "Đang tải thống kê từ SQLite và Firebase...");
-            if (dashboardLocalFinished && dashboardCloudFinished)
+            if (dashboardLocalFinished && dashboardCloudFinished) {
+                ((AdminWeeklyTrendView) findViewById(R.id.adminWeeklyTrend))
+                        .showMessage("Không tải được dữ liệu mượn tuần");
                 ((TextView) findViewById(R.id.textAdminRecentActivity))
-                        .setText(R.string.admin_screen_recent_empty);
+                        .setText("Không tải được dữ liệu hoạt động gần đây.");
+            }
             return;
         }
         int borrowed = (local == null ? 0 : local.borrowedToday)
