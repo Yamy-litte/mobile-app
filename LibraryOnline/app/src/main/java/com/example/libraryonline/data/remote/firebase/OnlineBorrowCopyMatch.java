@@ -6,6 +6,16 @@ public final class OnlineBorrowCopyMatch {
 
     private OnlineBorrowCopyMatch() {}
 
+    /** New approvals reserve title quantity; the physical copy is chosen on scan. */
+    public static Result compareUnassigned(String requestedTitleId,
+                                            String scannedTitleId, String scannedCopyId) {
+        if (requestedTitleId == null || requestedTitleId.isEmpty()
+                || scannedTitleId == null || scannedTitleId.isEmpty()
+                || scannedCopyId == null || scannedCopyId.isEmpty())
+            return Result.INVALID_DATA;
+        return requestedTitleId.equals(scannedTitleId) ? Result.MATCH : Result.WRONG_TITLE;
+    }
+
     public static Result compare(String requestedTitleId, String heldCopyId,
                                  String scannedTitleId, String scannedCopyId) {
         if (requestedTitleId == null || requestedTitleId.isEmpty()
