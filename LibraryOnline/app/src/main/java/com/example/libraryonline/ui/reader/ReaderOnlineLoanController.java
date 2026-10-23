@@ -204,9 +204,16 @@ final class ReaderOnlineLoanController {
                 Timestamp hold = doc.getTimestamp("holdUntil");
                 item.findViewById(R.id.readerOnlineItemApproved).setVisibility(View.VISIBLE);
                 TextView copy = item.findViewById(R.id.readerOnlineItemCopy);
-                copy.setVisibility(View.VISIBLE);
-                copy.setText("Mã cuốn: " + (doc.getString("copyId") == null
-                        ? "Đang đồng bộ" : doc.getString("copyId")));
+                // Approved means one title-level borrowing slot; no physical copy
+                // has been assigned yet. Legacy approved holds may still show copyId.
+                String heldCopyId = doc.getString("copyId");
+                if (heldCopyId == null) {
+                    copy.setVisibility(View.VISIBLE);
+                    copy.setText("Đã giữ suất mượn · Mã cuốn sẽ xác định khi nhận tại quầy");
+                } else {
+                    copy.setVisibility(View.VISIBLE);
+                    copy.setText("Mã cuốn đã giữ (đơn cũ): " + heldCopyId);
+                }
                 TextView holdTime = item.findViewById(R.id.readerOnlineItemHold);
                 holdTime.setVisibility(View.VISIBLE);
                 holdTime.setText("Nhận trước: " + time(hold));

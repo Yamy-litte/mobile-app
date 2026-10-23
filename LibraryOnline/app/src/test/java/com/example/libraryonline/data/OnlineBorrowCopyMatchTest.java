@@ -23,6 +23,18 @@ public class OnlineBorrowCopyMatchTest {
                 OnlineBorrowCopyMatch.compare("title-1", "copy-1", "title-1", "copy-2"));
     }
 
+    @Test public void newApprovalCanScanAnyReadyCopyOfRequestedTitle() {
+        assertEquals(OnlineBorrowCopyMatch.Result.MATCH,
+                OnlineBorrowCopyMatch.compareUnassigned("title-1", "title-1", "copy-2"));
+    }
+
+    @Test public void newApprovalCannotScanDifferentTitleOrMissingCopy() {
+        assertEquals(OnlineBorrowCopyMatch.Result.WRONG_TITLE,
+                OnlineBorrowCopyMatch.compareUnassigned("title-1", "title-2", "copy-2"));
+        assertEquals(OnlineBorrowCopyMatch.Result.INVALID_DATA,
+                OnlineBorrowCopyMatch.compareUnassigned("title-1", "title-1", null));
+    }
+
     @Test public void missingAssignmentCannotBeApprovedForHandover() {
         assertEquals(OnlineBorrowCopyMatch.Result.INVALID_DATA,
                 OnlineBorrowCopyMatch.compare("title-1", null, "title-1", "copy-1"));

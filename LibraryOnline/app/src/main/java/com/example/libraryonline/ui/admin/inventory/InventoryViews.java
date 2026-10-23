@@ -26,7 +26,11 @@ public final class InventoryViews {
         text(
                 root,
                 R.id.summaryCounts,
-                book.availableCopies + " sẵn sàng / " + book.totalCopies + " đã nhập");
+                "Có thể duyệt: " + book.availableCopies
+                        + " · Đã duyệt chờ giao Online: " + book.reservedOnlineCopies
+                        + " · Cuốn sẵn sàng vật lý: "
+                        + (book.availableCopies + book.reservedOnlineCopies)
+                        + " / " + book.totalCopies + " đã nhập");
         BookCoverLoader.load(
                 book.coverUrl,
                 root.findViewById(R.id.summaryCover),
@@ -40,7 +44,9 @@ public final class InventoryViews {
                 R.id.inventoryBookState,
                 book.isHidden
                         ? "Đã ẩn"
-                        : book.availableCopies > 0 ? "Sẵn sàng" : "Hết sách sẵn sàng");
+                        : book.availableCopies > 0 ? "Còn suất duyệt mượn"
+                                : book.reservedOnlineCopies > 0
+                                    ? "Đã giữ hết suất Online" : "Hết sách sẵn sàng");
         ((TextView) root.findViewById(R.id.inventoryBookState))
                 .setTextColor(
                         androidx.core.content.ContextCompat.getColor(
@@ -58,7 +64,11 @@ public final class InventoryViews {
         text(
                 root,
                 R.id.inventoryBookCount,
-                "Tổng đã nhập " + book.totalCopies + " / Sẵn sàng " + book.availableCopies);
+                "Tổng " + book.totalCopies
+                    + " · Có thể duyệt " + book.availableCopies
+                    + " · Đã duyệt chưa giao " + book.reservedOnlineCopies
+                    + " · Sẵn sàng vật lý "
+                    + (book.availableCopies + book.reservedOnlineCopies));
         BookCoverLoader.load(
                 book.coverUrl,
                 root.findViewById(R.id.inventoryBookCover),

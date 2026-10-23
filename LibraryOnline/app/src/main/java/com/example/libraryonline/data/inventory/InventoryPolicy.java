@@ -76,7 +76,9 @@ public final class InventoryPolicy {
     public static void audit(BookTitle title, List<BookCopy> copies) {
         long available = 0;
         for (BookCopy copy : copies) if (isAvailable(copy)) available++;
-        if (title.totalCopies != copies.size() || title.availableCopies != available)
+        if (title.reservedOnlineCopies < 0 || title.availableCopies < 0
+                || title.totalCopies != copies.size()
+                || (long) title.availableCopies + title.reservedOnlineCopies != available)
             throw new IllegalArgumentException(
                     "Số lượng đầu sách không khớp các bản sách. Cần đối soát dữ liệu trước khi thay"
                         + " đổi kho.");

@@ -194,7 +194,9 @@ final class AdminOnlineLoanController {
                     .setText("Số ngày mượn: " + (days == null ? "—" : days));
             if (OnlineLoanRequestRepository.APPROVED.equals(state)) {
                 TextView approvedNotice = item.findViewById(R.id.adminOnlineItemApproved);
-                approvedNotice.setText("Đã duyệt · Chờ Reader đến lấy trước "
+                approvedNotice.setText((doc.getString("copyId") == null
+                        ? "Đã duyệt suất đầu sách · Chọn cuốn khi quét tại quầy · Nhận trước "
+                        : "Đã duyệt cuốn (đơn cũ) · Nhận trước ")
                         + date(doc.getTimestamp("holdUntil")));
                 approvedNotice.setVisibility(View.VISIBLE);
                 Timestamp until = doc.getTimestamp("holdUntil");

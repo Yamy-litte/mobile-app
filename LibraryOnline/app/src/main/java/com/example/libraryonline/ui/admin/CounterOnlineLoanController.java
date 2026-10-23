@@ -236,10 +236,12 @@ final class CounterOnlineLoanController implements AutoCloseable {
             ((TextView) row.findViewById(R.id.counterOnlineBookDetails)).setText(
                     "Mã đầu sách: " + value(doc, "bookTitleId")
                     + " · Thời hạn yêu cầu: " + (days == null ? "—" : days) + " ngày"
-                    + "\nCuốn đã được giữ/giao (ID): " + value(doc, "copyId"));
+                    + "\n" + (doc.getString("copyId") == null
+                        ? "Đã giữ suất của đầu sách · Chọn cuốn khi quét tại quầy"
+                        : "Cuốn đã được giao/giữ (ID): " + value(doc, "copyId")));
             ((TextView) row.findViewById(R.id.counterOnlineBookStatus)).setText(
                     OnlineLoanRequestRepository.APPROVED.equals(state)
-                            ? "Đã duyệt · Chờ lấy · Nhận trước: "
+                            ? "Đã duyệt suất · Chờ lấy · Nhận trước: "
                                     + time(doc.getTimestamp("holdUntil"))
                             : "Đã giao · Hạn trả: " + time(doc.getTimestamp("dueAt")));
             Button select = row.findViewById(R.id.counterOnlineSelect);
@@ -374,9 +376,14 @@ final class CounterOnlineLoanController implements AutoCloseable {
             setMessage("Đang xác minh mã cuốn trên Firestore…");
             return;
         }
-        OnlineBorrowCopyMatch.Result match = OnlineBorrowCopyMatch.compare(
-                selected.getString("bookTitleId"), selected.getString("copyId"),
-                matchedCopy.getString("bookTitleId"), matchedCopy.getId());
+        boolean alreadyAssigned = selected.getString("copyId") != null;
+        OnlineBorrowCopyMatch.Result match = alreadyAssigned
+                ? OnlineBorrowCopyMatch.compare(
+                    selected.getString("bookTitleId"), selected.getString("copyId"),
+                    matchedCopy.getString("bookTitleId"), matchedCopy.getId())
+                : OnlineBorrowCopyMatch.compareUnassigned(
+                    selected.getString("bookTitleId"),
+                    matchedCopy.getString("bookTitleId"), matchedCopy.getId());
         if (match == OnlineBorrowCopyMatch.Result.INVALID_DATA) {
             setMessage("Yêu cầu hoặc mã cuốn thiếu dữ liệu. Cần đối soát kho.");
             return;
@@ -402,13 +409,17 @@ final class CounterOnlineLoanController implements AutoCloseable {
                 setMessage("Đơn đã quá 24 giờ giữ sách. Không thể giao.");
                 return;
             }
-            if (!"ChoLay".equals(matchedCopy.getString("copyStatus"))
-                    || !readerUid.equals(matchedCopy.getString("priorityUserId"))) {
-                setMessage("Cuốn chưa được giữ cho đúng độc giả, hoặc trạng thái không phải ChoLay.");
+            if (alreadyAssigned
+                    ? (!"ChoLay".equals(matchedCopy.getString("copyStatus"))
+                        || !readerUid.equals(matchedCopy.getString("priorityUserId")))
+                    : (!"SanSang".equals(matchedCopy.getString("copyStatus"))
+                        || matchedCopy.get("priorityUserId") != null)) {
+                setMessage(alreadyAssigned ? "Cuốn giữ cũ không hợp lệ (ChoLay/độc giả)."
+                        : "Cuốn đã được mượn hoặc không sẵn sàng (SanSang). Quét cuốn khác.");
                 return;
             }
             handover.setEnabled(true);
-            setMessage("Đã đối chiếu đúng đầu sách, đúng cuốn được giữ và đúng độc giả."
+            setMessage("Đã đối chiếu đúng đầu sách, mã cuốn vật lý và đúng độc giả."
                     + " Có thể xác nhận giao · " + value(selected, "bookTitle") + ".");
         } else if (OnlineLoanRequestRepository.COLLECTED.equals(state)) {
             if (!"DaMuon".equals(matchedCopy.getString("copyStatus"))) {
