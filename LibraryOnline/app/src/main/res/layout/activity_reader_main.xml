@@ -93,17 +93,7 @@
                         android:textSize="14sp"
                         android:paddingStart="8dp"
                         android:paddingEnd="0dp" />
-                    <Button
-                        android:id="@+id/readerScanBookBarcode"
-                        android:layout_width="54dp"
-                        android:layout_height="48dp"
-                        android:layout_marginStart="4dp"
-                        android:text="Quét"
-                        android:contentDescription="Quét barcode tìm sách"
-                        android:textSize="12sp"
-                        android:textAllCaps="false"
-                        android:backgroundTint="@color/library_blue"
-                        android:textColor="@color/surface" />
+
 
                 </LinearLayout>
                 <LinearLayout

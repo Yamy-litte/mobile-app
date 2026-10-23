@@ -47,7 +47,8 @@ public class InventoryActivity extends SessionActivity {
     private String uid, page = LIST, selectedCopyId, categoryId = "", handledCompletion;
     private String renderedKey, shelfDraft, renderedCategories;
     private long generation;
-    private boolean leaving, chooseIntake;
+    private boolean leaving;
+    private String pendingScanCode, scanOwnerUid;
     private InventoryForm editor;
     private InventoryQuantity quantity;
     private View pageView;
@@ -55,7 +56,11 @@ public class InventoryActivity extends SessionActivity {
     @Override
     protected void onCreate(Bundle state) {
         super.onCreate(state);
-        barcodeScanner = new LibraryBarcodeScanner(this);
+        barcodeScanner = new LibraryBarcodeScanner(this, this::onScannedInventory);
+        if (state != null) {
+            pendingScanCode = state.getString("pendingScanCode");
+            scanOwnerUid = state.getString("scanOwnerUid");
+        }
         setContentView(R.layout.activity_admin_inventory);
         WindowCompat.setDecorFitsSystemWindows(getWindow(), false);
         ViewCompat.setOnApplyWindowInsetsListener(
@@ -75,7 +80,7 @@ public class InventoryActivity extends SessionActivity {
             categoryId = state.getString("stockCategory", "");
             handledCompletion = state.getString("stockCompletion");
             shelfDraft = state.getString("stockShelfDraft");
-            chooseIntake = state.getBoolean("stockChooseIntake");
+
         }
         content = findViewById(R.id.inventoryContent);
         status = findViewById(R.id.inventoryStatus);
@@ -120,21 +125,11 @@ public class InventoryActivity extends SessionActivity {
                         v -> {
                             if (canWrite()) openEditor(null);
                         });
-        findViewById(R.id.inventoryChooseIntake)
-                .setOnClickListener(
-                        v -> {
-                            chooseIntake = true;
-                            status.setText("Chọn đầu sách bên dưới để nhập bổ sung.");
-                        });
         findViewById(R.id.inventoryScanBarcode).setOnClickListener(v -> {
-            if (isSessionReady())
-                barcodeScanner.scan("Quét barcode cuốn hoặc ISBN", this::openScannedInventory);
+            if (!isSessionReady()) return;
+            scanOwnerUid = uid;
+            barcodeScanner.scan("Quét barcode cuốn hoặc ISBN");
         });
-        findViewById(R.id.inventoryFindBarcode)
-                .setOnClickListener(
-                        v -> {
-                            if (isSessionReady()) findBarcode();
-                        });
         findViewById(R.id.inventoryRetry)
                 .setOnClickListener(
                         v -> {
@@ -181,6 +176,7 @@ public class InventoryActivity extends SessionActivity {
         model.attach(getApplicationContext(), uid);
         startSync();
         render();
+        applyPendingInventoryBarcode();
     }
 
     private boolean current(long token) {
@@ -401,13 +397,8 @@ public class InventoryActivity extends SessionActivity {
             row.setOnClickListener(
                     v -> {
                         if (!isSessionReady()) return;
-                        if (chooseIntake && canWrite()) {
-                            chooseIntake = false;
-                            openIntake(b);
-                        } else {
-                            model.selectedId = b.bookTitleId;
-                            go(COPIES);
-                        }
+                        model.selectedId = b.bookTitleId;
+                        go(COPIES);
                     });
             bindAction(row, R.id.inventoryBookEdit, () -> openEditor(b));
             bindAction(row, R.id.inventoryBookIntake, () -> openIntake(b));
@@ -816,9 +807,33 @@ public class InventoryActivity extends SessionActivity {
         go("intake".equals(model.draftKind) ? INTAKE : EDIT);
     }
 
-    private void openScannedInventory(String code) {
-        if (!isSessionReady()) return;
-        // Physical copy Code128 is NOT the title ISBN.
+    private void onScannedInventory(String code) {
+        pendingScanCode = code;
+        applyPendingInventoryBarcode();
+    }
+
+    private void applyPendingInventoryBarcode() {
+        if (!isSessionReady() || pendingScanCode == null) return;
+        if (!java.util.Objects.equals(uid, scanOwnerUid)) {
+            pendingScanCode = null;
+            return;
+        }
+        String code = pendingScanCode;
+        // Keep the code in the visible search input even when the matching copy
+        // needs another inventory sync cycle to appear.
+        categoryId = "";
+        if (!LIST.equals(page)) {
+            page = LIST;
+            renderedKey = null;
+            render();
+        }
+        search.setText(code);
+        search.setSelection(code.length());
+        if (books.isEmpty() && copies.isEmpty()) {
+            status.setText("Đã tự điền mã " + code + ". Đang đợi kho đồng bộ để tìm sách.");
+            return;
+        }
+        pendingScanCode = null;
         for (BookCopy copy : copies) {
             if (code.equals(copy.barcode)) {
                 openCopy(copy);
@@ -833,41 +848,11 @@ public class InventoryActivity extends SessionActivity {
                 return;
             }
         }
-        status.setText("Không tìm thấy barcode/ISBN " + code
-                + " trong kho đã đồng bộ. Hãy làm mới hoặc nhập mã thủ công.");
-        Toast.makeText(this, "Barcode chưa có trong dữ liệu kho trên thiết bị.",
+        status.setText("Đã điền mã " + code
+                + " nhưng chưa tìm thấy cuốn/ISBN trong kho trên thiết bị. Hãy làm mới.");
+        Toast.makeText(this, "Barcode chưa có trong kho đã đồng bộ.",
                 Toast.LENGTH_LONG).show();
-        search.setText(code);
-        page = LIST;
         render();
-    }
-
-    private void findBarcode() {
-        EditText input =
-                (EditText)
-                        getLayoutInflater()
-                                .inflate(R.layout.dialog_admin_inventory_barcode_search, null);
-        AlertDialog dialog =
-                privateSupportDialog()
-                        .setTitle("Tìm cuốn theo barcode")
-                        .setView(input)
-                        .setNegativeButton("Hủy", null)
-                        .setPositiveButton("Tìm", null)
-                        .show();
-        dialog.getButton(AlertDialog.BUTTON_POSITIVE)
-                .setOnClickListener(
-                        v -> {
-                            String value = input.getText().toString().trim();
-                            for (BookCopy c : copies)
-                                if (value.equals(c.barcode)) {
-                                    dialog.dismiss();
-                                    openCopy(c);
-                                    return;
-                                }
-                            input.setError(
-                                    "Không tìm thấy trong kho đã đồng bộ. Hãy làm mới và kiểm tra"
-                                            + " lại barcode.");
-                        });
     }
 
     private void printLabels(List<String> barcodes) {
@@ -955,6 +940,7 @@ public class InventoryActivity extends SessionActivity {
                                         copies = c;
                                         categories = g;
                                         render();
+                                        applyPendingInventoryBarcode();
                                     }
                                 });
                     } catch (Exception error) {
@@ -1012,7 +998,8 @@ public class InventoryActivity extends SessionActivity {
         state.putString("stockCategory", categoryId);
         state.putString("stockCompletion", handledCompletion);
         state.putString("stockShelfDraft", shelfDraft);
-        state.putBoolean("stockChooseIntake", chooseIntake);
+        state.putString("pendingScanCode", pendingScanCode);
+        state.putString("scanOwnerUid", scanOwnerUid);
         model.save(state);
         super.onSaveInstanceState(state);
     }

@@ -63,7 +63,6 @@ public class XmlPresentationTest {
                     {R.layout.item_admin_online_request, R.id.adminOnlineScanReader},
                     {R.layout.item_admin_online_request, R.id.adminOnlineScanCopy},
                     {R.layout.activity_admin_inventory, R.id.inventoryScanBarcode},
-                    {R.layout.activity_reader_main, R.id.readerScanBookBarcode},
                     {R.layout.activity_library_barcode_scan, R.id.libraryBarcodeCancel},
                     {R.layout.activity_library_barcode_scan, R.id.zxing_barcode_scanner}
             };

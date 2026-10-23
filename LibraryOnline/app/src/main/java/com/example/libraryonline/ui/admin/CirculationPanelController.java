@@ -42,13 +42,13 @@ final class CirculationPanelController implements AutoCloseable {
                 .setOnClickListener(v -> {
                     if (activity instanceof AdminMainActivity)
                         ((AdminMainActivity) activity).scanBarcodeInto(
-                                readerBarcode, "Quét mã thẻ độc giả");
+                                R.id.inputCirculationReaderBarcode, null, "Quét mã thẻ độc giả");
                 });
         activity.findViewById(R.id.scanCirculationCopyBarcode)
                 .setOnClickListener(v -> {
                     if (activity instanceof AdminMainActivity)
                         ((AdminMainActivity) activity).scanBarcodeInto(
-                                copyBarcode, "Quét mã cuốn sách");
+                                R.id.inputCirculationCopyBarcode, null, "Quét mã cuốn sách");
                 });
         borrowButton.setOnClickListener(v -> borrow());
         returnButton.setOnClickListener(v -> returnCopy());

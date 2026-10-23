@@ -40,6 +40,7 @@ public class AdminMainActivity extends com.example.libraryonline.ui.auth.Session
     private static final String SECONDARY_APP_NAME = "LibraryOnlineSecondaryAuth";
 
     private LibraryBarcodeScanner barcodeScanner;
+    private String scanTarget, scanRequestId, scanOwnerUid, scannedValue;
     private FirebaseFirestore firestore;
     private FirebaseAuth auth;
     private FirebaseAuth secondaryAuth;
@@ -67,7 +68,13 @@ public class AdminMainActivity extends com.example.libraryonline.ui.auth.Session
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         // Register the Activity Result contract before this Activity starts.
-        barcodeScanner = new LibraryBarcodeScanner(this);
+        barcodeScanner = new LibraryBarcodeScanner(this, this::onScannedBarcode);
+        if (savedInstanceState != null) {
+            scanTarget = savedInstanceState.getString("scanTarget");
+            scanRequestId = savedInstanceState.getString("scanRequestId");
+            scanOwnerUid = savedInstanceState.getString("scanOwnerUid");
+            scannedValue = savedInstanceState.getString("scannedValue");
+        }
         androidx.core.view.WindowCompat.setDecorFitsSystemWindows(getWindow(), false);
         setContentView(R.layout.activity_admin_main);
         firestore = FirebaseFirestore.getInstance();
@@ -479,12 +486,17 @@ public class AdminMainActivity extends com.example.libraryonline.ui.auth.Session
         circulationController = new CirculationPanelController(this);
         startRequests();
         if (onlineLoanController != null) onlineLoanController.start(profile.uid);
+        deliverPendingBarcode();
         loadDashboard();
     }
 
     @Override
     protected void onSaveInstanceState(Bundle state) {
         state.putInt("adminTab", homeView.selectedTab());
+        state.putString("scanTarget", scanTarget);
+        state.putString("scanRequestId", scanRequestId);
+        state.putString("scanOwnerUid", scanOwnerUid);
+        state.putString("scannedValue", scannedValue);
         super.onSaveInstanceState(state);
     }
 
@@ -1489,16 +1501,77 @@ public class AdminMainActivity extends com.example.libraryonline.ui.auth.Session
         return card;
     }
 
-    /** Reuse one camera scanner across counter circulation and Online handover. */
-    void scanBarcodeInto(EditText input, String prompt) {
-        if (!isSessionReady() || barcodeScanner == null || input == null) return;
-        barcodeScanner.scan(prompt, code -> {
-            // A live Online request row can be rerendered while the camera is open.
-            // Never write a scan into a detached/stale field or perform checkout.
-            if (!isSessionReady() || !input.isAttachedToWindow()) return;
-            input.setText(code);
-            input.setSelection(code.length());
-        });
+    /**
+     * Remember the logical destination, not the old EditText object: SessionActivity
+     * removes and recreates counter/Online rows whenever camera moves it to onStop.
+     */
+    void scanBarcodeInto(int fieldId, String requestId, String prompt) {
+        if (!isSessionReady() || barcodeScanner == null) return;
+        if (fieldId != R.id.inputCirculationReaderBarcode
+                && fieldId != R.id.inputCirculationCopyBarcode
+                && fieldId != R.id.adminOnlineReaderBarcode
+                && fieldId != R.id.adminOnlineCopyBarcode) return;
+        scanTarget = getResources().getResourceEntryName(fieldId);
+        scanRequestId = requestId;
+        scanOwnerUid = adminUid;
+        scannedValue = null;
+        barcodeScanner.scan(prompt);
+    }
+
+    private void onScannedBarcode(String barcode) {
+        // An Activity result may arrive before the new session has been verified.
+        scannedValue = barcode;
+        deliverPendingBarcode();
+    }
+
+    private void clearPendingBarcode() {
+        scanTarget = null;
+        scanRequestId = null;
+        scanOwnerUid = null;
+        scannedValue = null;
+    }
+
+    /** Called after session authorization and after online request list inflation. */
+    void deliverPendingBarcode() {
+        if (scannedValue == null || scanTarget == null || !isSessionReady()) return;
+        if (!adminUid.equals(scanOwnerUid)) {
+            clearPendingBarcode();
+            return;
+        }
+        final int fieldId;
+        switch (scanTarget) {
+            case "inputCirculationReaderBarcode":
+                fieldId = R.id.inputCirculationReaderBarcode;
+                break;
+            case "inputCirculationCopyBarcode":
+                fieldId = R.id.inputCirculationCopyBarcode;
+                break;
+            case "adminOnlineReaderBarcode":
+                fieldId = R.id.adminOnlineReaderBarcode;
+                break;
+            case "adminOnlineCopyBarcode":
+                fieldId = R.id.adminOnlineCopyBarcode;
+                break;
+            default:
+                clearPendingBarcode();
+                return;
+        }
+        EditText target = null;
+        if (scanRequestId == null) {
+            target = findViewById(fieldId);
+        } else {
+            View container = findViewById(R.id.containerAdminOnlineRequests);
+            View row = container == null ? null
+                    : container.findViewWithTag("online:" + scanRequestId);
+            if (row != null) target = row.findViewById(fieldId);
+        }
+        // Keep the result while Firestore is rebuilding the Online list.
+        if (target == null || !target.isAttachedToWindow()) return;
+        String code = scannedValue;
+        target.setText(code);
+        target.setSelection(code.length());
+        clearPendingBarcode();
+        Toast.makeText(this, "Đã tự điền barcode vừa quét.", Toast.LENGTH_SHORT).show();
     }
 
     @Override

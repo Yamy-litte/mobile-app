@@ -13,8 +13,6 @@ import android.widget.TextView;
 import android.widget.Toast;
 
 import com.example.libraryonline.R;
-import com.example.libraryonline.ui.scanner.LibraryBarcodeScanner;
-import com.google.firebase.firestore.Source;
 import com.example.libraryonline.data.local.dao.BookTitleDao;
 import com.example.libraryonline.data.local.db.DatabaseHelper;
 import com.example.libraryonline.data.model.BookTitle;
@@ -53,7 +51,6 @@ public class ReaderMainActivity extends com.example.libraryonline.ui.auth.Sessio
     private LinearLayout popularBooksContainer;
     private LinearLayout latestBooksContainer;
     private EditText searchInput;
-    private LibraryBarcodeScanner barcodeScanner;
     private TextView greeting, avatar, popularCount, catalogueStatus;
     private final List<BookTitle> books = new ArrayList<>();
     private final ExecutorService catalogueExecutor = Executors.newSingleThreadExecutor();
@@ -63,7 +60,6 @@ public class ReaderMainActivity extends com.example.libraryonline.ui.auth.Sessio
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        barcodeScanner = new LibraryBarcodeScanner(this);
         auth = FirebaseAuth.getInstance();
         firestore = FirebaseFirestore.getInstance();
         setContentView(R.layout.activity_reader_main);
@@ -196,10 +192,6 @@ public class ReaderMainActivity extends com.example.libraryonline.ui.auth.Sessio
     }
 
     private void bindActions() {
-        findViewById(R.id.readerScanBookBarcode).setOnClickListener(v -> {
-            if (isSessionReady())
-                barcodeScanner.scan("Quét ISBN hoặc barcode cuốn sách", this::searchScannedBook);
-        });
         searchInput.addTextChangedListener(
                 new TextWatcher() {
                     @Override
@@ -213,89 +205,6 @@ public class ReaderMainActivity extends com.example.libraryonline.ui.auth.Sessio
 
                     @Override
                     public void afterTextChanged(Editable s) {}
-                });
-    }
-
-    /** ISBN maps to a title; a physical Code-128 label maps to a BookCopy. */
-    private void searchScannedBook(String barcode) {
-        if (!isSessionReady()) return;
-        selectedCategory = "";
-        buildCategories();
-        for (BookTitle book : books) {
-            if (barcode.equals(book.isbn)) {
-                searchInput.setText(barcode);
-                searchInput.setSelection(barcode.length());
-                homeView.show(ReaderHomeView.HOME);
-                return;
-            }
-        }
-        FirebaseUser user = auth.getCurrentUser();
-        final String uid = user == null ? null : user.getUid();
-        if (uid == null) return;
-        Toast.makeText(this, "Đang tra barcode trong thư viện…", Toast.LENGTH_SHORT).show();
-        firestore.collection("BookTitles").whereEqualTo("isbn", barcode)
-                .get(Source.SERVER).addOnCompleteListener(this, titles -> {
-                    if (!sameReaderSession(uid)) return;
-                    if (!titles.isSuccessful()) {
-                        Toast.makeText(this, "Lỗi tra cứu ISBN trên Firestore.",
-                                Toast.LENGTH_LONG).show();
-                        return;
-                    }
-                    for (DocumentSnapshot title : titles.getResult().getDocuments()) {
-                        if (!Boolean.TRUE.equals(title.getBoolean("isHidden"))) {
-                            openScannedTitle(title.getId(), uid);
-                            return;
-                        }
-                    }
-                    lookupPhysicalCopy(barcode, uid);
-                });
-    }
-
-    private boolean sameReaderSession(String uid) {
-        FirebaseUser current = auth.getCurrentUser();
-        return isSessionReady() && current != null && uid.equals(current.getUid())
-                && !isFinishing() && !isDestroyed();
-    }
-
-    private void lookupPhysicalCopy(String barcode, String uid) {
-        firestore.collection("BookCopies").whereEqualTo("barcode", barcode)
-                .get(Source.SERVER).addOnCompleteListener(this, copies -> {
-                    if (!sameReaderSession(uid)) return;
-                    if (!copies.isSuccessful()) {
-                        Toast.makeText(this, "Lỗi tra cứu barcode cuốn sách.",
-                                Toast.LENGTH_LONG).show();
-                        return;
-                    }
-                    if (copies.getResult().isEmpty()) {
-                        searchInput.setText(barcode);
-                        Toast.makeText(this, "Không tìm thấy ISBN hoặc barcode: " + barcode,
-                                Toast.LENGTH_LONG).show();
-                        return;
-                    }
-                    for (DocumentSnapshot copy : copies.getResult().getDocuments()) {
-                        String titleId = copy.getString("bookTitleId");
-                        if (titleId != null && !Boolean.TRUE.equals(copy.getBoolean("isHidden"))) {
-                            openScannedTitle(titleId, uid);
-                            return;
-                        }
-                    }
-                    Toast.makeText(this, "Các cuốn có barcode này đang bị ẩn.",
-                            Toast.LENGTH_LONG).show();
-                });
-    }
-
-    private void openScannedTitle(String titleId, String uid) {
-        firestore.collection("BookTitles").document(titleId).get(Source.SERVER)
-                .addOnCompleteListener(this, title -> {
-                    if (!sameReaderSession(uid)) return;
-                    if (!title.isSuccessful() || !title.getResult().exists()
-                            || Boolean.TRUE.equals(title.getResult().getBoolean("isHidden"))) {
-                        Toast.makeText(this, "Đầu sách không còn được công khai.",
-                                Toast.LENGTH_LONG).show();
-                        return;
-                    }
-                    startActivity(new Intent(this, BookDetailActivity.class)
-                            .putExtra(BookDetailActivity.EXTRA_BOOK_ID, titleId));
                 });
     }
 

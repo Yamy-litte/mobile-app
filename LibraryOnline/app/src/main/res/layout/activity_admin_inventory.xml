@@ -72,31 +72,31 @@
                         android:id="@+id/inventorySubtitle"
                         style="@style/InventoryCaption"
                         android:text="@string/inventory_ui_subtitle"/>
-                    <EditText
-                        android:id="@+id/inventorySearch"
-                        style="@style/InventoryInput"
-                        android:hint="@string/inventory_ui_search"
-                        android:inputType="text"
-                        android:drawableStart="@drawable/ic_inventory_search"
-                        android:drawablePadding="8dp"/>
-                    <com.google.android.material.button.MaterialButton
-                        android:id="@+id/inventoryScanBarcode"
-                        style="@style/InventoryOutline"
-                        android:layout_marginTop="8dp"
-                        android:text="Quét barcode bằng camera" />
+                    <!-- One compact search row: text lookup and camera in the same place. -->
                     <LinearLayout
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:orientation="horizontal"
-                        android:gravity="center_vertical">
+                        android:gravity="center_vertical"
+                        android:layout_marginTop="8dp">
+                        <EditText
+                            android:id="@+id/inventorySearch"
+                            style="@style/InventoryInput"
+                            android:layout_width="0dp"
+                            android:layout_weight="1"
+                            android:hint="@string/inventory_ui_search"
+                            android:inputType="text"
+                            android:drawableStart="@drawable/ic_inventory_search"
+                            android:drawablePadding="8dp"
+                            android:imeOptions="actionSearch" />
                         <com.google.android.material.button.MaterialButton
-                            android:id="@+id/inventoryFindBarcode"
-                            style="@style/InventoryHalf"
-                            android:text="@string/inventory_ui_find_barcode"/>
-                        <com.google.android.material.button.MaterialButton
-                            android:id="@+id/inventoryChooseIntake"
-                            style="@style/InventoryHalf"
-                            android:text="@string/inventory_ui_intake"/>
+                            android:id="@+id/inventoryScanBarcode"
+                            style="@style/InventoryOutline"
+                            android:layout_width="wrap_content"
+                            android:layout_marginStart="8dp"
+                            android:text="Quét mã"
+                            android:textAllCaps="false"
+                            android:contentDescription="Quét mã vạch cuốn hoặc ISBN bằng camera" />
                     </LinearLayout>
                     <HorizontalScrollView
                         android:layout_width="match_parent"

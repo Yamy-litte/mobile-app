@@ -20,13 +20,21 @@ import java.util.function.Consumer;
 public final class LibraryBarcodeScanner {
     private final AppCompatActivity activity;
     private final ActivityResultLauncher<ScanOptions> launcher;
+    // Stable Activity-level receiver survives the scanner Activity's onStop/onStart
+    // cycle, unlike callbacks that capture a View removed when the session restarts.
+    private final Consumer<String> receiver;
     private Consumer<String> pending;
     private boolean inProgress;
 
     public LibraryBarcodeScanner(AppCompatActivity activity) {
+        this(activity, null);
+    }
+
+    public LibraryBarcodeScanner(AppCompatActivity activity, Consumer<String> receiver) {
         this.activity = activity;
+        this.receiver = receiver;
         launcher = activity.registerForActivityResult(new ScanContract(), result -> {
-            Consumer<String> callback = pending;
+            Consumer<String> callback = pending == null ? receiver : pending;
             pending = null;
             inProgress = false;
             if (result == null || result.getContents() == null) {
@@ -49,6 +57,12 @@ public final class LibraryBarcodeScanner {
         });
     }
 
+    public void scan(String prompt) {
+        if (receiver == null)
+            throw new IllegalStateException("Chưa đăng ký nơi nhận barcode.");
+        scan(prompt, null);
+    }
+
     /** Restrict to actual printed Code-128 and common library ISBN/QR formats. */
     public void scan(String prompt, Consumer<String> onDecoded) {
         if (inProgress) return;
@@ -57,7 +71,8 @@ public final class LibraryBarcodeScanner {
                     Toast.LENGTH_LONG).show();
             return;
         }
-        if (onDecoded == null) throw new IllegalArgumentException("Thiếu hàm nhận barcode.");
+        if (onDecoded == null && receiver == null)
+            throw new IllegalArgumentException("Thiếu hàm nhận barcode.");
         pending = onDecoded;
         inProgress = true;
         try {
