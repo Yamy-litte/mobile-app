@@ -442,3 +442,19 @@ test("Online return restores availability once; Reader can request again only af
   await assertSucceeds(updateDoc(doc(db("reader"),"OnlineLoanRequests/reader_book"),reapply));
   await assertFails(updateDoc(doc(db("reader"),"OnlineLoanRequests/reader_book"),{status:"Collected"}));
 });
+
+test("Reader may cancel only Pending Online request, then resubmit; no stock mutation", async () => {
+  const own=db("reader"), request=doc(own,"OnlineLoanRequests/reader_book");
+  await assertSucceeds(setDoc(request,onlineRequestFixture()));
+  await assertFails(updateDoc(doc(db("other"),"OnlineLoanRequests/reader_book"),
+    {status:"Cancelled",updatedAt:serverTimestamp()}));
+  await assertFails(updateDoc(request,{status:"Cancelled",loanDays:60,
+    updatedAt:serverTimestamp()}));
+  await assertSucceeds(updateDoc(request,{status:"Cancelled",updatedAt:serverTimestamp()}));
+  const title=await getDoc(doc(db("reader"),"BookTitles/book"));
+  require("node:assert/strict").equal(title.data().availableCopies,1);
+  await assertSucceeds(updateDoc(request,{status:"Pending",attempt:2,
+    loanDays:7,createdAt:serverTimestamp(),updatedAt:serverTimestamp()}));
+  await assertFails(updateDoc(request,{status:"Cancelled",copyId:"fake",
+    updatedAt:serverTimestamp()}));
+});
