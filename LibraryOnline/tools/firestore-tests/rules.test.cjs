@@ -454,6 +454,37 @@ test("expired online hold returns reserved copy once; unauthorized reader cannot
   await assertFails(duplicate.commit());
 });
 
+test("Legacy Approved order still releases its originally held copy on expiry", async () => {
+  const earlier=Timestamp.fromDate(new Date(Date.now()-30*3600000));
+  await env.withSecurityRulesDisabled(async c => {
+    const d=c.firestore(), b=writeBatch(d);
+    b.set(doc(d,"OnlineLoanRequests/reader_book"),{
+      requestId:"reader_book",userId:"reader",bookTitleId:"book",bookTitle:"Real inventory",
+      loanDays:7,attempt:1,status:"Approved",copyId:"copy",
+      createdAt:earlier,updatedAt:earlier,reviewedBy:"admin",reviewedAt:earlier,
+      holdUntil:Timestamp.fromDate(new Date(Date.now()-3600000)),
+      notificationId:"reader_book_v1_Approved"
+    });
+    b.update(doc(d,"BookCopies/copy"),{copyStatus:"ChoLay",priorityUserId:"reader"});
+    b.update(doc(d,"BookTitles/book"),{availableCopies:0});
+    await b.commit();
+  });
+  const d=db("admin"), b=writeBatch(d);
+  b.update(doc(d,"OnlineLoanRequests/reader_book"),{
+    status:"Expired",updatedAt:serverTimestamp(),notificationId:"reader_book_v1_Expired"
+  });
+  b.update(doc(d,"BookCopies/copy"),{
+    copyStatus:"SanSang",priorityUserId:null,updatedAt:serverTimestamp()
+  });
+  b.update(doc(d,"BookTitles/book"),{availableCopies:1,updatedAt:serverTimestamp()});
+  b.set(doc(d,"OnlineLoanNotifications/reader_book_v1_Expired"),
+    onlineNoticeFixture("Expired","Đã hoàn tất giải phóng cuốn cũ."));
+  await assertSucceeds(b.commit());
+  const title=(await getDoc(doc(d,"BookTitles/book"))).data();
+  require("node:assert/strict").equal(title.availableCopies,1);
+  require("node:assert/strict").equal(title.reservedOnlineCopies,undefined);
+});
+
 test("Online handover checks linked copy and notification; Reader cannot forge checkout", async () => {
   const now = new Date();
   await env.withSecurityRulesDisabled(async c => {
@@ -476,6 +507,21 @@ test("Online handover checks linked copy and notification; Reader cannot forge c
       notificationId:notification.id};
   await assertFails(updateDoc(request,issued));
   await assertFails(updateDoc(doc(db("reader"),"OnlineLoanRequests/reader_book"),issued));
+  // A real copy status update is still insufficient unless the reservation
+  // count is decremented atomically at the exact physical handover.
+  const missingRelease=writeBatch(d);
+  missingRelease.update(request,issued);
+  missingRelease.update(doc(d,"BookCopies/copy"),{
+    copyStatus:"DaMuon",priorityUserId:null,updatedAt:serverTimestamp()
+  });
+  missingRelease.set(notification,onlineNoticeFixture("Collected","Đã giao."));
+  missingRelease.set(doc(d,"OnlineLoanReceipts/reader_book_v1"),{
+    requestId:"reader_book",userId:"reader",bookTitleId:"book",
+    bookTitle:"Real inventory",copyId:"copy",loanDays:7,attempt:1,status:"Open",
+    collectedBy:"admin",collectedAt:serverTimestamp(),dueAt:due,
+    returnedAt:null,returnedBy:null
+  });
+  await assertFails(missingRelease.commit());
   const batch=writeBatch(d);
   batch.update(request,issued);
   batch.update(doc(d,"BookCopies/copy"),{copyStatus:"DaMuon",priorityUserId:null,
