@@ -216,7 +216,7 @@
                 android:layout_marginTop="12dp"
                 android:text="@string/circulation_borrow"/>
             <Button android:id="@+id/buttonCirculationReturn"
-                style="@style/CirculationPrimaryButton"
+                style="@style/CirculationSecondaryButton"
                 android:layout_marginTop="8dp"
                 android:text="@string/circulation_return"/>
             <TextView style="@style/CirculationCaption"
