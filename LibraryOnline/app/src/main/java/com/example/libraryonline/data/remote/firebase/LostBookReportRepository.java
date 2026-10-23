@@ -85,6 +85,7 @@ public final class LostBookReportRepository {
                         "acceptedAt", FieldValue.serverTimestamp(),
                         "updatedAt", FieldValue.serverTimestamp());
                 tx.update(userRef, "lostBookBorrowLocks", locks + 1,
+                        "lastLostReportId", reportId,
                         "updatedAt", FieldValue.serverTimestamp());
                 return (Void) null;
             });
@@ -155,6 +156,7 @@ public final class LostBookReportRepository {
                         "updatedAt", FieldValue.serverTimestamp());
                 // Does not touch cardStatus: manual/late-payment locks survive.
                 tx.update(userRef, "lostBookBorrowLocks", locks - 1,
+                        "lastLostReportId", reportId,
                         "updatedAt", FieldValue.serverTimestamp());
                 return (Void) null;
             });
