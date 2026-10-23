@@ -463,7 +463,9 @@ public final class OnlineLoanRequestRepository {
         data.put("status", status);
         data.put("attempt", attempt);
         data.put("title", title);
-        data.put("message", message);
+        // Notification Rules cap the body at 500 characters; avoid rolling back
+        // an otherwise valid stock transaction because of an unusually long title.
+        data.put("message", message.length() > 500 ? message.substring(0, 500) : message);
         data.put("createdAt", FieldValue.serverTimestamp());
         data.put("readAt", null);
         return data;
