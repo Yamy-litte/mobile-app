@@ -489,6 +489,7 @@ final class CounterOnlineLoanController implements AutoCloseable {
                         // counter switched cards while the server was processing.
                         if (!live(operationToken)) return;
                         if (completed.isSuccessful()) {
+                            activity.refreshDashboardAfterCirculation();
                             copyBarcode.setText("");
                             selected = null;
                             selectedId = null;
