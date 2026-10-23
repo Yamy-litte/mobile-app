@@ -47,10 +47,8 @@ Firestore Rules chạy **trên emulator cục bộ**, không dùng dữ liệu p
 
 ```bash
 cd LibraryOnline
-cd tools/firestore-tests
-npm ci
-cd ../..
-firebase emulators:exec --only firestore "npm --prefix tools/firestore-tests test"
+npm --prefix tools/firestore-tests ci
+npx --yes --package=firebase-tools@14.22.0 firebase emulators:exec --config firebase.emulators.json --project demo-library-online --only firestore 'npm --prefix tools/firestore-tests test'
 ```
 
 Lệnh cuối yêu cầu Firebase CLI và Java được cấu hình trong môi trường phát triển; xác minh `tools/firestore-tests/README.md` trước khi chạy để dùng đúng script hiện có.
