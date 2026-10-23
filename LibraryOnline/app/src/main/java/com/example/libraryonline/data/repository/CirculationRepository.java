@@ -30,27 +30,11 @@ public final class CirculationRepository implements AutoCloseable {
         helper = new DatabaseHelper(context.getApplicationContext());
     }
 
-    /**
-     * Process expired reservation holds independently of borrow/return activity.
-     * WorkManager calls this periodically; the transaction keeps queue transfer atomic.
-     */
-    public void processExpiredReservationHolds() {
-        SQLiteDatabase db = helper.getWritableDatabase();
-        db.beginTransaction();
-        try {
-            expireTimedOutReservations(db, timestamp());
-            db.setTransactionSuccessful();
-        } finally {
-            db.endTransaction();
-        }
-    }
-
     public OperationResult borrow(String readerBarcode, String copyBarcode, int requestedDays,
                                   String adminAuthUid) {
         SQLiteDatabase db = helper.getWritableDatabase();
         db.beginTransaction();
         try {
-            expireTimedOutReservations(db, timestamp());
             User reader = findReaderByBarcode(db, readerBarcode);
             if (reader == null) throw new IllegalArgumentException("Không tìm thấy thẻ độc giả.");
             if (reader.cardExpiryDate != null && !reader.cardExpiryDate.trim().isEmpty()
@@ -67,21 +51,11 @@ public final class CirculationRepository implements AutoCloseable {
 
             BookCopy copy = findCopyByBarcode(db, copyBarcode);
             if (copy == null) throw new IllegalArgumentException("Không tìm thấy mã cuốn sách.");
-            // A newly approved Firestore Online request creates a remote ChoLay hold.
-            // This older SQLite checkout has no shared loan receipt/ack path: allowing it
-            // would leave Firestore held and could later release an already borrowed copy.
-            // Legacy local Online reservations remain usable; the new cloud pickup is a
-            // separate operation that needs its own cross-device reconciliation.
-            if ("ChoLay".equals(copy.copyStatus)
-                    && scalarInt(db,
-                        "SELECT COUNT(*) FROM Reservations WHERE userId=? AND copyId=? "
-                                + "AND reservationType='Online' "
-                                + "AND reservationStatus NOT IN ('Cancelled','Expired','Completed','Received')",
-                        new String[]{reader.userId, copy.copyId}) == 0)
+            // Firestore is authoritative for Online pickup. Even old local
+            // ChoLay holds must not be checked out by this direct-only path.
+            if ("ChoLay".equals(copy.copyStatus))
                 throw new IllegalArgumentException(
-                        "Cuốn đang giữ bởi yêu cầu Online trên Firebase. "
-                                + "Chưa thể giao qua phiếu SQLite cũ; hãy dùng quy trình giao sách Online "
-                                + "sau khi đồng bộ mượn/trả.");
+                        "Cuốn đang giữ Online; hãy giao qua quy trình Online trên Firebase.");
 
             int activeCount = scalarInt(db,
                     "SELECT COUNT(*) FROM LoanDetails d JOIN LoanReceipts r ON r.loanReceiptId=d.loanReceiptId " +
@@ -142,10 +116,6 @@ public final class CirculationRepository implements AutoCloseable {
             db.update("BookCopies", copyUpdate, "copyId=?", new String[]{copy.copyId});
             refreshAvailableCopies(db, copy.bookTitleId, now);
 
-            db.execSQL("UPDATE Reservations SET reservationStatus='Completed', cancelledAt=NULL " +
-                    "WHERE userId=? AND copyId=? AND reservationStatus NOT IN ('Cancelled','Expired','Completed')",
-                    new Object[]{reader.userId, copy.copyId});
-
             db.setTransactionSuccessful();
             return new OperationResult("Đã ghi nhận mượn sách. Hạn trả: " + dueDate, null, dueDate, 0L);
         } finally {
@@ -157,7 +127,6 @@ public final class CirculationRepository implements AutoCloseable {
         SQLiteDatabase db = helper.getWritableDatabase();
         db.beginTransaction();
         try {
-            expireTimedOutReservations(db, timestamp());
             User reader = findReaderByBarcode(db, readerBarcode);
             if (reader == null) throw new IllegalArgumentException("Không tìm thấy thẻ độc giả.");
             String adminId = findActiveAdminId(db, adminAuthUid);
@@ -201,23 +170,14 @@ public final class CirculationRepository implements AutoCloseable {
                 db.update("LoanReceipts", receiptUpdate, "loanReceiptId=?", new String[]{receiptId});
             }
 
-            String reservationMessage = null;
-            if (copy.isHidden || copy.parentTitleHidden) {
-                ContentValues copyUpdate = new ContentValues();
-                copyUpdate.put("copyStatus", "DangSuaChua");
-                copyUpdate.putNull("priorityUserId");
-                copyUpdate.put("updatedAt", now);
-                db.update("BookCopies", copyUpdate, "copyId=?", new String[]{copy.copyId});
-            } else {
-                reservationMessage = assignNextWaitingReservation(db, copy, now);
-                if (reservationMessage == null) {
-                    ContentValues copyUpdate = new ContentValues();
-                    copyUpdate.put("copyStatus", "SanSang");
-                    copyUpdate.putNull("priorityUserId");
-                    copyUpdate.put("updatedAt", now);
-                    db.update("BookCopies", copyUpdate, "copyId=?", new String[]{copy.copyId});
-                }
-            }
+            // Preorders were retired. Return to stock (or repair if hidden);
+            // never allocate this copy to a legacy DatTruoc queue.
+            ContentValues copyUpdate = new ContentValues();
+            copyUpdate.put("copyStatus", copy.isHidden || copy.parentTitleHidden
+                    ? "DangSuaChua" : "SanSang");
+            copyUpdate.putNull("priorityUserId");
+            copyUpdate.put("updatedAt", now);
+            db.update("BookCopies", copyUpdate, "copyId=?", new String[]{copy.copyId});
             refreshAvailableCopies(db, copy.bookTitleId, now);
 
             String penaltyId = null;
@@ -247,7 +207,6 @@ public final class CirculationRepository implements AutoCloseable {
             String message = fine > 0
                     ? "Đã nhận trả sách. Trễ " + lateDays + " ngày, tiền phạt " + fine + " đồng. Mã khoản phạt: " + penaltyId + ". Thẻ đã bị khóa."
                     : "Đã nhận trả sách đúng hạn.";
-            if (reservationMessage != null) message += " " + reservationMessage;
             return new OperationResult(message, penaltyId, null, fine);
         } finally {
             db.endTransaction();
@@ -383,139 +342,13 @@ public final class CirculationRepository implements AutoCloseable {
                 "JOIN BookCopies b ON b.copyId=d.copyId " +
                 "WHERE r.userId=? AND d.returnDate IS NULL AND d.detailStatus IN ('DangMuon','QuaHan') " +
                 "UNION SELECT DISTINCT bookTitleId FROM Reservations WHERE userId=? " +
+                "AND reservationType='Online' " +
                 "AND reservationStatus NOT IN ('Cancelled','Expired','Completed','Received') " +
                 "AND (copyId IS NULL OR copyId<>?)",
                 new String[]{userId, userId, excludedReservationCopyId})) {
             while (c.moveToNext()) ids.add(c.getString(0));
         }
         return ids;
-    }
-
-    /**
-     * Expire reservation holds whose 48-hour priority window has elapsed, then offer the
-     * same physical copy to the next waiting reader. Runs only inside a caller transaction.
-     */
-    private static void expireTimedOutReservations(SQLiteDatabase db, String now) {
-        ArrayList<String> expiredReservationIds = new ArrayList<>();
-        ArrayList<String> expiredCopyIds = new ArrayList<>();
-        try (Cursor c = db.rawQuery(
-                "SELECT reservationId,copyId FROM Reservations " +
-                "WHERE reservationStatus='Ready' AND priorityUntil IS NOT NULL AND priorityUntil<=? " +
-                "AND copyId IS NOT NULL ORDER BY priorityUntil ASC",
-                new String[]{now})) {
-            while (c.moveToNext()) {
-                expiredReservationIds.add(c.getString(0));
-                expiredCopyIds.add(c.getString(1));
-            }
-        }
-        for (int i = 0; i < expiredReservationIds.size(); i++) {
-            String reservationId = expiredReservationIds.get(i);
-            String copyId = expiredCopyIds.get(i);
-            ContentValues expired = new ContentValues();
-            expired.put("reservationStatus", "Expired");
-            expired.put("cancelledAt", now);
-            db.update("Reservations", expired,
-                    "reservationId=? AND reservationStatus='Ready'", new String[]{reservationId});
-
-            BookCopy copy = findCopyById(db, copyId);
-            if (copy == null || copy.isHidden || copy.parentTitleHidden) continue;
-            String reassignment = assignNextWaitingReservation(db, copy, now);
-            if (reassignment == null) {
-                ContentValues available = new ContentValues();
-                available.put("copyStatus", "SanSang");
-                available.putNull("priorityUserId");
-                available.put("updatedAt", now);
-                db.update("BookCopies", available, "copyId=?", new String[]{copyId});
-            }
-            refreshAvailableCopies(db, copy.bookTitleId, now);
-        }
-    }
-
-    private static BookCopy findCopyById(SQLiteDatabase db, String copyId) {
-        try (Cursor c = db.rawQuery(
-                "SELECT c.copyId,c.bookTitleId,c.barcode,c.copyStatus,c.priorityUserId,c.isHidden,t.isHidden " +
-                "FROM BookCopies c JOIN BookTitles t ON t.bookTitleId=c.bookTitleId WHERE c.copyId=? LIMIT 1",
-                new String[]{copyId})) {
-            if (!c.moveToFirst()) return null;
-            BookCopy copy = new BookCopy();
-            copy.copyId = c.getString(0);
-            copy.bookTitleId = c.getString(1);
-            copy.barcode = c.getString(2);
-            copy.copyStatus = c.getString(3);
-            copy.priorityUserId = c.getString(4);
-            copy.isHidden = c.getInt(5) == 1;
-            copy.parentTitleHidden = c.getInt(6) == 1;
-            return copy;
-        }
-    }
-
-    /**
-     * Assign a returned physical copy to the oldest waiting DatTruoc reservation.
-     * All writes are performed inside the caller's circulation transaction.
-     */
-    private static String assignNextWaitingReservation(SQLiteDatabase db, BookCopy copy, String now) {
-        String reservationId = null, userId = null;
-        try (Cursor c = db.rawQuery(
-                "SELECT reservationId,userId FROM Reservations " +
-                "WHERE bookTitleId=? AND reservationType='DatTruoc' AND reservationStatus='Pending' " +
-                "ORDER BY CASE WHEN queuePosition IS NULL THEN 1 ELSE 0 END, queuePosition ASC, createdAt ASC LIMIT 1",
-                new String[]{copy.bookTitleId})) {
-            if (c.moveToFirst()) {
-                reservationId = c.getString(0);
-                userId = c.getString(1);
-            }
-        }
-        if (reservationId == null) return null;
-
-        int holdHours = scalarInt(db,
-                "SELECT reservationHoldHours FROM SystemConfigs ORDER BY updatedAt DESC LIMIT 1", null);
-        if (holdHours < 1) holdHours = 48;
-        String priorityUntil = addHours(now, holdHours);
-
-        ContentValues reservation = new ContentValues();
-        reservation.put("copyId", copy.copyId);
-        reservation.put("reservationStatus", "Ready");
-        reservation.put("priorityUntil", priorityUntil);
-        reservation.put("notifiedAt", now);
-        db.update("Reservations", reservation, "reservationId=? AND reservationStatus='Pending'",
-                new String[]{reservationId});
-
-        ContentValues copyUpdate = new ContentValues();
-        copyUpdate.put("copyStatus", "DaDatTruoc");
-        copyUpdate.put("priorityUserId", userId);
-        copyUpdate.put("updatedAt", now);
-        db.update("BookCopies", copyUpdate, "copyId=?", new String[]{copy.copyId});
-
-        ContentValues notification = new ContentValues();
-        notification.put("notificationId", UUID.randomUUID().toString());
-        notification.put("userId", userId);
-        notification.put("notificationType", "ReservationReady");
-        notification.put("title", "Sách đặt trước đã sẵn sàng");
-        notification.put("message", "Cuốn sách bạn đặt trước đã sẵn sàng. Vui lòng nhận trong " +
-                holdHours + " giờ, trước " + priorityUntil + ".");
-        notification.put("relatedEntityType", "Reservation");
-        notification.put("relatedEntityId", reservationId);
-        notification.put("scheduledAt", now);
-        notification.putNull("sentAt");
-        notification.putNull("readAt");
-        notification.put("deliveryStatus", "Pending");
-        db.insertOrThrow("Notifications", null, notification);
-        return "Đã ưu tiên cuốn sách cho độc giả đang chờ đến " + priorityUntil + ".";
-    }
-
-    private static String addHours(String timestamp, int hours) {
-        SimpleDateFormat f = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss", Locale.ROOT);
-        f.setLenient(false);
-        f.setTimeZone(TimeZone.getDefault());
-        try {
-            Date parsed = f.parse(timestamp);
-            java.util.Calendar cal = java.util.Calendar.getInstance();
-            cal.setTime(parsed);
-            cal.add(java.util.Calendar.HOUR_OF_DAY, hours);
-            return f.format(cal.getTime());
-        } catch (java.text.ParseException ex) {
-            throw new IllegalArgumentException("Không thể tính thời hạn nhận sách đặt trước.", ex);
-        }
     }
 
     /**
