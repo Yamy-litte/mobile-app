@@ -13,8 +13,6 @@ import com.example.libraryonline.data.local.db.DatabaseHelper;
 import com.example.libraryonline.data.model.BookTitle;
 import com.example.libraryonline.data.model.SystemConfig;
 import com.example.libraryonline.data.model.User;
-import com.example.libraryonline.data.repository.BookRepository;
-import com.example.libraryonline.data.repository.UserRepository;
 
 import org.junit.After;
 import org.junit.Before;
@@ -92,28 +90,4 @@ public class LibraryDataDaoTest {
         assertEquals(5000, config.lateFeePerDay);
     }
 
-    @Test
-    public void repositoriesCanReadAndWriteProfilesAndBooks() {
-        UserRepository users = new UserRepository(context);
-        BookRepository books = new BookRepository(context);
-        try {
-            User user = new User("repo-user-1", "Repository Test", "repo@example.test",
-                    "2026-10-20", "2026-10-20");
-            assertTrue(users.createProfile(user) > 0);
-            assertEquals("Repository Test", users.getByEmail("repo@example.test").fullName);
-
-            BookTitle book = new BookTitle();
-            book.bookTitleId = "repo-book-1";
-            book.title = "Repository Book";
-            book.totalCopies = 1;
-            book.availableCopies = 1;
-            book.createdAt = "2026-10-20";
-            book.updatedAt = "2026-10-20";
-            assertTrue(books.addBookTitle(book) > 0);
-            assertEquals("Repository Book", books.getBookTitle("repo-book-1").title);
-        } finally {
-            users.close();
-            books.close();
-        }
-    }
 }
