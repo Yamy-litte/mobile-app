@@ -54,6 +54,7 @@ public class AdminManagementActivity extends SessionActivity {
     private TextView readersSummary;
     private String readerFilter = "all";
     private int reportGeneration;
+    private int readerHistoryGeneration;
     private LinearLayout resultsContainer;
 
     @Override protected void onCreate(Bundle state) {
@@ -433,6 +434,7 @@ public class AdminManagementActivity extends SessionActivity {
 
     private void loadReaderHistory(String readerUid, View screen) {
         if (!isSessionReady() || !screen.isAttachedToWindow()) return;
+        final int generation = ++readerHistoryGeneration;
         final ReaderHistoryState state = new ReaderHistoryState();
         TextView summary = screen.findViewById(R.id.adminReaderHistorySummary);
         TextView localStatus = screen.findViewById(R.id.adminReaderHistoryFinesStatus);
@@ -454,7 +456,7 @@ public class AdminManagementActivity extends SessionActivity {
             final com.example.libraryonline.data.repository.ReaderHistoryLocalRepository.Snapshot result = snapshot;
             final String error = errorMessage;
             runOnUiThread(() -> {
-                if (!historyScreenActive(screen)) return;
+                if (!historyScreenActive(screen) || generation != readerHistoryGeneration) return;
                 state.localDone = true;
                 state.local = result;
                 state.localError = error;
@@ -466,7 +468,7 @@ public class AdminManagementActivity extends SessionActivity {
         firestore.collection("OnlineLoanReceipts").whereEqualTo("userId", readerUid)
                 .get(com.google.firebase.firestore.Source.SERVER)
                 .addOnCompleteListener(task -> {
-                    if (!historyScreenActive(screen)) return;
+                    if (!historyScreenActive(screen) || generation != readerHistoryGeneration) return;
                     state.cloudDone = true;
                     if (task.isSuccessful() && task.getResult() != null) {
                         state.online = task.getResult().getDocuments();
@@ -582,7 +584,8 @@ public class AdminManagementActivity extends SessionActivity {
             loanStatus.append("\nKhông tải được phiếu Firestore: " + data.cloudError);
         if (data.localDone && data.localError != null)
             loanStatus.append("\nKhông đọc được lịch sử SQLite: " + data.localError);
-        if (data.localDone && data.cloudDone && loans.getChildCount() == 0)
+        if (data.localDone && data.cloudDone && data.localError == null
+                && data.cloudError == null && loans.getChildCount() == 0)
             historyCard(loans, "Không có bản ghi mượn/trả",
                     "Chưa ghi nhận khoản mượn trong những nguồn đã tải thành công.",
                     "Không có dữ liệu");
@@ -593,9 +596,13 @@ public class AdminManagementActivity extends SessionActivity {
             historyCard(fines, "Không có khoản phạt trả muộn",
                     "Chưa ghi nhận khoản phạt trên thiết bị Admin này.", "SQLite");
         TextView summary = screen.findViewById(R.id.adminReaderHistorySummary);
+        String countSuffix = !data.localDone || !data.cloudDone
+                || data.localError != null || data.cloudError != null
+                ? " (chưa đầy đủ)" : "";
         summary.setText("Đang mượn: " + activeCount + " · Đã trả: " + returnedCount
-                + "\nKhoản phạt trả muộn: " + fineCount
-                + " · Còn nợ tại máy: " + vnd(remaining)
+                + countSuffix
+                + "\nKhoản phạt trả muộn: " + (data.local == null ? "—" : fineCount)
+                + " · Còn nợ tại máy: " + (data.local == null ? "—" : vnd(remaining))
                 + (data.localDone && data.cloudDone ? ""
                 : "\nĐang chờ kết quả tải dữ liệu…")
                 + (data.localError == null && data.cloudError == null ? ""
