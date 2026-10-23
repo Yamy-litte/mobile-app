@@ -89,7 +89,9 @@ public final class OnlineLoanRequestRepository {
                         DocumentSnapshot config = tx.get(configRef);
                         DocumentSnapshot previous = readPrevious ? tx.get(requestRef) : null;
                         if (!user.exists() || !"Reader".equals(user.getString("role"))
-                                || !"HoatDong".equals(user.getString("cardStatus")))
+                                || !"HoatDong".equals(user.getString("cardStatus"))
+                        || (user.getLong("lostBookBorrowLocks") != null
+                                && user.getLong("lostBookBorrowLocks") > 0))
                             throw new IllegalArgumentException(
                                     "Thẻ độc giả chưa hoạt động hoặc đang bị khóa.");
                         int maxDays = config.exists() && config.getLong("maxLoanDays") != null
@@ -184,7 +186,9 @@ public final class OnlineLoanRequestRepository {
                 if (!current.exists() || !PENDING.equals(current.getString("status")))
                     throw new IllegalArgumentException("Yêu cầu không còn chờ duyệt.");
                 if (!user.exists() || !"Reader".equals(user.getString("role"))
-                        || !"HoatDong".equals(user.getString("cardStatus")))
+                        || !"HoatDong".equals(user.getString("cardStatus"))
+                        || (user.getLong("lostBookBorrowLocks") != null
+                                && user.getLong("lostBookBorrowLocks") > 0))
                     throw new IllegalArgumentException("Thẻ độc giả không còn hoạt động.");
                 Long free = title.getLong("availableCopies");
                 if (!title.exists() || Boolean.TRUE.equals(title.getBoolean("isHidden"))
@@ -347,6 +351,8 @@ public final class OnlineLoanRequestRepository {
                     throw new IllegalArgumentException("Đơn đã quá hạn nhận. Cần giải phóng sách.");
                 if (!user.exists() || !"Reader".equals(user.getString("role"))
                         || !"HoatDong".equals(user.getString("cardStatus"))
+                        || (user.getLong("lostBookBorrowLocks") != null
+                                && user.getLong("lostBookBorrowLocks") > 0)
                         || !readerBarcode.trim().equals(user.getString("barcode")))
                     throw new IllegalArgumentException("Thẻ độc giả không khớp hoặc không còn hiệu lực.");
                 String expiry = user.getString("cardExpiryDate");
