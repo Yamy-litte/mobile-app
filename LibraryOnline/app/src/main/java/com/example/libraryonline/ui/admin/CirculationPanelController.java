@@ -26,6 +26,7 @@ final class CirculationPanelController implements AutoCloseable {
     private final TextView result;
     private final Button borrowButton;
     private final Button returnButton;
+    private final CounterOnlineLoanController online;
 
     CirculationPanelController(Activity activity) {
         this.activity = activity;
@@ -35,6 +36,10 @@ final class CirculationPanelController implements AutoCloseable {
         loanDays = activity.findViewById(R.id.inputCirculationLoanDays);
         penaltyId = activity.findViewById(R.id.inputCirculationPenaltyId);
         collectFineButton = activity.findViewById(R.id.buttonCirculationCollectFine);
+        online = activity instanceof AdminMainActivity
+                ? new CounterOnlineLoanController((AdminMainActivity) activity,
+                        readerBarcode, copyBarcode)
+                : null;
         result = activity.findViewById(R.id.textCirculationResult);
         borrowButton = activity.findViewById(R.id.buttonCirculationBorrow);
         returnButton = activity.findViewById(R.id.buttonCirculationReturn);
@@ -56,6 +61,10 @@ final class CirculationPanelController implements AutoCloseable {
     }
 
     private void borrow() {
+        if (online != null && online.hasSelection()) {
+            showError("Đã chọn đơn mượn Online. Hãy đối chiếu đúng cuốn và dùng nút Xác nhận giao sách Online.");
+            return;
+        }
         String reader = readerBarcode.getText().toString().trim();
         String copy = copyBarcode.getText().toString().trim();
         int days;
@@ -78,6 +87,10 @@ final class CirculationPanelController implements AutoCloseable {
     }
 
     private void returnCopy() {
+        if (online != null && online.hasSelection()) {
+            showError("Đã chọn phiếu mượn Online. Hãy dùng nút Xác nhận nhận trả sách Online.");
+            return;
+        }
         String reader = readerBarcode.getText().toString().trim();
         String copy = copyBarcode.getText().toString().trim();
         if (reader.isEmpty() || copy.isEmpty()) {
@@ -149,6 +162,7 @@ final class CirculationPanelController implements AutoCloseable {
     }
 
     @Override public void close() {
+        if (online != null) online.close();
         worker.shutdown();
         Thread closer = new Thread(() -> {
             try {
