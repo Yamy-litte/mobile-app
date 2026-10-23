@@ -37,6 +37,7 @@ public class XmlPresentationTest {
             Screen activity = controller.get();
             int[][] checks = {
                     {R.layout.view_admin_reader_list, R.id.adminReaderSearch},
+                    {R.layout.view_admin_reader_list, R.id.adminReaderScanCard},
                     {R.layout.item_admin_reader_profile, R.id.adminReaderCardOpen},
                     {R.layout.view_admin_reader_detail, R.id.adminReaderDetailLock},
                     {R.layout.view_admin_config_panel, R.id.adminConfigBooksInput},
@@ -56,7 +57,15 @@ public class XmlPresentationTest {
                     {R.layout.view_reader_loans, R.id.containerReaderOnlineReceipts},
                     {R.layout.item_reader_online_receipt, R.id.readerOnlineReceiptStatus},
                     {R.layout.activity_reader_online_borrow, R.id.onlineBorrowValidation},
-                    {R.layout.activity_reader_online_borrow, R.id.onlineBorrowRetry}
+                    {R.layout.activity_reader_online_borrow, R.id.onlineBorrowRetry},
+                    {R.layout.view_admin_circulation, R.id.scanCirculationReaderBarcode},
+                    {R.layout.view_admin_circulation, R.id.scanCirculationCopyBarcode},
+                    {R.layout.item_admin_online_request, R.id.adminOnlineScanReader},
+                    {R.layout.item_admin_online_request, R.id.adminOnlineScanCopy},
+                    {R.layout.activity_admin_inventory, R.id.inventoryScanBarcode},
+                    {R.layout.activity_reader_main, R.id.readerScanBookBarcode},
+                    {R.layout.activity_library_barcode_scan, R.id.libraryBarcodeCancel},
+                    {R.layout.activity_library_barcode_scan, R.id.zxing_barcode_scanner}
             };
             for (int[] pair : checks) {
                 View view = activity.getLayoutInflater().inflate(

@@ -273,6 +273,14 @@ final class AdminOnlineLoanController {
         panel.setVisibility(View.VISIBLE);
         EditText readerBarcode = item.findViewById(R.id.adminOnlineReaderBarcode);
         EditText copyBarcode = item.findViewById(R.id.adminOnlineCopyBarcode);
+        item.findViewById(R.id.adminOnlineScanReader).setOnClickListener(v -> {
+            if (current(uid))
+                activity.scanBarcodeInto(readerBarcode, "Quét đúng mã thẻ của độc giả nhận/trả");
+        });
+        item.findViewById(R.id.adminOnlineScanCopy).setOnClickListener(v -> {
+            if (current(uid))
+                activity.scanBarcodeInto(copyBarcode, "Quét đúng mã cuốn đang giữ/mượn");
+        });
         Button action = item.findViewById(returning
                 ? R.id.adminOnlineItemReturn : R.id.adminOnlineItemCollect);
         action.setVisibility(View.VISIBLE);

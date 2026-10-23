@@ -49,6 +49,7 @@ android {
     }
 
     compileOptions {
+        isCoreLibraryDesugaringEnabled = true
         sourceCompatibility = JavaVersion.VERSION_11
         targetCompatibility = JavaVersion.VERSION_11
     }
@@ -60,8 +61,10 @@ dependencies {
     implementation(libs.constraintlayout)
     implementation(libs.fragment)
     implementation("com.github.bumptech.glide:glide:4.16.0")
-    // Code 128 labels only; no camera/scanner or network dependency.
+    // Keep ZXing core for printed Code-128 labels and local camera decoding.
     implementation("com.google.zxing:core:3.5.3")
+    implementation("com.journeyapps:zxing-android-embedded:4.3.0")
+    coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.1.5")
     implementation(libs.material)
 
     implementation(platform(libs.firebase.bom))

@@ -1,6 +1,11 @@
 <?xml version="1.0" encoding="utf-8"?>
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android" android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical">
-<EditText android:id="@+id/adminReaderSearch" android:layout_width="match_parent" android:layout_height="52dp" android:background="@drawable/bg_admin_screen_field" android:paddingStart="16dp" android:paddingEnd="16dp" android:singleLine="true" android:textSize="14sp" android:textColor="@color/text_primary" android:textColorHint="@color/text_secondary" android:hint="Tìm theo tên / SĐT" android:drawableStart="@drawable/ic_inventory_search" android:drawablePadding="10dp"/>
+<EditText android:id="@+id/adminReaderSearch" android:layout_width="match_parent" android:layout_height="52dp" android:background="@drawable/bg_admin_screen_field" android:paddingStart="16dp" android:paddingEnd="16dp" android:singleLine="true" android:textSize="14sp" android:textColor="@color/text_primary" android:textColorHint="@color/text_secondary" android:hint="Tên, SĐT hoặc mã thẻ" android:drawableStart="@drawable/ic_inventory_search" android:drawablePadding="10dp"/>
+<Button android:id="@+id/adminReaderScanCard"
+    android:layout_width="match_parent" android:layout_height="48dp"
+    android:layout_marginTop="8dp" android:backgroundTint="@color/library_blue"
+    android:textColor="@color/surface" android:textAllCaps="false"
+    android:text="Quét mã thẻ độc giả để tìm" />
 <TextView android:id="@+id/adminReaderSummary" android:layout_width="match_parent" android:layout_height="wrap_content" android:paddingTop="5dp" android:paddingBottom="5dp" android:textColor="@color/text_secondary" android:textSize="13sp" android:text="Đang tải danh sách độc giả..." android:background="@drawable/bg_admin_screen_readonly" android:padding="12dp" android:layout_marginTop="8dp"/>
 <HorizontalScrollView android:layout_width="match_parent" android:layout_height="wrap_content" android:scrollbars="none" android:layout_marginTop="8dp">
  <LinearLayout android:layout_width="wrap_content" android:layout_height="wrap_content" android:orientation="horizontal">
