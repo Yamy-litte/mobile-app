@@ -193,7 +193,8 @@ public final class OnlineLoanRequestRepository {
                             "Đã hết suất có thể duyệt của đầu sách này. Không duyệt vượt tồn kho.");
                 long reserved = title.getLong("reservedOnlineCopies") == null
                         ? 0 : title.getLong("reservedOnlineCopies");
-                if (reserved < 0 || free + reserved > title.getLong("totalCopies"))
+                Long total = title.getLong("totalCopies");
+                if (total == null || reserved < 0 || free + reserved > total)
                     throw new IllegalArgumentException("Bộ đếm suất giữ Online không hợp lệ.");
                 long attempt = current.getLong("attempt") == null ? 1 : current.getLong("attempt");
                 Timestamp holdUntil = new Timestamp(new Date(System.currentTimeMillis() + HOLD_MS));
