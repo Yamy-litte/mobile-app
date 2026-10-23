@@ -18,6 +18,7 @@ public class LoanDetailRepository implements AutoCloseable {
     public LoanDetail getById(String id) { return dao.findById(id); }
     public java.util.List<LoanDetail> getByReceipt(String receiptId) { return dao.findByReceipt(receiptId); }
     public java.util.List<LoanDetail> getActiveByUser(String userId) { return dao.findActiveByUser(userId); }
+    public java.util.List<LoanDetail> getReturnedByUser(String userId) { return dao.findReturnedByUser(userId); }
     public int update(LoanDetail x) { return dao.update(x); }
 
     @Override public void close() { helper.close(); }
