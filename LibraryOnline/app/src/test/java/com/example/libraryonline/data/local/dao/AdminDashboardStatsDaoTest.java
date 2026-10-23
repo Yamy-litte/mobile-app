@@ -46,6 +46,7 @@ public class AdminDashboardStatsDaoTest {
         assertEquals(7, result.dailyBorrowed.length);
         for (int n : result.dailyBorrowed) assertEquals(0, n);
         assertTrue(result.recentActivities.isEmpty());
+        assertTrue(result.recentEvents.isEmpty());
     }
 
     @Test public void calculatesActualTodayAndMondayBasedWeekFromLocalLoans() {
@@ -63,5 +64,19 @@ public class AdminDashboardStatsDaoTest {
         assertEquals(1, result.dailyBorrowed[1]); // Tuesday
         assertEquals(1, result.dailyBorrowed[3]); // Thursday
         assertEquals(2, result.recentActivities.size());
+        assertEquals(2, result.recentEvents.size());
+        assertTrue(result.recentEvents.get(0).at > 0L);
+    }
+    @Test public void countsTimestampStyleReturnDatesWithoutCountingOtherDays() {
+        db.execSQL("INSERT INTO Users VALUES ('u1','Người mượn')");
+        db.execSQL("INSERT INTO BookTitles VALUES ('b1','Sách thật')");
+        db.execSQL("INSERT INTO BookCopies VALUES ('c1','b1','SanSang',0)");
+        db.execSQL("INSERT INTO LoanReceipts VALUES ('r1','u1','2026-10-21T09:00:00','Completed')");
+        db.execSQL("INSERT INTO LoanDetails VALUES ('l1','r1','c1','2026-10-21','2026-10-25','2026-10-22T11:15:00','DaTra','2026-10-21T09:00:00')");
+        AdminDashboardStatsDao.Summary result = new AdminDashboardStatsDao(db).load(day());
+        assertEquals(0, result.borrowedToday);
+        assertEquals(1, result.returnedToday);
+        assertEquals(1, result.dailyBorrowed[2]); // Wednesday, October 21
+        assertTrue(result.recentEvents.get(0).label.contains("Đã trả"));
     }
 }
