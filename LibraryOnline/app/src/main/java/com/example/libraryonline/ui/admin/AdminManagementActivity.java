@@ -314,7 +314,7 @@ public class AdminManagementActivity extends SessionActivity {
     /** Detail sub-screen from Figma; only card status/expiry are mutable for readers. */
     private void showReaderDetails(DocumentSnapshot doc) {
         if (!isSessionReady()) return;
-        clearContent("Hồ sơ độc giả", "Chi tiết thẻ và lịch sử được ghi trên thiết bị.");
+        clearContent("Hồ sơ độc giả", "Thông tin thẻ trên Firestore và lịch sử mượn/trả theo từng nguồn.");
         View screen = getLayoutInflater().inflate(R.layout.view_admin_reader_detail, content, false);
         content.addView(screen);
         screen.findViewById(R.id.adminReaderDetailBack).setOnClickListener(v -> showReaders());
@@ -408,28 +408,225 @@ public class AdminManagementActivity extends SessionActivity {
         });
     }
 
+    /** Full per-reader history: Firestore Online receipts and this-device SQLite records. */
     private void showReaderHistory(DocumentSnapshot doc) {
-        String uid = doc.getId();
+        if (!isSessionReady()) return;
+        clearContent("Hồ sơ độc giả · Lịch sử", "Các lần mượn, trả và khoản phạt trả muộn.");
+        View screen = getLayoutInflater().inflate(
+                R.layout.view_admin_reader_history, content, false);
+        content.addView(screen);
+        ((TextView) screen.findViewById(R.id.adminReaderHistoryName))
+                .setText(value(doc, "fullName") + " · " + value(doc, "barcode"));
+        screen.findViewById(R.id.adminReaderHistoryBack)
+                .setOnClickListener(v -> showReaderDetails(doc));
+        screen.findViewById(R.id.adminReaderHistoryRefresh)
+                .setOnClickListener(v -> loadReaderHistory(doc.getId(), screen));
+        loadReaderHistory(doc.getId(), screen);
+    }
+
+    private static final class ReaderHistoryState {
+        com.example.libraryonline.data.repository.ReaderHistoryLocalRepository.Snapshot local;
+        java.util.List<DocumentSnapshot> online;
+        String localError, cloudError;
+        boolean localDone, cloudDone;
+    }
+
+    private void loadReaderHistory(String readerUid, View screen) {
+        if (!isSessionReady() || !screen.isAttachedToWindow()) return;
+        final ReaderHistoryState state = new ReaderHistoryState();
+        TextView summary = screen.findViewById(R.id.adminReaderHistorySummary);
+        TextView localStatus = screen.findViewById(R.id.adminReaderHistoryFinesStatus);
+        TextView onlineStatus = screen.findViewById(R.id.adminReaderHistoryLoansStatus);
+        summary.setText("Đang tải lịch sử độc giả…");
+        localStatus.setText("Đang tải các khoản phạt trên thiết bị…");
+        onlineStatus.setText("Đang tải phiếu mượn trên thiết bị và Firestore…");
+        ((LinearLayout) screen.findViewById(R.id.adminReaderHistoryLoans)).removeAllViews();
+        ((LinearLayout) screen.findViewById(R.id.adminReaderHistoryFines)).removeAllViews();
         io.execute(() -> {
-            int receipts = 0, activeLoans = 0, unpaid = 0;
-            try (DatabaseHelper helper = new DatabaseHelper(getApplicationContext())) {
-                android.database.sqlite.SQLiteDatabase db = helper.getReadableDatabase();
-                receipts = scalar(db, "SELECT COUNT(*) FROM LoanReceipts WHERE userId=?", uid);
-                activeLoans = scalar(db, "SELECT COUNT(*) FROM LoanDetails d JOIN LoanReceipts r ON r.loanReceiptId=d.loanReceiptId WHERE r.userId=? AND d.returnDate IS NULL", uid);
-                unpaid = scalar(db, "SELECT COUNT(*) FROM Penalties WHERE userId=? AND penaltyType='LateReturn' "
-                        + "AND penaltyStatus IN ('Unpaid','Partial')", uid);
-            } catch (Exception ignored) {}
-            final int r = receipts, a = activeLoans, p = unpaid;
+            com.example.libraryonline.data.repository.ReaderHistoryLocalRepository.Snapshot snapshot = null;
+            String errorMessage = null;
+            try (com.example.libraryonline.data.repository.ReaderHistoryLocalRepository repo =
+                         new com.example.libraryonline.data.repository.ReaderHistoryLocalRepository(this)) {
+                snapshot = repo.load(readerUid);
+            } catch (RuntimeException failure) {
+                errorMessage = safe(failure.getMessage());
+            }
+            final com.example.libraryonline.data.repository.ReaderHistoryLocalRepository.Snapshot result = snapshot;
+            final String error = errorMessage;
             runOnUiThread(() -> {
-                if (!isSessionReady()) return;
-                privateSupportDialog().setTitle("Lịch sử độc giả")
-                        .setMessage(value(doc, "fullName") + "\nPhiếu mượn (bản ghi trên thiết bị): " + r
-                                + "\nSách đang mượn (bản ghi trên thiết bị): " + a
-                                + "\nKhoản phạt chưa thanh toán (bản ghi trên thiết bị): " + p
-                                + "\n\nLưu ý: lịch sử này chỉ phản ánh dữ liệu SQLite hiện có trên thiết bị.")
-                        .setPositiveButton("Đóng", null).show();
+                if (!historyScreenActive(screen)) return;
+                state.localDone = true;
+                state.local = result;
+                state.localError = error;
+                renderReaderHistory(state, screen);
             });
         });
+        // This is deliberately SERVER-only: don't silently present stale cached
+        // cloud receipts as a complete current account history.
+        firestore.collection("OnlineLoanReceipts").whereEqualTo("userId", readerUid)
+                .get(com.google.firebase.firestore.Source.SERVER)
+                .addOnCompleteListener(task -> {
+                    if (!historyScreenActive(screen)) return;
+                    state.cloudDone = true;
+                    if (task.isSuccessful() && task.getResult() != null) {
+                        state.online = task.getResult().getDocuments();
+                    } else {
+                        state.cloudError = task.getException() == null
+                                ? "Không nhận được dữ liệu từ máy chủ."
+                                : safe(task.getException().getMessage());
+                    }
+                    renderReaderHistory(state, screen);
+                });
+    }
+
+    private boolean historyScreenActive(View screen) {
+        return isSessionReady() && !isFinishing() && !isDestroyed()
+                && screen.isAttachedToWindow();
+    }
+
+    private void renderReaderHistory(ReaderHistoryState data, View screen) {
+        LinearLayout loans = screen.findViewById(R.id.adminReaderHistoryLoans);
+        LinearLayout fines = screen.findViewById(R.id.adminReaderHistoryFines);
+        loans.removeAllViews();
+        fines.removeAllViews();
+        TextView loanStatus = screen.findViewById(R.id.adminReaderHistoryLoansStatus);
+        TextView fineStatus = screen.findViewById(R.id.adminReaderHistoryFinesStatus);
+        int cloudCount = 0, localCount = 0, activeCount = 0, returnedCount = 0;
+        int fineCount = 0;
+        long remaining = 0;
+        if (data.online != null) {
+            java.util.List<DocumentSnapshot> sorted = new java.util.ArrayList<>(data.online);
+            java.util.Collections.sort(sorted, (left, right) -> Long.compare(
+                    timestampMillis(right.getTimestamp("collectedAt")),
+                    timestampMillis(left.getTimestamp("collectedAt"))));
+            for (DocumentSnapshot receipt : sorted) {
+                String status = value(receipt, "status");
+                if (!"Open".equals(status) && !"Returned".equals(status)) continue;
+                cloudCount++;
+                boolean returned = "Returned".equals(status);
+                if (returned) returnedCount++; else activeCount++;
+                String title = value(receipt, "bookTitle");
+                if (title.isEmpty()) title = "Đầu sách chưa có tên";
+                String detail = "Phiếu: " + receipt.getId()
+                        + "\nMã cuốn: " + value(receipt, "copyId")
+                        + "\nNgày giao: " + cloudDate(receipt.getTimestamp("collectedAt"))
+                        + "\nHạn trả: " + cloudDate(receipt.getTimestamp("dueAt"))
+                        + (returned ? "\nĐã trả: " + cloudDate(receipt.getTimestamp("returnedAt")) : "")
+                        + "\nGia hạn: " + number(receipt, "extensionCount", 0) + " lần";
+                String label = returned ? "Đã trả"
+                        : timestampMillis(receipt.getTimestamp("dueAt")) > 0
+                          && timestampMillis(receipt.getTimestamp("dueAt")) < System.currentTimeMillis()
+                            ? "Quá hạn" : "Đang mượn";
+                historyCard(loans, title, detail, label + " · Firestore");
+            }
+        }
+        if (data.local != null) {
+            for (com.example.libraryonline.data.repository.ReaderHistoryLocalRepository.Loan loan
+                    : data.local.loans) {
+                localCount++;
+                boolean returned = loan.returnedAt != null && !loan.returnedAt.isEmpty()
+                        && "DaTra".equals(loan.status);
+                if (returned) returnedCount++;
+                else if (loan.returnedAt == null
+                        && ("DangMuon".equals(loan.status) || "QuaHan".equals(loan.status)))
+                    activeCount++;
+                String label = returned ? "Đã trả"
+                        : "QuaHan".equals(loan.status) ? "Quá hạn"
+                        : "DangMuon".equals(loan.status) ? "Đang mượn"
+                        : loan.status == null ? "Chưa rõ trạng thái" : loan.status;
+                historyCard(loans, loan.title == null || loan.title.isEmpty()
+                                ? "Mã cuốn: " + loan.copyId : loan.title,
+                        "Phiếu: " + loan.receiptId
+                        + "\nMã cuốn: " + loan.copyId
+                        + (loan.barcode == null || loan.barcode.isEmpty() ? "" : " · " + loan.barcode)
+                        + "\nNgày mượn: " + localDate(loan.borrowedAt)
+                        + "\nHạn trả: " + localDate(loan.dueAt)
+                        + (loan.returnedAt == null ? "" : "\nĐã trả: " + localDate(loan.returnedAt))
+                        + "\nGia hạn: " + loan.extensionCount + " lần",
+                        label + " · SQLite" + ("Online".equals(loan.loanType)
+                                ? " (phiếu Online cũ)" : ""));
+            }
+            for (com.example.libraryonline.data.repository.ReaderHistoryLocalRepository.Fine fine
+                    : data.local.fines) {
+                fineCount++;
+                remaining += fine.remaining();
+                StringBuilder detail = new StringBuilder("Mã phạt: ").append(fine.id)
+                        .append("\nMã cuốn: ").append(fine.copyId)
+                        .append("\nTrễ: ").append(fine.lateDays).append(" ngày")
+                        .append("\nNgày ghi nhận: ").append(localDate(fine.createdAt))
+                        .append("\nPhải thu: ").append(vnd(fine.amountDue))
+                        .append(" · Đã thu: ").append(vnd(fine.amountPaid))
+                        .append("\nCòn nợ: ").append(vnd(fine.remaining()));
+                if (!fine.payments.isEmpty()) {
+                    detail.append("\nThanh toán:");
+                    for (com.example.libraryonline.data.repository.ReaderHistoryLocalRepository.Payment payment
+                            : fine.payments) {
+                        detail.append("\n  • ").append(localDate(payment.receivedAt))
+                                .append(" · ").append(vnd(payment.amount))
+                                .append(" · ").append(payment.method == null ? "" : payment.method)
+                                .append(" · ").append("Confirmed".equals(payment.status)
+                                        ? "Đã xác nhận" : "Đã hủy");
+                    }
+                }
+                String status = fine.remaining() <= 0 ? "Đã thanh toán"
+                        : fine.amountPaid > 0 ? "Thanh toán một phần" : "Chưa thanh toán";
+                historyCard(fines, fine.title == null || fine.title.isEmpty()
+                                ? "Phạt trả muộn" : "Phạt trả muộn · " + fine.title,
+                        detail.toString(), status + " · SQLite");
+            }
+        }
+        loanStatus.setText(data.localDone && data.cloudDone
+                ? "Firestore: " + cloudCount + " phiếu · SQLite trên máy: " + localCount + " chi tiết"
+                : "Đang tổng hợp lịch sử từ hai nguồn…");
+        if (data.cloudDone && data.cloudError != null)
+            loanStatus.append("\nKhông tải được phiếu Firestore: " + data.cloudError);
+        if (data.localDone && data.localError != null)
+            loanStatus.append("\nKhông đọc được lịch sử SQLite: " + data.localError);
+        if (data.localDone && data.cloudDone && loans.getChildCount() == 0)
+            historyCard(loans, "Không có bản ghi mượn/trả",
+                    "Chưa ghi nhận khoản mượn trong những nguồn đã tải thành công.",
+                    "Không có dữ liệu");
+        fineStatus.setText(!data.localDone ? "Đang đọc các khoản phạt tại quầy…"
+                : data.localError != null ? "Không đọc được khoản phạt: " + data.localError
+                : "Phạt trả muộn tại máy: " + fineCount + " khoản · Còn nợ: " + vnd(remaining));
+        if (data.localDone && data.local != null && fines.getChildCount() == 0)
+            historyCard(fines, "Không có khoản phạt trả muộn",
+                    "Chưa ghi nhận khoản phạt trên thiết bị Admin này.", "SQLite");
+        TextView summary = screen.findViewById(R.id.adminReaderHistorySummary);
+        summary.setText("Đang mượn: " + activeCount + " · Đã trả: " + returnedCount
+                + "\nKhoản phạt trả muộn: " + fineCount
+                + " · Còn nợ tại máy: " + vnd(remaining)
+                + (data.localDone && data.cloudDone ? ""
+                : "\nĐang chờ kết quả tải dữ liệu…")
+                + (data.localError == null && data.cloudError == null ? ""
+                : "\nMột nguồn dữ liệu chưa tải được; số liệu có thể thiếu."));
+    }
+
+    private void historyCard(LinearLayout list, String title, String details, String status) {
+        View item = getLayoutInflater().inflate(
+                R.layout.item_admin_reader_history_entry, list, false);
+        ((TextView) item.findViewById(R.id.adminReaderHistoryEntryTitle)).setText(title);
+        ((TextView) item.findViewById(R.id.adminReaderHistoryEntryDescription)).setText(details);
+        ((TextView) item.findViewById(R.id.adminReaderHistoryEntryFootnote)).setText(status);
+        list.addView(item);
+    }
+
+    private static long timestampMillis(Timestamp timestamp) {
+        return timestamp == null ? 0 : timestamp.toDate().getTime();
+    }
+
+    private String cloudDate(Timestamp time) {
+        return time == null ? "Chưa có"
+                : new SimpleDateFormat("dd/MM/yyyy HH:mm", new Locale("vi", "VN"))
+                .format(time.toDate());
+    }
+
+    private String localDate(String time) {
+        return time == null || time.isEmpty() ? "Chưa có" : time.replace('T', ' ');
+    }
+
+    private String vnd(long amount) {
+        return NumberFormat.getIntegerInstance(new Locale("vi", "VN")).format(amount) + " đ";
     }
 
     private void showConfig() {
