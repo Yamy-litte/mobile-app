@@ -110,6 +110,12 @@ public final class InventoryChanges {
         if (target.equals(copy.copyStatus) && copy.isHidden) return Collections.emptyMap();
         InventoryPolicy.requireRetirable(copy);
         InventoryPolicy.audit(b, copies);
+        // SanSang includes physically ready copies already committed to Approved
+        // Online slots. Do not retire/hide one when no UNCOMMITTED capacity remains.
+        if (b.availableCopies < 1)
+            throw new IllegalArgumentException(
+                    "Toàn bộ cuốn sẵn sàng đã được duyệt giữ suất Online."
+                    + " Không thể ẩn/thanh lý cho đến khi giao hoặc hết hạn.");
         Map<String, Map<String, Object>> writes = new LinkedHashMap<>();
         Map<String, Object> change = new HashMap<>();
         change.put("copyStatus", target);
