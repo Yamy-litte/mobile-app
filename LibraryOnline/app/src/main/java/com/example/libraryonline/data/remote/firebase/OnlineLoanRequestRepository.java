@@ -26,6 +26,7 @@ public final class OnlineLoanRequestRepository {
     public static final String EXPIRED = "Expired";
     public static final String COLLECTED = "Collected";
     public static final String RETURNED = "Returned";
+    public static final String CANCELLED = "Cancelled";
     private static final Executor DIRECT = Runnable::run;
     private static final long HOLD_MS = 24L * 60L * 60L * 1000L;
 
@@ -50,6 +51,7 @@ public final class OnlineLoanRequestRepository {
         if (EXPIRED.equals(status)) return "Đã hết thời gian đến lấy";
         if (COLLECTED.equals(status)) return "Đã nhận sách · Đang mượn";
         if (RETURNED.equals(status)) return "Đã hoàn trả sách";
+        if (CANCELLED.equals(status)) return "Bạn đã hủy yêu cầu";
         return "Chờ Admin duyệt";
     }
 
@@ -96,7 +98,8 @@ public final class OnlineLoanRequestRepository {
                 tx.set(requestRef, changes);
             } else if (REJECTED.equals(previous.getString("status"))
                     || EXPIRED.equals(previous.getString("status"))
-                    || RETURNED.equals(previous.getString("status"))) {
+                    || RETURNED.equals(previous.getString("status"))
+                    || CANCELLED.equals(previous.getString("status"))) {
                 long attempt = previous.getLong("attempt") == null ? 1 : previous.getLong("attempt");
                 changes.put("attempt", attempt + 1);
                 changes.put("copyId", FieldValue.delete());
@@ -116,6 +119,22 @@ public final class OnlineLoanRequestRepository {
                 throw new IllegalArgumentException(
                         "Bạn đã có yêu cầu mượn đầu sách này đang chờ hoặc đã duyệt.");
             }
+            return (Void) null;
+        });
+    }
+
+    /** Reader can withdraw an unreviewed request; no copy is held at this stage. */
+    public Task<Void> cancelPending(String uid, String bookId) {
+        FirebaseUser user = FirebaseAuth.getInstance().getCurrentUser();
+        if (user == null || !uid.equals(user.getUid()))
+            return Tasks.forException(new IllegalStateException("Phiên đăng nhập không hợp lệ."));
+        DocumentReference ref = db.collection(REQUESTS).document(requestId(uid, bookId));
+        return db.runTransaction(tx -> {
+            DocumentSnapshot current = tx.get(ref);
+            if (!current.exists() || !uid.equals(current.getString("userId"))
+                    || !PENDING.equals(current.getString("status")))
+                throw new IllegalArgumentException("Chỉ hủy được yêu cầu đang chờ Admin duyệt.");
+            tx.update(ref, "status", CANCELLED, "updatedAt", FieldValue.serverTimestamp());
             return (Void) null;
         });
     }
