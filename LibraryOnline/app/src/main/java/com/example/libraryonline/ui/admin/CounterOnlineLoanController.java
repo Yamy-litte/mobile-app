@@ -119,6 +119,7 @@ final class CounterOnlineLoanController implements AutoCloseable {
         requests.clear();
         requestsList.removeAllViews();
         blockActions();
+        if (copyBarcode.length() > 0) copyBarcode.setText("");
         summary.setText("");
         String code = readerBarcode.getText().toString().trim();
         if (code.isEmpty()) {
@@ -217,6 +218,11 @@ final class CounterOnlineLoanController implements AutoCloseable {
         for (DocumentSnapshot doc : requests)
             if (doc.getId().equals(selectedId)) { previous = doc; break; }
         selected = previous;
+        // Select the sole matching request automatically after scanning the card.
+        if (selected == null && requests.size() == 1) {
+            selected = requests.get(0);
+            selectedId = selected.getId();
+        }
         for (DocumentSnapshot doc : requests) {
             View row = activity.getLayoutInflater().inflate(
                     R.layout.item_admin_counter_online_loan, requestsList, false);
@@ -249,13 +255,8 @@ final class CounterOnlineLoanController implements AutoCloseable {
             setMessage("Độc giả chưa có yêu cầu Online đã duyệt hoặc sách Online đang mượn.");
             return;
         }
-        // A Reader with exactly one actionable Online loan need not select manually.
-        if (selected == null && requests.size() == 1) {
-            selected = requests.get(0);
-            selectedId = selected.getId();
-        }
         checkCopyAgainstSelected();
-        if (selected == null && copyBarcode.length() > 0) scheduleCopyLookup();
+        if (copyBarcode.length() > 0) scheduleCopyLookup();
     }
 
     private static String value(DocumentSnapshot doc, String key) {
