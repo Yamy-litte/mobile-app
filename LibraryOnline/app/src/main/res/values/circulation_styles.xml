@@ -60,6 +60,11 @@
         <item name="android:layout_marginStart">8dp</item>
         <item name="android:textSize">13sp</item>
     </style>
+    <style name="CirculationSecondaryButton" parent="CirculationPrimaryButton">
+        <item name="android:background">@drawable/bg_admin_screen_field</item>
+        <item name="android:backgroundTint">@null</item>
+        <item name="android:textColor">@color/library_blue</item>
+    </style>
     <style name="CirculationModeButton">
         <item name="android:layout_width">0dp</item>
         <item name="android:layout_height">48dp</item>
