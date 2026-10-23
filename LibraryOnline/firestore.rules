@@ -594,6 +594,67 @@ service cloud.firestore {
         && onlineDecisionNotice();
     }
 
+    // Seven-day renewal is shared with local direct loans. Legacy receipts
+    // without extension fields are treated as not yet renewed.
+    function validReaderExtensionRequest() {
+      let old = resource.data;
+      let next = request.resource.data;
+      let receiptPath =
+          /databases/$(database)/documents/OnlineLoanReceipts/$(old.receiptId);
+      return signedIn()
+        && old.status == 'Collected'
+        && old.userId == request.auth.uid
+        && old.receiptId is string
+        && old.dueAt is timestamp
+        && old.dueAt >= request.time
+        && old.get('extensionCount', 0) == 0
+        && old.get('extended', false) == false
+        && next.diff(old).affectedKeys().hasOnly([
+          'dueAt', 'originalDueAt', 'extensionCount', 'extended', 'updatedAt'
+        ])
+        && next.extensionCount == 1
+        && next.extended == true
+        && next.originalDueAt == old.dueAt
+        && next.dueAt == old.dueAt + duration.value(7, 'd')
+        && next.updatedAt == request.time
+        && exists(receiptPath)
+        && get(receiptPath).data.status == 'Open'
+        && get(receiptPath).data.userId == old.userId
+        && get(receiptPath).data.requestId == old.requestId
+        && getAfter(receiptPath).data.dueAt == next.dueAt
+        && getAfter(receiptPath).data.extensionCount == 1
+        && getAfter(receiptPath).data.originalDueAt == old.dueAt;
+    }
+
+    function validReaderExtensionReceipt() {
+      let old = resource.data;
+      let next = request.resource.data;
+      let requestPath =
+          /databases/$(database)/documents/OnlineLoanRequests/$(old.requestId);
+      return signedIn()
+        && old.userId == request.auth.uid
+        && old.status == 'Open'
+        && old.dueAt is timestamp
+        && old.dueAt >= request.time
+        && old.get('extensionCount', 0) == 0
+        && old.get('extended', false) == false
+        && next.diff(old).affectedKeys().hasOnly([
+          'dueAt', 'originalDueAt', 'extensionCount', 'extended'
+        ])
+        && next.extensionCount == 1
+        && next.extended == true
+        && next.originalDueAt == old.dueAt
+        && next.dueAt == old.dueAt + duration.value(7, 'd')
+        && exists(requestPath)
+        && get(requestPath).data.status == 'Collected'
+        && get(requestPath).data.userId == old.userId
+        && get(requestPath).data.receiptId == request.resource.id
+        && getAfter(requestPath).data.dueAt == next.dueAt
+        && getAfter(requestPath).data.extensionCount == 1
+        && getAfter(requestPath).data.originalDueAt == old.dueAt
+        && getAfter(requestPath).data.updatedAt == request.time;
+    }
+
     match /OnlineLoanRequests/{requestId} {
       // A missing request is readable only by its owner so first-time
       // transaction checks do not trigger PERMISSION_DENIED.
@@ -679,7 +740,7 @@ service cloud.firestore {
         && request.resource.data.createdAt == resource.data.createdAt
         && request.resource.data.updatedAt == request.time
         && validOnlineReturn()
-      );
+      ) || validReaderExtensionRequest();
       allow delete: if false;
     }
 
@@ -724,7 +785,8 @@ service cloud.firestore {
         && request.resource.data.returnedBy == request.auth.uid
         && getAfter(/databases/$(database)/documents/OnlineLoanRequests/$(resource.data.requestId)).data.status == 'Returned'
         && getAfter(/databases/$(database)/documents/OnlineLoanRequests/$(resource.data.requestId)).data.receiptId == receiptId
-        && getAfter(/databases/$(database)/documents/OnlineLoanRequests/$(resource.data.requestId)).data.returnedAt == request.time;
+        && getAfter(/databases/$(database)/documents/OnlineLoanRequests/$(resource.data.requestId)).data.returnedAt == request.time
+        || validReaderExtensionReceipt();
       allow delete: if false;
     }
 
