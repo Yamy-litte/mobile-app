@@ -556,6 +556,7 @@ service cloud.firestore {
         && next.returnedAt == request.time
         && exists(copyPath)
         && oldCopy.copyStatus == 'DaMuon'
+        && oldCopy.priorityUserId == null
         && oldCopy.isHidden == false
         && oldCopy.bookTitleId == resource.data.bookTitleId
         && newCopy.copyStatus == 'SanSang'
@@ -586,8 +587,7 @@ service cloud.firestore {
         && request.resource.data.updatedAt == request.time
       ) || (
         // Reader re-submits a rejected, expired, cancelled or returned request;
-        // previous decision/checkout metadata must be cleared, attempt increases
-        // must be cleared, and attempt must increase, preserving the same title.
+        // previous decision and checkout metadata must be cleared and attempt incremented.
         signedIn()
         && request.auth.uid == resource.data.userId
         && resource.data.status in ['Rejected', 'Expired', 'Returned', 'Cancelled']
