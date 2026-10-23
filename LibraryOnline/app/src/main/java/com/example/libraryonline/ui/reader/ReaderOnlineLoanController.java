@@ -88,8 +88,8 @@ final class ReaderOnlineLoanController {
         TextView heading = activity.findViewById(R.id.readerLoansSectionHeading);
         TextView explanation = activity.findViewById(R.id.readerLoansSectionDescription);
         if (BORROWED.equals(loanMode)) {
-            heading.setText("Sách đang mượn Online");
-            explanation.setText("Đã nhận tại quầy · Hạn trả bắt đầu khi thủ thư giao sách.");
+            heading.setText("Đang mượn");
+            explanation.setText("Danh sách sách bạn đang mượn, không phân biệt hình thức mượn.");
         } else if (PICKUP.equals(loanMode)) {
             heading.setText("Đã duyệt · Chờ đến nhận");
             explanation.setText("Thư viện đã giữ suất theo đầu sách. Quét nhận cuốn tại quầy trước hạn.");
@@ -97,8 +97,8 @@ final class ReaderOnlineLoanController {
             heading.setText("Yêu cầu đang chờ duyệt");
             explanation.setText("Theo dõi phản hồi của thủ thư. Bạn có thể hủy đơn chưa duyệt.");
         } else {
-            heading.setText("Yêu cầu đã kết thúc");
-            explanation.setText("Đơn đã trả, từ chối, hủy hoặc hết hạn; bên dưới là lịch sử giao/trả Online.");
+            heading.setText("Đã trả");
+            explanation.setText("Các cuốn sách đã được thư viện xác nhận trả lại.");
         }
     }
 
@@ -109,10 +109,7 @@ final class ReaderOnlineLoanController {
             return OnlineLoanRequestRepository.APPROVED.equals(status);
         if (PENDING_MODE.equals(loanMode))
             return OnlineLoanRequestRepository.PENDING.equals(status);
-        return OnlineLoanRequestRepository.RETURNED.equals(status)
-                || OnlineLoanRequestRepository.REJECTED.equals(status)
-                || OnlineLoanRequestRepository.EXPIRED.equals(status)
-                || OnlineLoanRequestRepository.CANCELLED.equals(status);
+        return OnlineLoanRequestRepository.RETURNED.equals(status);
     }
 
     void start(String uid) {
@@ -242,12 +239,12 @@ final class ReaderOnlineLoanController {
         ((TextView) activity.findViewById(R.id.readerLoansTabPending))
                 .setText("Chờ duyệt (" + pending + ")");
         ((TextView) activity.findViewById(R.id.readerLoansTabHistory))
-                .setText("Lịch sử (" + completed + ")");
+                .setText("Đã trả (" + records.stream().filter(doc -> OnlineLoanRequestRepository.RETURNED.equals(doc.getString("status"))).count() + ")");
         message(R.id.textReaderOnlineSummary, matching == 0
                 ? (BORROWED.equals(loanMode) ? "Bạn chưa có sách Online đang mượn."
                     : PICKUP.equals(loanMode) ? "Không có yêu cầu nào đang chờ nhận sách."
                     : PENDING_MODE.equals(loanMode) ? "Không có yêu cầu chờ duyệt."
-                    : "Không có yêu cầu đã kết thúc.")
+                    : "Chưa có sách đã trả.")
                 : matching + " yêu cầu trong mục này"
                   + (snapshot.getMetadata().isFromCache()
                     ? " · Dữ liệu đã lưu, đang kiểm tra máy chủ" : ""));
