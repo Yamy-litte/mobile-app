@@ -577,11 +577,20 @@ service cloud.firestore {
         || (signedIn() && resource.data.userId == request.auth.uid);
       allow create: if validNewOnlineRequest(requestId);
       allow update: if (
-        // Reader re-submits a rejected/expired request; previous decision metadata
+        signedIn()
+        && request.auth.uid == resource.data.userId
+        && resource.data.status == 'Pending'
+        && request.resource.data.status == 'Cancelled'
+        && request.resource.data.diff(resource.data).affectedKeys()
+            .hasOnly(['status', 'updatedAt'])
+        && request.resource.data.updatedAt == request.time
+      ) || (
+        // Reader re-submits a rejected, expired, cancelled or returned request;
+        // previous decision/checkout metadata must be cleared, attempt increases
         // must be cleared, and attempt must increase, preserving the same title.
         signedIn()
         && request.auth.uid == resource.data.userId
-        && resource.data.status in ['Rejected', 'Expired', 'Returned']
+        && resource.data.status in ['Rejected', 'Expired', 'Returned', 'Cancelled']
         && request.resource.data.keys().hasOnly([
           'requestId', 'userId', 'bookTitleId', 'bookTitle',
           'loanDays', 'status', 'attempt', 'createdAt', 'updatedAt'
