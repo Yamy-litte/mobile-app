@@ -1,0 +1,92 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical">
+    <Button
+        android:id="@+id/adminReaderHistoryBack"
+        android:layout_width="match_parent"
+        android:layout_height="48dp"
+        android:textAllCaps="false"
+        android:layout_marginTop="8dp"
+        android:backgroundTint="@color/library_blue"
+        android:textColor="@color/white"
+        android:text="← Trở về hồ sơ độc giả" />
+    <TextView
+        android:id="@+id/adminReaderHistoryName"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="12dp"
+        android:textColor="@color/text_primary"
+        android:textSize="20sp"
+        android:textStyle="bold" />
+    <TextView
+        android:id="@+id/adminReaderHistorySummary"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="8dp"
+        android:padding="14dp"
+        android:background="@drawable/bg_admin_screen_card"
+        android:textColor="@color/text_primary"
+        android:textSize="14sp"
+        android:text="Đang tải dữ liệu mượn sách và tiền phạt…" />
+    <Button
+        android:id="@+id/adminReaderHistoryRefresh"
+        android:layout_width="match_parent"
+        android:layout_height="44dp"
+        android:layout_marginTop="10dp"
+        android:textAllCaps="false"
+        android:text="Tải lại lịch sử và khoản phạt" />
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="14dp"
+        android:text="Lịch sử mượn sách"
+        android:textColor="@color/text_primary"
+        android:textStyle="bold"
+        android:textSize="18sp" />
+    <TextView
+        android:id="@+id/adminReaderHistoryLoansStatus"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="5dp"
+        android:textColor="@color/text_secondary"
+        android:textSize="13sp"
+        android:text="Đang tải dữ liệu tại quầy và Online…" />
+    <LinearLayout
+        android:id="@+id/adminReaderHistoryLoans"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="9dp"
+        android:orientation="vertical" />
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="18dp"
+        android:text="Các khoản phạt trả muộn"
+        android:textColor="@color/text_primary"
+        android:textStyle="bold"
+        android:textSize="18sp" />
+    <TextView
+        android:id="@+id/adminReaderHistoryFinesStatus"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="5dp"
+        android:textColor="@color/text_secondary"
+        android:textSize="13sp"
+        android:text="Đang đọc khoản phạt tại quầy…" />
+    <LinearLayout
+        android:id="@+id/adminReaderHistoryFines"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="9dp"
+        android:orientation="vertical" />
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="12dp"
+        android:padding="10dp"
+        android:textColor="@color/text_secondary"
+        android:textSize="12sp"
+        android:text="Phiếu mượn Online lấy từ Firestore. Phiếu trực tiếp, phạt và thanh toán lấy từ SQLite trên thiết bị Admin này; chưa phải lịch sử và công nợ đồng bộ toàn hệ thống. Việc trả sách Online quá hạn hiện chưa tự tạo khoản phạt trên Cloud." />
+</LinearLayout>
