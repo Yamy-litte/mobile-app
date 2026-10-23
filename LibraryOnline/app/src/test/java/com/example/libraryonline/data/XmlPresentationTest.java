@@ -58,6 +58,20 @@ public class XmlPresentationTest {
                     {R.layout.item_reader_online_receipt, R.id.readerOnlineReceiptStatus},
                     {R.layout.activity_reader_online_borrow, R.id.onlineBorrowValidation},
                     {R.layout.activity_reader_online_borrow, R.id.onlineBorrowRetry},
+                    {R.layout.view_admin_circulation, R.id.circulationModeOnline},
+                    {R.layout.view_admin_circulation, R.id.circulationModeDirect},
+                    {R.layout.view_admin_circulation, R.id.circulationModePenalty},
+                    {R.layout.view_admin_circulation, R.id.circulationReaderPanel},
+                    {R.layout.view_admin_circulation, R.id.circulationOnlinePanel},
+                    {R.layout.view_admin_circulation, R.id.circulationCopyPanel},
+                    {R.layout.view_admin_circulation, R.id.circulationOnlineActions},
+                    {R.layout.view_admin_circulation, R.id.circulationDirectPanel},
+                    {R.layout.view_admin_circulation, R.id.circulationPenaltyPanel},
+                    {R.layout.view_admin_circulation, R.id.buttonCirculationBorrow},
+                    {R.layout.view_admin_circulation, R.id.buttonCirculationReturn},
+                    {R.layout.view_admin_circulation, R.id.buttonCirculationCollectFine},
+                    {R.layout.view_admin_circulation, R.id.textCirculationResult},
+                    {R.layout.item_admin_counter_online_loan, R.id.counterOnlineStage},
                     {R.layout.view_admin_circulation, R.id.scanCirculationReaderBarcode},
                     {R.layout.view_admin_circulation, R.id.scanCirculationCopyBarcode},
                     {R.layout.view_admin_circulation, R.id.textCounterOnlineReader},
@@ -133,6 +147,28 @@ public class XmlPresentationTest {
                     validation.getColorForState(new int[]{android.R.attr.state_selected}, 0));
             assertEquals(ContextCompat.getColor(activity, R.color.text_secondary),
                     validation.getDefaultColor());
+        }
+    }
+
+    @Test public void circulationWorkflowModeAndVerifiedStateUseLoginPalette() {
+        try (ActivityController<Screen> controller =
+                     Robolectric.buildActivity(Screen.class).setup()) {
+            Screen activity = controller.get();
+            int[] active = {android.R.attr.state_selected};
+            ColorStateList mode = ContextCompat.getColorStateList(
+                    activity, R.color.circulation_mode_text);
+            ColorStateList verification = ContextCompat.getColorStateList(
+                    activity, R.color.circulation_verification_text);
+            assertNotNull(mode);
+            assertNotNull(verification);
+            assertTrue(mode.isStateful());
+            assertTrue(verification.isStateful());
+            assertEquals(ContextCompat.getColor(activity, R.color.surface),
+                    mode.getColorForState(active, 0));
+            assertEquals(ContextCompat.getColor(activity, R.color.text_secondary),
+                    mode.getDefaultColor());
+            assertEquals(ContextCompat.getColor(activity, R.color.library_success),
+                    verification.getColorForState(active, 0));
         }
     }
 
