@@ -1,22 +1,15 @@
 <?xml version="1.0" encoding="utf-8"?>
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent" android:layout_height="wrap_content"
-    android:layout_marginBottom="10dp" android:orientation="vertical"
-    android:padding="16dp" android:background="@drawable/bg_reader_search">
+    android:layout_marginBottom="10dp" android:padding="15dp"
+    android:orientation="vertical" android:background="@drawable/bg_admin_screen_card">
     <TextView android:id="@+id/readerOnlineReceiptTitle"
-        android:layout_width="match_parent" android:layout_height="wrap_content"
-        android:textSize="16sp" android:textStyle="bold"
-        android:textColor="@color/text_primary"/>
+        style="@style/ReaderLoansHeading" android:textSize="15sp"/>
     <TextView android:id="@+id/readerOnlineReceiptCopy"
-        android:layout_width="match_parent" android:layout_height="wrap_content"
-        android:layout_marginTop="6dp" android:textSize="13sp"
-        android:textColor="@color/text_secondary"/>
+        style="@style/ReaderLoansCaption" android:layout_marginTop="7dp"/>
     <TextView android:id="@+id/readerOnlineReceiptDates"
-        android:layout_width="match_parent" android:layout_height="wrap_content"
-        android:layout_marginTop="6dp" android:textSize="13sp"
-        android:textColor="@color/text_secondary"/>
+        style="@style/ReaderLoansCaption" android:layout_marginTop="6dp"/>
     <TextView android:id="@+id/readerOnlineReceiptStatus"
-        android:layout_width="match_parent" android:layout_height="wrap_content"
-        android:layout_marginTop="6dp" android:textSize="14sp"
-        android:textStyle="bold" android:textColor="@color/text_primary"/>
+        style="@style/ReaderLoansCaption" android:layout_marginTop="8dp"
+        android:textStyle="bold" android:textColor="@color/library_success"/>
 </LinearLayout>

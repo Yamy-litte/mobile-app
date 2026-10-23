@@ -1,29 +1,74 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginBottom="10dp" android:paddingStart="16dp" android:paddingEnd="16dp" android:paddingTop="14dp" android:paddingBottom="14dp" android:orientation="vertical" android:background="@drawable/bg_reader_search">
-<TextView android:id="@+id/readerOnlineItemTitle" android:layout_width="match_parent" android:layout_height="wrap_content" android:paddingBottom="6dp" android:textSize="16sp" android:textColor="@color/text_primary" android:textStyle="bold"/>
-<TextView android:id="@+id/readerOnlineItemStatus" android:layout_width="match_parent" android:layout_height="wrap_content" android:paddingBottom="6dp" android:textSize="13sp" android:textColor="@color/text_secondary"/>
-<TextView android:id="@+id/readerOnlineItemDays" android:layout_width="match_parent" android:layout_height="wrap_content" android:paddingBottom="6dp" android:textSize="13sp" android:textColor="@color/text_secondary"/>
-<TextView android:id="@+id/readerOnlineItemApproved" android:text="Đã giữ sách cho bạn · Chờ lấy" android:layout_width="match_parent" android:layout_height="wrap_content" android:paddingBottom="6dp" android:textSize="16sp" android:textColor="@color/text_primary" android:textStyle="bold" android:visibility="gone"/>
-<TextView android:id="@+id/readerOnlineItemCopy" android:layout_width="match_parent" android:layout_height="wrap_content" android:paddingBottom="6dp" android:textSize="13sp" android:textColor="@color/text_secondary" android:visibility="gone"/>
-<TextView android:id="@+id/readerOnlineItemHold" android:layout_width="match_parent" android:layout_height="wrap_content" android:paddingBottom="6dp" android:textSize="13sp" android:textColor="@color/text_secondary" android:visibility="gone"/>
-<TextView android:id="@+id/readerOnlineItemCountdown" android:layout_width="match_parent" android:layout_height="wrap_content" android:paddingBottom="6dp" android:textSize="16sp" android:textColor="@color/library_success" android:textStyle="bold" android:visibility="gone"/>
-<TextView android:id="@+id/readerOnlineItemHelp" android:layout_width="match_parent" android:layout_height="wrap_content" android:paddingBottom="6dp" android:textSize="13sp" android:textColor="@color/text_secondary" android:visibility="gone" android:text="Hạn trả chỉ tính từ khi Admin thực tế giao sách tại quầy."/>
-<TextView android:id="@+id/readerOnlineItemReject" android:layout_width="match_parent" android:layout_height="wrap_content" android:paddingBottom="6dp" android:textSize="13sp" android:textColor="@color/text_secondary" android:visibility="gone"/>
-<TextView android:id="@+id/readerOnlineItemCheckout"
- android:layout_width="match_parent" android:layout_height="wrap_content"
- android:paddingBottom="6dp" android:textColor="@color/text_primary"
- android:textSize="14sp" android:textStyle="bold" android:visibility="gone"/>
-<TextView android:id="@+id/readerOnlineItemDue"
- android:layout_width="match_parent" android:layout_height="wrap_content"
- android:paddingBottom="6dp" android:textColor="@color/text_secondary"
- android:textSize="13sp" android:visibility="gone"/>
-<TextView android:id="@+id/readerOnlineItemReturned"
- android:layout_width="match_parent" android:layout_height="wrap_content"
- android:paddingBottom="6dp" android:textColor="@color/library_success"
- android:textSize="13sp" android:visibility="gone"/>
-<Button android:id="@+id/readerOnlineItemCancel"
- android:layout_width="match_parent" android:layout_height="48dp"
- android:layout_marginTop="8dp" android:text="Hủy yêu cầu đang chờ duyệt"
- android:textAllCaps="false" android:backgroundTint="@color/surface"
- android:textColor="@color/library_danger" android:visibility="gone"/>
-<TextView android:id="@+id/readerOnlineItemSent" android:layout_width="match_parent" android:layout_height="wrap_content" android:paddingBottom="6dp" android:textSize="13sp" android:textColor="@color/text_secondary"/></LinearLayout>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent" android:layout_height="wrap_content"
+    android:layout_marginBottom="10dp" android:padding="15dp"
+    android:orientation="vertical" android:background="@drawable/bg_admin_screen_card">
+    <LinearLayout android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:gravity="center_vertical" android:orientation="horizontal">
+        <TextView android:id="@+id/readerOnlineItemTitle"
+            android:layout_width="0dp" android:layout_height="wrap_content"
+            android:layout_weight="1" android:paddingEnd="8dp"
+            android:maxLines="2" android:ellipsize="end"
+            android:textSize="16sp" android:textStyle="bold"
+            android:textColor="@color/text_primary"/>
+        <TextView android:id="@+id/readerOnlineItemStatus"
+            android:layout_width="wrap_content" android:layout_height="wrap_content"
+            android:paddingStart="9dp" android:paddingEnd="9dp"
+            android:paddingTop="5dp" android:paddingBottom="5dp"
+            android:textSize="11sp" android:textStyle="bold"
+            android:textColor="@color/library_blue"
+            android:background="@drawable/bg_admin_soft"/>
+    </LinearLayout>
+    <TextView android:id="@+id/readerOnlineItemDays"
+        style="@style/ReaderLoansCaption"
+        android:layout_marginTop="9dp"/>
+    <TextView android:id="@+id/readerOnlineItemApproved"
+        style="@style/ReaderLoansCaption"
+        android:layout_marginTop="7dp" android:textStyle="bold"
+        android:textColor="@color/library_blue"
+        android:text="Đã duyệt suất đầu sách · Chờ nhận tại thư viện"
+        android:visibility="gone"/>
+    <TextView android:id="@+id/readerOnlineItemCopy"
+        style="@style/ReaderLoansCaption"
+        android:layout_marginTop="5dp" android:visibility="gone"/>
+    <TextView android:id="@+id/readerOnlineItemHold"
+        style="@style/ReaderLoansCaption"
+        android:layout_marginTop="5dp" android:visibility="gone"/>
+    <TextView android:id="@+id/readerOnlineItemCountdown"
+        style="@style/ReaderLoansCaption"
+        android:layout_marginTop="8dp"
+        android:textStyle="bold" android:textColor="@color/library_success"
+        android:visibility="gone"/>
+    <TextView android:id="@+id/readerOnlineItemHelp"
+        style="@style/ReaderLoansCaption"
+        android:layout_marginTop="6dp" android:visibility="gone"
+        android:text="Hạn trả chỉ bắt đầu khi thủ thư thực tế giao sách."/>
+    <TextView android:id="@+id/readerOnlineItemReject"
+        style="@style/ReaderLoansCaption"
+        android:layout_marginTop="6dp" android:visibility="gone"
+        android:textColor="@color/library_danger"/>
+    <TextView android:id="@+id/readerOnlineItemCheckout"
+        style="@style/ReaderLoansCaption"
+        android:layout_marginTop="7dp" android:textColor="@color/text_primary"
+        android:textStyle="bold" android:visibility="gone"/>
+    <TextView android:id="@+id/readerOnlineItemDue"
+        style="@style/ReaderLoansCaption"
+        android:layout_marginTop="5dp" android:visibility="gone"/>
+    <TextView android:id="@+id/readerOnlineItemReturned"
+        style="@style/ReaderLoansCaption"
+        android:layout_marginTop="5dp"
+        android:textColor="@color/library_success" android:visibility="gone"/>
+    <Button android:id="@+id/readerOnlineItemCancel"
+        android:layout_width="match_parent" android:layout_height="48dp"
+        android:layout_marginTop="12dp"
+        android:background="@drawable/bg_admin_screen_field"
+        android:backgroundTint="@null"
+        android:textColor="@color/library_danger"
+        android:textAllCaps="false" android:textSize="13sp"
+        android:text="Hủy yêu cầu đang chờ duyệt"
+        android:visibility="gone"/>
+    <TextView android:id="@+id/readerOnlineItemSent"
+        style="@style/ReaderLoansCaption"
+        android:layout_marginTop="10dp" android:textSize="12sp"/>
+</LinearLayout>

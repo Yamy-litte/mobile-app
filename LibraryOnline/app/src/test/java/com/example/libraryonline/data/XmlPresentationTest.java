@@ -55,6 +55,19 @@ public class XmlPresentationTest {
                     {R.layout.item_reader_online_request, R.id.readerOnlineItemCancel},
                     {R.layout.item_reader_online_request, R.id.readerOnlineItemDue},
                     {R.layout.view_reader_loans, R.id.containerReaderOnlineReceipts},
+                    {R.layout.view_reader_loans, R.id.readerLoansTabBorrowed},
+                    {R.layout.view_reader_loans, R.id.readerLoansTabPickup},
+                    {R.layout.view_reader_loans, R.id.readerLoansTabPending},
+                    {R.layout.view_reader_loans, R.id.readerLoansTabHistory},
+                    {R.layout.view_reader_loans, R.id.readerLoansOnlineSection},
+                    {R.layout.view_reader_loans, R.id.readerLoansLocalPanel},
+                    {R.layout.view_reader_loans, R.id.readerLoansHistoryPanel},
+                    {R.layout.activity_admin_main, R.id.adminHomeOnlineWork},
+                    {R.layout.activity_admin_main, R.id.adminHomeOnlinePending},
+                    {R.layout.activity_admin_main, R.id.adminHomeOnlineApproved},
+                    {R.layout.activity_admin_main, R.id.adminHomeOnlineBorrowed},
+                    {R.layout.activity_admin_main, R.id.adminHomeReviewOnline},
+                    {R.layout.activity_admin_main, R.id.adminHomeStartHandover},
                     {R.layout.item_reader_online_receipt, R.id.readerOnlineReceiptStatus},
                     {R.layout.activity_reader_online_borrow, R.id.onlineBorrowValidation},
                     {R.layout.activity_reader_online_borrow, R.id.onlineBorrowRetry},
@@ -169,6 +182,21 @@ public class XmlPresentationTest {
                     mode.getDefaultColor());
             assertEquals(ContextCompat.getColor(activity, R.color.library_success),
                     verification.getColorForState(active, 0));
+        }
+    }
+
+    @Test public void readerLoanTabsUseLoginColorStateList() {
+        try (ActivityController<Screen> controller =
+                Robolectric.buildActivity(Screen.class).setup()) {
+            Screen activity = controller.get();
+            ColorStateList text = ContextCompat.getColorStateList(
+                    activity, R.color.reader_loan_tab_text);
+            assertNotNull(text);
+            assertTrue(text.isStateful());
+            assertEquals(ContextCompat.getColor(activity, R.color.surface),
+                    text.getColorForState(new int[]{android.R.attr.state_selected}, 0));
+            assertEquals(ContextCompat.getColor(activity, R.color.text_secondary),
+                    text.getDefaultColor());
         }
     }
 

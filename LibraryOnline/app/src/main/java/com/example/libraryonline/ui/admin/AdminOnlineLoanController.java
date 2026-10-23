@@ -66,12 +66,15 @@ final class AdminOnlineLoanController {
                 .setOnClickListener(v -> OnlineLoanAlertCenter.requestOptIn(activity));
         ((TextView) activity.findViewById(R.id.textAdminOnlineCount))
                 .setText(R.string.online_borrow_loading);
+        activity.homeOnlineWorkUnavailable("Đang tải công việc Online từ Firestore…");
         listener = db.collection(OnlineLoanRequestRepository.REQUESTS)
                 .addSnapshotListener(MetadataChanges.INCLUDE, (snapshot, error) -> {
                     if (!current(uid)) return;
                     if (error != null) {
                         ((TextView) activity.findViewById(R.id.textAdminOnlineCount)).setText(
                                 "Lỗi tải yêu cầu mượn Online: " + error.getMessage());
+                        activity.homeOnlineWorkUnavailable(
+                                "Không cập nhật được hàng đợi Online. Kiểm tra mạng/Firestore.");
                         return;
                     }
                     if (snapshot != null) render(snapshot);
@@ -81,6 +84,7 @@ final class AdminOnlineLoanController {
     void stop() {
         adminUid = null;
         previousPending = -1;
+        activity.homeOnlineWorkUnavailable("Chưa tải yêu cầu Online.");
         expiryAttempted.clear();
         expiryHandler.removeCallbacks(expiryPulse);
         knownApprovedHolds.clear();
@@ -133,6 +137,9 @@ final class AdminOnlineLoanController {
             if (OnlineLoanRequestRepository.APPROVED.equals(doc.getString("status"))) approved++;
             if (OnlineLoanRequestRepository.COLLECTED.equals(doc.getString("status"))) collected++;
         }
+        activity.updateHomeOnlineWork(pending, approved, collected,
+                snapshot.getMetadata().isFromCache()
+                        || snapshot.getMetadata().hasPendingWrites());
         if (!snapshot.getMetadata().isFromCache()) {
             java.util.List<String> ids = new java.util.ArrayList<>();
             for (DocumentSnapshot d : docs)

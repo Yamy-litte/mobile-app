@@ -106,6 +106,9 @@ public class ReaderMainActivity extends com.example.libraryonline.ui.auth.Sessio
         notificationSettings = new ReaderNotificationSettingsController(this);
         accountController = new ReaderAccountController(this);
         onlineLoanController = new ReaderOnlineLoanController(this);
+        if (savedInstanceState != null)
+            onlineLoanController.setMode(savedInstanceState.getString(
+                    "readerLoansStage", ReaderOnlineLoanController.BORROWED));
         homeView.setOnTabChangedListener(tab -> {
             if (tab != ReaderHomeView.ACCOUNT) accountController.onLeaveAccount();
             if (isSessionReady()) {
@@ -536,6 +539,8 @@ public class ReaderMainActivity extends com.example.libraryonline.ui.auth.Sessio
     @Override
     protected void onSaveInstanceState(Bundle state) {
         state.putInt("readerTab", homeView.selectedTab());
+        if (onlineLoanController != null)
+            state.putString("readerLoansStage", onlineLoanController.selectedMode());
         super.onSaveInstanceState(state);
     }
 
