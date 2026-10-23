@@ -331,10 +331,11 @@ test("Admin approval holds exactly one available copy and creates one Reader not
   const batch=writeBatch(d);
   batch.update(request,decision);
   // Approval only reserves one AVAILABLE COUNT; BookCopies stays untouched.
-  batch.update(doc(d,"BookTitles/book"),{availableCopies:0,updatedAt:serverTimestamp()});
+  batch.update(doc(d,"BookTitles/book"),{availableCopies:0,reservedOnlineCopies:1,updatedAt:serverTimestamp()});
   batch.set(notification,onlineNoticeFixture("Approved","Đến nhận sách trong 24 giờ"));
   await assertSucceeds(batch.commit());
   require("node:assert/strict").equal((await getDoc(doc(d,"BookTitles/book"))).data().availableCopies,0);
+  require("node:assert/strict").equal((await getDoc(doc(d,"BookTitles/book"))).data().reservedOnlineCopies,1);
   require("node:assert/strict").equal((await getDoc(doc(d,"BookCopies/copy"))).data().copyStatus,"SanSang");
   require("node:assert/strict").equal((await getDoc(request)).data().copyId,undefined);
   await assertFails(updateDoc(request,decision));
@@ -358,7 +359,7 @@ test("Two approved requests cannot reserve more than a single free title copy", 
     holdUntil:Timestamp.fromDate(new Date(Date.now()+24*3600000)),
     notificationId:"reader_book_v1_Approved",updatedAt:serverTimestamp()
   });
-  first.update(doc(d,"BookTitles/book"),{availableCopies:0,updatedAt:serverTimestamp()});
+  first.update(doc(d,"BookTitles/book"),{availableCopies:0,reservedOnlineCopies:1,updatedAt:serverTimestamp()});
   first.set(doc(d,"OnlineLoanNotifications/reader_book_v1_Approved"),
     onlineNoticeFixture("Approved","Đã giữ 1 suất mượn."));
   await assertSucceeds(first.commit());
@@ -369,7 +370,7 @@ test("Two approved requests cannot reserve more than a single free title copy", 
     holdUntil:Timestamp.fromDate(new Date(Date.now()+24*3600000)),
     notificationId:"other_book_v1_Approved",updatedAt:serverTimestamp()
   });
-  second.update(doc(d,"BookTitles/book"),{availableCopies:0,updatedAt:serverTimestamp()});
+  second.update(doc(d,"BookTitles/book"),{availableCopies:0,reservedOnlineCopies:2,updatedAt:serverTimestamp()});
   second.set(doc(d,"OnlineLoanNotifications/other_book_v1_Approved"),{
     requestId:"other_book",userId:"other",status:"Approved",attempt:1,
     title:"Yêu cầu Online",message:"Đã giữ 1 suất mượn.",createdAt:serverTimestamp(),readAt:null
@@ -379,6 +380,8 @@ test("Two approved requests cannot reserve more than a single free title copy", 
     (await getDoc(doc(d,"OnlineLoanRequests/other_book"))).data().status,"Pending");
   require("node:assert/strict").equal(
     (await getDoc(doc(d,"BookTitles/book"))).data().availableCopies,0);
+  require("node:assert/strict").equal(
+    (await getDoc(doc(d,"BookTitles/book"))).data().reservedOnlineCopies,1);
   require("node:assert/strict").equal(
     (await getDoc(doc(d,"BookCopies/copy"))).data().copyStatus,"SanSang");
 });
@@ -395,7 +398,7 @@ test("Unassigned approved request cannot be checked out with a different-title c
       holdUntil:Timestamp.fromDate(new Date(Date.now()+24*3600000)),
       notificationId:"reader_book_v1_Approved"
     });
-    b.update(doc(d,"BookTitles/book"),{availableCopies:0});
+    b.update(doc(d,"BookTitles/book"),{availableCopies:0,reservedOnlineCopies:1});
     b.set(doc(d,"BookTitles/otherTitle"),{...book,isbn:"another",availableCopies:1});
     b.set(doc(d,"BookCopies/otherCopy"),{...copy,bookTitleId:"otherTitle",barcode:"otherBarcode"});
     await b.commit();
@@ -433,7 +436,7 @@ test("expired online hold returns reserved copy once; unauthorized reader cannot
       reviewedAt:Timestamp.fromDate(older), holdUntil:Timestamp.fromDate(now),
       notificationId:"reader_book_v1_Approved"
     });
-    batch.update(doc(d,"BookTitles/book"),{availableCopies:0});
+    batch.update(doc(d,"BookTitles/book"),{availableCopies:0,reservedOnlineCopies:1});
     await batch.commit();
   });
   const d=db("admin"), request=doc(d,"OnlineLoanRequests/reader_book");
@@ -441,13 +444,13 @@ test("expired online hold returns reserved copy once; unauthorized reader cannot
   await assertFails(updateDoc(doc(db("reader"),"OnlineLoanRequests/reader_book"),{status:"Expired"}));
   const release=writeBatch(d);
   release.update(request,{status:"Expired",notificationId:notification.id,updatedAt:serverTimestamp()});
-  release.update(doc(d,"BookTitles/book"),{availableCopies:1,updatedAt:serverTimestamp()});
+  release.update(doc(d,"BookTitles/book"),{availableCopies:1,reservedOnlineCopies:0,updatedAt:serverTimestamp()});
   release.set(notification,onlineNoticeFixture("Expired","Đã hết thời gian giữ sách."));
   await assertSucceeds(release.commit());
   require("node:assert/strict").equal((await getDoc(doc(d,"BookTitles/book"))).data().availableCopies,1);
   const duplicate = writeBatch(d);
   duplicate.update(request,{status:"Expired",notificationId:notification.id,updatedAt:serverTimestamp()});
-  duplicate.update(doc(d,"BookTitles/book"),{availableCopies:2,updatedAt:serverTimestamp()});
+  duplicate.update(doc(d,"BookTitles/book"),{availableCopies:2,reservedOnlineCopies:0,updatedAt:serverTimestamp()});
   await assertFails(duplicate.commit());
 });
 
@@ -462,7 +465,7 @@ test("Online handover checks linked copy and notification; Reader cannot forge c
       notificationId:"reader_book_v1_Approved",
       holdUntil:Timestamp.fromDate(new Date(Date.now()+24*3600000))
     });
-    batch.update(doc(d,"BookTitles/book"),{availableCopies:0});
+    batch.update(doc(d,"BookTitles/book"),{availableCopies:0,reservedOnlineCopies:1});
     await batch.commit();
   });
   const d=db("admin"), request=doc(d,"OnlineLoanRequests/reader_book");
@@ -477,6 +480,7 @@ test("Online handover checks linked copy and notification; Reader cannot forge c
   batch.update(request,issued);
   batch.update(doc(d,"BookCopies/copy"),{copyStatus:"DaMuon",priorityUserId:null,
       updatedAt:serverTimestamp()});
+  batch.update(doc(d,"BookTitles/book"),{reservedOnlineCopies:0,updatedAt:serverTimestamp()});
   batch.set(notification,onlineNoticeFixture("Collected","Đã nhận sách tại quầy."));
   batch.set(doc(d,"OnlineLoanReceipts/reader_book_v1"),{
     requestId:"reader_book",userId:"reader",bookTitleId:"book",
@@ -487,6 +491,7 @@ test("Online handover checks linked copy and notification; Reader cannot forge c
   await assertSucceeds(batch.commit());
   const title=await getDoc(doc(d,"BookTitles/book"));
   require("node:assert/strict").equal(title.data().availableCopies,0);
+  require("node:assert/strict").equal(title.data().reservedOnlineCopies,0);
   require("node:assert/strict").equal((await getDoc(request)).data().status,"Collected");
   const recorded=await assertSucceeds(getDoc(doc(db("reader"),"OnlineLoanReceipts/reader_book_v1")));
   require("node:assert/strict").equal(recorded.data().status,"Open");
