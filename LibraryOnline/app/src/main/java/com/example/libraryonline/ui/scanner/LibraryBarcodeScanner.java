@@ -50,7 +50,19 @@ public final class LibraryBarcodeScanner {
         if (onDecoded == null) throw new IllegalArgumentException("Thiếu hàm nhận barcode.");
         pending = onDecoded;
         inProgress = true;
-        ScanOptions options = new ScanOptions()
+        try {
+            launcher.launch(options(prompt));
+        } catch (RuntimeException error) {
+            inProgress = false;
+            pending = null;
+            Toast.makeText(activity, "Không mở được camera. Có thể nhập mã thủ công.",
+                    Toast.LENGTH_LONG).show();
+        }
+    }
+
+    /** Options are testable without opening the camera. */
+    static ScanOptions options(String prompt) {
+        return new ScanOptions()
                 .setCaptureActivity(LibraryBarcodeCaptureActivity.class)
                 .setDesiredBarcodeFormats(ScanOptions.CODE_128, ScanOptions.CODE_39,
                         ScanOptions.CODE_93, ScanOptions.EAN_13, ScanOptions.EAN_8,
@@ -58,13 +70,5 @@ public final class LibraryBarcodeScanner {
                 .setOrientationLocked(true)
                 .setBeepEnabled(true)
                 .setPrompt(prompt == null ? "Đưa mã vào khung để quét" : prompt);
-        try {
-            launcher.launch(options);
-        } catch (RuntimeException error) {
-            inProgress = false;
-            pending = null;
-            Toast.makeText(activity, "Không mở được camera. Có thể nhập mã thủ công.",
-                    Toast.LENGTH_LONG).show();
-        }
     }
 }
