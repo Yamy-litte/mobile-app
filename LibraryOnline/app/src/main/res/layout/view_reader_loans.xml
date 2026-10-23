@@ -19,9 +19,19 @@
             android:layout_width="match_parent" android:layout_height="wrap_content"
             android:layout_marginTop="12dp" android:layout_marginBottom="20dp"
             android:orientation="vertical"/>
+        <TextView style="@style/CatalogueHeading"
+            android:text="Lịch sử giao sách Online" />
+        <TextView android:id="@+id/textReaderOnlineReceiptsSummary"
+            style="@style/CatalogueCaption"
+            android:layout_marginTop="6dp"
+            android:text="Đang tải lịch sử nhận sách…" />
+        <LinearLayout android:id="@+id/containerReaderOnlineReceipts"
+            android:layout_width="match_parent" android:layout_height="wrap_content"
+            android:layout_marginTop="12dp" android:layout_marginBottom="20dp"
+            android:orientation="vertical"/>
         <TextView
             style="@style/CatalogueHeading"
-            android:text="Sách đang mượn" />
+            android:text="Sách đang mượn (dữ liệu trên thiết bị)" />
         <TextView
             android:id="@+id/textReaderLoansSummary"
             style="@style/CatalogueBody"
