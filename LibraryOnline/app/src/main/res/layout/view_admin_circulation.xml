@@ -31,6 +31,11 @@
             android:inputType="text"
             android:hint="@string/circulation_reader_barcode_hint"
             android:autofillHints="none" />
+<Button android:id="@+id/scanCirculationReaderBarcode"
+            android:layout_width="match_parent" android:layout_height="48dp"
+            android:layout_marginTop="6dp" android:backgroundTint="@color/library_blue"
+            android:textColor="@color/surface" android:textAllCaps="false"
+            android:text="Quét mã thẻ bằng camera" />
 
         <TextView
             style="@style/CatalogueHeading"
@@ -44,6 +49,11 @@
             android:inputType="text"
             android:hint="@string/circulation_copy_barcode_hint"
             android:autofillHints="none" />
+<Button android:id="@+id/scanCirculationCopyBarcode"
+            android:layout_width="match_parent" android:layout_height="48dp"
+            android:layout_marginTop="6dp" android:backgroundTint="@color/library_blue"
+            android:textColor="@color/surface" android:textAllCaps="false"
+            android:text="Quét mã cuốn bằng camera" />
 
         <TextView
             style="@style/CatalogueHeading"
