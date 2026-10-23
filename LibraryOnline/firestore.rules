@@ -680,6 +680,10 @@ service cloud.firestore {
         && getAfter(/databases/$(database)/documents/OnlineLoanRequests/$(request.resource.data.requestId)).data.receiptId == receiptId
         && getAfter(/databases/$(database)/documents/OnlineLoanRequests/$(request.resource.data.requestId)).data.copyId == request.resource.data.copyId
         && getAfter(/databases/$(database)/documents/OnlineLoanRequests/$(request.resource.data.requestId)).data.userId == request.resource.data.userId
+        && getAfter(/databases/$(database)/documents/OnlineLoanRequests/$(request.resource.data.requestId)).data.bookTitleId == request.resource.data.bookTitleId
+        && getAfter(/databases/$(database)/documents/OnlineLoanRequests/$(request.resource.data.requestId)).data.bookTitle == request.resource.data.bookTitle
+        && getAfter(/databases/$(database)/documents/OnlineLoanRequests/$(request.resource.data.requestId)).data.loanDays == request.resource.data.loanDays
+        && getAfter(/databases/$(database)/documents/OnlineLoanRequests/$(request.resource.data.requestId)).data.collectedAt == request.resource.data.collectedAt
         && getAfter(/databases/$(database)/documents/OnlineLoanRequests/$(request.resource.data.requestId)).data.attempt == request.resource.data.attempt
         && getAfter(/databases/$(database)/documents/OnlineLoanRequests/$(request.resource.data.requestId)).data.dueAt == request.resource.data.dueAt;
       allow update: if isAdmin()
