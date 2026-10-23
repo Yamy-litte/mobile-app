@@ -430,8 +430,9 @@ final class CounterOnlineLoanController implements AutoCloseable {
         final String requestId = selected.getId();
         final String cardCode = readerBarcode.getText().toString().trim();
         final String copyCode = copyBarcode.getText().toString().trim();
-        final String adminUid = com.google.firebase.auth.FirebaseAuth.getInstance()
-                .getUid();
+        com.google.firebase.auth.FirebaseUser admin =
+                com.google.firebase.auth.FirebaseAuth.getInstance().getCurrentUser();
+        final String adminUid = admin == null ? null : admin.getUid();
         if (adminUid == null || !cardCode.equals(verifiedCardCode)
                 || !copyCode.equals(matchedCopy.getString("barcode"))) return;
 
