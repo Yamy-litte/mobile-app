@@ -21,4 +21,9 @@
  android:layout_width="match_parent" android:layout_height="wrap_content"
  android:paddingBottom="6dp" android:textColor="@color/library_success"
  android:textSize="13sp" android:visibility="gone"/>
+<Button android:id="@+id/readerOnlineItemCancel"
+ android:layout_width="match_parent" android:layout_height="48dp"
+ android:layout_marginTop="8dp" android:text="Hủy yêu cầu đang chờ duyệt"
+ android:textAllCaps="false" android:backgroundTint="@color/surface"
+ android:textColor="@color/library_danger" android:visibility="gone"/>
 <TextView android:id="@+id/readerOnlineItemSent" android:layout_width="match_parent" android:layout_height="wrap_content" android:paddingBottom="6dp" android:textSize="13sp" android:textColor="@color/text_secondary"/></LinearLayout>
