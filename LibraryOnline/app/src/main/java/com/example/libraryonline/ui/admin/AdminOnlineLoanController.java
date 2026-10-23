@@ -174,6 +174,7 @@ final class AdminOnlineLoanController {
                     && !OnlineLoanRequestRepository.COLLECTED.equals(state)) continue;
             View item = activity.getLayoutInflater().inflate(
                     R.layout.item_admin_online_request, container, false);
+            item.setTag("online:" + doc.getId());
             container.addView(item);
             String reader = doc.getString("userId");
             String title = doc.getString("bookTitle");
@@ -264,6 +265,7 @@ final class AdminOnlineLoanController {
                 show(dialog);
             });
         }
+        activity.deliverPendingBarcode();
     }
 
     /** Only the XML fields are presentation; this controller only verifies data and binds actions. */
@@ -275,11 +277,15 @@ final class AdminOnlineLoanController {
         EditText copyBarcode = item.findViewById(R.id.adminOnlineCopyBarcode);
         item.findViewById(R.id.adminOnlineScanReader).setOnClickListener(v -> {
             if (current(uid))
-                activity.scanBarcodeInto(readerBarcode, "Quét đúng mã thẻ của độc giả nhận/trả");
+                activity.scanBarcodeInto(
+                        R.id.adminOnlineReaderBarcode, request.getId(),
+                        "Quét đúng mã thẻ của độc giả nhận/trả");
         });
         item.findViewById(R.id.adminOnlineScanCopy).setOnClickListener(v -> {
             if (current(uid))
-                activity.scanBarcodeInto(copyBarcode, "Quét đúng mã cuốn đang giữ/mượn");
+                activity.scanBarcodeInto(
+                        R.id.adminOnlineCopyBarcode, request.getId(),
+                        "Quét đúng mã cuốn đang giữ/mượn");
         });
         Button action = item.findViewById(returning
                 ? R.id.adminOnlineItemReturn : R.id.adminOnlineItemCollect);
