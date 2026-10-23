@@ -251,6 +251,13 @@ service cloud.firestore {
         && request.resource.data.availableCopies is int
         && request.resource.data.availableCopies >= 0
         && request.resource.data.availableCopies <= request.resource.data.totalCopies
+        && (!request.resource.data.keys().hasAny(['reservedOnlineCopies'])
+            || (request.resource.data.reservedOnlineCopies is int
+                && request.resource.data.reservedOnlineCopies >= 0
+                && request.resource.data.reservedOnlineCopies <= request.resource.data.totalCopies
+                && request.resource.data.availableCopies
+                    + request.resource.data.reservedOnlineCopies
+                    <= request.resource.data.totalCopies))
         && request.resource.data.isHidden is bool;
       allow delete: if false;
     }
@@ -435,6 +442,8 @@ service cloud.firestore {
         && get(titlePath).data.isHidden == false
         && get(titlePath).data.availableCopies > 0
         && getAfter(titlePath).data.availableCopies == get(titlePath).data.availableCopies - 1
+        && getAfter(titlePath).data.reservedOnlineCopies
+            == get(titlePath).data.get('reservedOnlineCopies', 0) + 1
         && getAfter(titlePath).data.totalCopies == get(titlePath).data.totalCopies
         && getAfter(titlePath).data.updatedAt == request.time
         && activeOnlineReader(resource.data.userId)
@@ -479,6 +488,9 @@ service cloud.firestore {
         ))
         && get(titlePath).data.availableCopies < get(titlePath).data.totalCopies
         && getAfter(titlePath).data.availableCopies == get(titlePath).data.availableCopies + 1
+        && getAfter(titlePath).data.get('reservedOnlineCopies', 0)
+            == get(titlePath).data.get('reservedOnlineCopies', 0) - (legacy ? 0 : 1)
+        && (legacy || get(titlePath).data.get('reservedOnlineCopies', 0) > 0)
         && getAfter(titlePath).data.totalCopies == get(titlePath).data.totalCopies
         && getAfter(titlePath).data.updatedAt == request.time
         && onlineDecisionNotice();
@@ -529,6 +541,14 @@ service cloud.firestore {
         && newCopy.diff(oldCopy).affectedKeys()
             .hasOnly(['copyStatus', 'priorityUserId', 'updatedAt'])
         && newCopy.updatedAt == request.time
+        && (legacy || (
+          get(/databases/$(database)/documents/BookTitles/$(resource.data.bookTitleId)).data.get('reservedOnlineCopies', 0) > 0
+          && getAfter(/databases/$(database)/documents/BookTitles/$(resource.data.bookTitleId)).data.reservedOnlineCopies
+               == get(/databases/$(database)/documents/BookTitles/$(resource.data.bookTitleId)).data.get('reservedOnlineCopies', 0) - 1
+          && getAfter(/databases/$(database)/documents/BookTitles/$(resource.data.bookTitleId)).data.availableCopies
+               == get(/databases/$(database)/documents/BookTitles/$(resource.data.bookTitleId)).data.availableCopies
+          && getAfter(/databases/$(database)/documents/BookTitles/$(resource.data.bookTitleId)).data.updatedAt == request.time
+        ))
         && activeOnlineReader(resource.data.userId)
         && onlineDecisionNotice();
     }
@@ -567,6 +587,8 @@ service cloud.firestore {
         && get(titlePath).data.isHidden == false
         && get(titlePath).data.availableCopies < get(titlePath).data.totalCopies
         && getAfter(titlePath).data.availableCopies == get(titlePath).data.availableCopies + 1
+        && getAfter(titlePath).data.get('reservedOnlineCopies', 0)
+             == get(titlePath).data.get('reservedOnlineCopies', 0)
         && getAfter(titlePath).data.totalCopies == get(titlePath).data.totalCopies
         && getAfter(titlePath).data.updatedAt == request.time
         && onlineDecisionNotice();
