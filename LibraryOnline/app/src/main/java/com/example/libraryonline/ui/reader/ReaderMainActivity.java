@@ -374,26 +374,32 @@ public class ReaderMainActivity extends com.example.libraryonline.ui.auth.Sessio
 
     private void loadReaderLoans(String userId) {
         LinearLayout container = findViewById(R.id.containerReaderLoans);
+        LinearLayout returnedContainer = findViewById(R.id.containerReaderReturnedLoans);
         TextView summary = findViewById(R.id.textReaderLoansSummary);
-        if (container == null || summary == null) return;
+        if (container == null || returnedContainer == null || summary == null) return;
         if (userId == null || userId.trim().isEmpty()) {
             summary.setText("Không xác định được tài khoản độc giả.");
             return;
         }
         catalogueExecutor.execute(() -> {
-            List<LoanDetail> active;
+            List<LoanDetail> active, returned;
             try (LoanDetailRepository repository = new LoanDetailRepository(getApplicationContext())) {
                 active = repository.getActiveByUser(userId);
+                returned = repository.getReturnedByUser(userId);
             } catch (Exception failure) {
-                runOnUiThread(() -> summary.setText("Chưa tải được danh sách mượn. Vui lòng thử lại."));
+                runOnUiThread(() -> {
+                    summary.setVisibility(View.VISIBLE);
+                    summary.setText("Chưa tải được dữ liệu mượn/trả trên thiết bị. Vui lòng thử lại.");
+                });
                 return;
             }
             runOnUiThread(() -> {
-                if (isFinishing() || isDestroyed()) return;
+                if (isFinishing() || isDestroyed() || !isSessionReady()) return;
                 container.removeAllViews();
-                summary.setText(active.isEmpty()
-                        ? "Bạn hiện không có sách đang mượn hoặc quá hạn."
-                        : "Bạn đang mượn " + active.size() + " cuốn sách.");
+                returnedContainer.removeAllViews();
+                summary.setVisibility(View.GONE); // The unified tab has one shared summary.
+                if (onlineLoanController != null)
+                    onlineLoanController.setLocalLoanCounts(active.size(), returned.size());
                 if (notificationSettings != null) notificationSettings.updateLoans(active);
                 for (LoanDetail loan : active) {
                     View card = getLayoutInflater().inflate(
@@ -446,6 +452,23 @@ public class ReaderMainActivity extends com.example.libraryonline.ui.auth.Sessio
                             });
                         });
                     }
+                }
+                // Historical local returns appear inside the same "Đã trả" list
+                // as returned Firestore receipts, without a separate "Tại quầy" panel.
+                for (LoanDetail loan : returned) {
+                    View card = getLayoutInflater().inflate(
+                            R.layout.item_reader_loan_record, returnedContainer, false);
+                    returnedContainer.addView(card);
+                    ((TextView) card.findViewById(R.id.readerLoanReceipt)).setText(
+                            "Mã phiếu: " + safe(loan.loanReceiptId, "Chưa cập nhật"));
+                    ((TextView) card.findViewById(R.id.readerLoanCopy)).setText(
+                            "Mã bản sách: " + safe(loan.copyId, "Chưa cập nhật"));
+                    ((TextView) card.findViewById(R.id.readerLoanBorrow)).setText(
+                            "Ngày mượn: " + safe(loan.borrowDate, "Chưa cập nhật"));
+                    ((TextView) card.findViewById(R.id.readerLoanDue)).setText(
+                            "Hạn trả: " + safe(loan.dueDate, "Chưa cập nhật"));
+                    ((TextView) card.findViewById(R.id.readerLoanStatus)).setText(
+                            "Đã trả: " + safe(loan.returnDate, "Chưa cập nhật"));
                 }
             });
         });
