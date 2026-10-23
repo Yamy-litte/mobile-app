@@ -123,6 +123,56 @@ public final class CirculationRepository implements AutoCloseable {
         }
     }
 
+    /**
+     * Extend an actually handed-over local loan by seven days, once.
+     * This is the same eligibility rule used for Firestore receipts; the
+     * local transaction preserves historical direct-counter/offline loans.
+     */
+    public String extendLoan(String readerUid, String loanDetailId) {
+        if (readerUid == null || readerUid.trim().isEmpty()
+                || loanDetailId == null || loanDetailId.trim().isEmpty())
+            throw new IllegalArgumentException("Thiếu thông tin độc giả hoặc phiếu mượn.");
+        SQLiteDatabase db = helper.getWritableDatabase();
+        db.beginTransaction();
+        try {
+            String due = null;
+            int count = 0;
+            boolean alreadyExtended = false;
+            try (Cursor cursor = db.rawQuery(
+                    "SELECT d.dueDate,d.extensionCount,d.extended FROM LoanDetails d "
+                    + "JOIN LoanReceipts r ON r.loanReceiptId=d.loanReceiptId "
+                    + "WHERE d.loanDetailId=? AND r.userId=? AND r.receiptStatus='Open' "
+                    + "AND d.returnDate IS NULL AND d.detailStatus IN ('DangMuon','QuaHan')",
+                    new String[]{loanDetailId, readerUid})) {
+                if (!cursor.moveToFirst())
+                    throw new IllegalArgumentException("Không tìm thấy khoản mượn đang hoạt động.");
+                due = cursor.getString(0);
+                count = cursor.getInt(1);
+                alreadyExtended = cursor.getInt(2) != 0;
+            }
+            if (count > 0 || alreadyExtended)
+                throw new IllegalArgumentException("Mỗi lần mượn chỉ được gia hạn một lần.");
+            String today = today();
+            String next = com.example.libraryonline.domain.validator.LoanExtensionPolicy
+                    .extendLocalDate(due, today);
+            ContentValues changes = new ContentValues();
+            changes.put("dueDate", next);
+            changes.put("originalDueDate", due);
+            changes.put("extensionCount", 1);
+            changes.put("extended", 1);
+            int updated = db.update("LoanDetails", changes,
+                    "loanDetailId=? AND extensionCount=0 AND extended=0 "
+                    + "AND returnDate IS NULL AND detailStatus='DangMuon'",
+                    new String[]{loanDetailId});
+            if (updated != 1)
+                throw new IllegalStateException("Khoản mượn đã thay đổi, hãy tải lại.");
+            db.setTransactionSuccessful();
+            return next;
+        } finally {
+            db.endTransaction();
+        }
+    }
+
     public OperationResult returnCopy(String readerBarcode, String copyBarcode, String adminAuthUid) {
         SQLiteDatabase db = helper.getWritableDatabase();
         db.beginTransaction();
