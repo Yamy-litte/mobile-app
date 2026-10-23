@@ -97,9 +97,13 @@ final class AdminDashboardCloudStats {
         Task<QuerySnapshot> lastReturned = db.collection("OnlineLoanReceipts")
                 .orderBy("returnedAt", Query.Direction.DESCENDING)
                 .limit(5).get(Source.DEFAULT);
+        Task<QuerySnapshot> lastRequests = db.collection("OnlineLoanRequests")
+                .orderBy("updatedAt", Query.Direction.DESCENDING)
+                .limit(10).get(Source.DEFAULT);
 
         List<Task<QuerySnapshot>> tasks = Arrays.asList(
-                borrowedWeek, returnedWeek, openLoans, approved, lastBorrowed, lastReturned);
+                borrowedWeek, returnedWeek, openLoans, approved,
+                lastBorrowed, lastReturned, lastRequests);
         Tasks.whenAllComplete(tasks).addOnCompleteListener(activity, done -> {
             for (Task<QuerySnapshot> query : tasks) {
                 if (!query.isSuccessful() || query.getResult() == null) {
@@ -151,6 +155,30 @@ final class AdminDashboardCloudStats {
                     long at = time(receipt, "returnedAt");
                     if (at > 0 && at <= now) recent.add(new ActivityEvent(at,
                             "Đã trả Online: " + title(receipt) + " · " + formatted(at)));
+                }
+                for (DocumentSnapshot request : lastRequests.getResult().getDocuments()) {
+                    String state = request.getString("status");
+                    String action;
+                    long at;
+                    if ("Pending".equals(state)) {
+                        action = "Yêu cầu mượn Online mới: ";
+                        at = time(request, "createdAt");
+                    } else if ("Approved".equals(state)) {
+                        action = "Đã duyệt mượn Online: ";
+                        at = time(request, "reviewedAt");
+                    } else if ("Rejected".equals(state)) {
+                        action = "Từ chối yêu cầu Online: ";
+                        at = time(request, "reviewedAt");
+                    } else if ("Cancelled".equals(state)) {
+                        action = "Đã hủy yêu cầu Online: ";
+                        at = time(request, "updatedAt");
+                    } else {
+                        // Collected/Returned are already represented by durable receipts.
+                        continue;
+                    }
+                    if (at > 0 && at <= now)
+                        recent.add(new ActivityEvent(at,
+                                action + title(request) + " · " + formatted(at)));
                 }
                 Collections.sort(recent, (left, right) -> Long.compare(right.at, left.at));
                 if (recent.size() > 10)
