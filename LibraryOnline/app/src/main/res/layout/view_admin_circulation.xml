@@ -34,8 +34,8 @@
             android:background="@drawable/bg_admin_screen_card">
             <Button android:id="@+id/circulationModeOnline"
                 style="@style/CirculationModeButton"
-                android:text="Mượn Online"
-                android:contentDescription="Quy trình giao và trả sách được duyệt Online"/>
+                android:text="Đơn Online"
+                android:contentDescription="Giao và nhận trả sách từ yêu cầu Online đã được duyệt"/>
             <Button android:id="@+id/circulationModeDirect"
                 style="@style/CirculationModeButton"
                 android:text="Tại quầy"
