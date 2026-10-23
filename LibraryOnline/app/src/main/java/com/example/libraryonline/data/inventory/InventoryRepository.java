@@ -384,6 +384,8 @@ public final class InventoryRepository {
             throw new IllegalArgumentException("Thiếu số lượng đầu sách. Cần đối soát.");
         b.totalCopies = Math.toIntExact(total);
         b.availableCopies = Math.toIntExact(available);
+        Long reserved = d.getLong("reservedOnlineCopies");
+        b.reservedOnlineCopies = reserved == null ? 0 : Math.toIntExact(reserved);
         b.isHidden = Boolean.TRUE.equals(d.getBoolean("isHidden"));
         return b;
     }
