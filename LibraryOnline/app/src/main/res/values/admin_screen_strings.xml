@@ -3,9 +3,9 @@
     <string name="admin_screen_home_subtitle">Đang cập nhật dữ liệu...</string>
     <string name="admin_screen_today">Hoạt động hôm nay</string>
     <string name="admin_screen_weekly">Xu hướng mượn tuần</string>
-    <string name="admin_screen_weekly_source">Số lượt mượn được lưu trên thiết bị</string>
+    <string name="admin_screen_weekly_source">Lượt mượn trực tiếp (SQLite) và Online (Firebase)</string>
     <string name="admin_screen_recent">Hoạt động gần đây</string>
-    <string name="admin_screen_local_note">Số liệu mượn/trả chỉ tính từ SQLite trên thiết bị này.</string>
+    <string name="admin_screen_local_note">Số liệu được tổng hợp từ SQLite trên máy và Firestore.</string>
     <string name="admin_screen_pending">Yêu cầu đang chờ</string>
     <string name="admin_screen_quick_actions">Hành động nhanh</string>
     <string name="admin_screen_borrow">Mượn trực tiếp</string>
@@ -26,7 +26,7 @@
     <string name="admin_screen_contact">Thông tin liên hệ</string>
     <string name="admin_screen_save_contact">Lưu thay đổi</string>
     <string name="admin_screen_security">Bảo mật &amp; phiên đăng nhập</string>
-    <string name="admin_screen_data_loading">Đang tải dữ liệu trên thiết bị...</string>
-    <string name="admin_screen_data_error">Không tải được số liệu trên thiết bị này.</string>
-    <string name="admin_screen_recent_empty">Chưa có giao dịch được ghi nhận trên thiết bị này.</string>
+    <string name="admin_screen_data_loading">Đang đọc lịch sử từ SQLite và Firebase...</string>
+    <string name="admin_screen_data_error">Không tải được thống kê mượn/trả.</string>
+    <string name="admin_screen_recent_empty">Chưa ghi nhận giao dịch mượn/trả nào.</string>
 </resources>
