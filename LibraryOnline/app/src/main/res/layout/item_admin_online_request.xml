@@ -5,6 +5,42 @@
 <TextView android:id="@+id/adminOnlineItemDays" android:layout_width="match_parent" android:layout_height="wrap_content" android:paddingBottom="6dp" android:textSize="13sp" android:textColor="@color/text_secondary"/>
 <TextView android:id="@+id/adminOnlineItemApproved" android:layout_width="match_parent" android:layout_height="wrap_content" android:paddingBottom="6dp" android:textSize="16sp" android:textColor="@color/text_primary" android:textStyle="bold" android:visibility="gone"/>
 <Button android:id="@+id/adminOnlineItemRelease" android:layout_width="match_parent" android:layout_height="48dp" android:layout_marginTop="8dp" android:backgroundTint="@color/library_blue" android:textColor="@color/white" android:textAllCaps="false" android:text="Hết 24 giờ · Kiểm tra và trả kho" android:visibility="gone"/>
+<TextView android:id="@+id/adminOnlineItemLoanState"
+ android:layout_width="match_parent" android:layout_height="wrap_content"
+ android:paddingBottom="8dp" android:textSize="14sp"
+ android:textColor="@color/text_primary" android:visibility="gone"/>
+<LinearLayout android:id="@+id/adminOnlineHandoverPanel"
+ android:layout_width="match_parent" android:layout_height="wrap_content"
+ android:layout_marginTop="10dp" android:orientation="vertical"
+ android:visibility="gone">
+ <TextView android:layout_width="match_parent" android:layout_height="wrap_content"
+  android:text="Đối chiếu mã vạch trên thẻ Reader và cuốn sách thực tế"
+  android:textSize="13sp" android:textColor="@color/text_secondary"/>
+ <EditText android:id="@+id/adminOnlineReaderBarcode"
+  android:layout_width="match_parent" android:layout_height="52dp"
+  android:layout_marginTop="8dp" android:paddingStart="12dp"
+  android:paddingEnd="12dp" android:singleLine="true"
+  android:inputType="textNoSuggestions" android:hint="Quét/nhập mã thẻ độc giả"
+  android:background="@drawable/bg_admin_screen_field"
+  android:textColor="@color/text_primary" android:textColorHint="@color/text_secondary"/>
+ <EditText android:id="@+id/adminOnlineCopyBarcode"
+  android:layout_width="match_parent" android:layout_height="52dp"
+  android:layout_marginTop="8dp" android:paddingStart="12dp"
+  android:paddingEnd="12dp" android:singleLine="true"
+  android:inputType="textNoSuggestions" android:hint="Quét/nhập mã cuốn sách"
+  android:background="@drawable/bg_admin_screen_field"
+  android:textColor="@color/text_primary" android:textColorHint="@color/text_secondary"/>
+ <Button android:id="@+id/adminOnlineItemCollect" android:layout_width="match_parent"
+  android:layout_height="50dp" android:layout_marginTop="12dp"
+  android:backgroundTint="@color/library_blue" android:textColor="@color/white"
+  android:textAllCaps="false" android:text="Xác nhận giao sách tại quầy"
+  android:visibility="gone"/>
+ <Button android:id="@+id/adminOnlineItemReturn" android:layout_width="match_parent"
+  android:layout_height="50dp" android:layout_marginTop="12dp"
+  android:backgroundTint="@color/library_blue" android:textColor="@color/white"
+  android:textAllCaps="false" android:text="Xác nhận nhận trả sách Online"
+  android:visibility="gone"/>
+</LinearLayout>
 <TextView android:id="@+id/adminOnlineItemSent" android:layout_width="match_parent" android:layout_height="wrap_content" android:paddingBottom="6dp" android:textSize="13sp" android:textColor="@color/text_secondary" android:visibility="gone"/>
 <LinearLayout android:id="@+id/adminOnlineItemActions" android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal" android:visibility="gone">
 <Button android:id="@+id/adminOnlineItemApprove" android:layout_width="0dp" android:layout_height="50dp" android:layout_weight="1" android:text="@string/online_borrow_review_approve" android:backgroundTint="@color/library_blue" android:textColor="@color/white" android:textAllCaps="false"/>
