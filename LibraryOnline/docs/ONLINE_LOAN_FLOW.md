@@ -13,17 +13,17 @@ Firestore là nguồn chung giữa thiết bị Reader/Admin; **không tự tạ
 | Reader gửi hợp lệ | Pending | Chưa giữ | Không đổi | Admin nhận tin trong app |
 | Reader hủy khi chưa duyệt | Cancelled | Chưa giữ | Không đổi | Đơn biến mất khỏi hàng chờ |
 | Admin từ chối | Rejected | Chưa giữ | Không đổi | Reader có lý do |
-| Admin duyệt | Approved | SanSang → ChoLay | Trừ 1 | Reader nhận hạn đến lấy 24h |
-| Admin giao sách (xác minh hai barcode) | Collected | ChoLay → DaMuon | Không đổi | Reader nhận hạn trả |
+| Admin duyệt | Approved | Chưa chọn BookCopy, vẫn SanSang | Trừ 1 suất, tăng reservedOnlineCopies 1 | Reader nhận hạn đến lấy 24h |
+| Admin giao sách (xác minh hai barcode) | Collected | Quét và gán BookCopy; SanSang → DaMuon | reservedOnlineCopies giảm 1, availableCopies không đổi | Reader nhận hạn trả |
 | Admin nhận trả (xác minh hai barcode) | Returned | DaMuon → SanSang | Cộng 1 | Reader nhận xác nhận |
-| Hết hạn giữ sách | Expired | ChoLay → SanSang | Cộng 1 | Reader nhận tin hết hạn |
+| Hết hạn giữ sách | Expired | Không đổi BookCopy | Hoàn 1 suất availableCopies; giảm reservedOnlineCopies 1 | Reader nhận tin hết hạn |
 
-- Admin phải đối chiếu **mã thẻ Reader và mã cuốn vật lý** trước khi bấm giao/trả. Có thể nhập tay hoặc dùng đầu đọc barcode dạng bàn phím; chưa tích hợp quét camera trong màn hình giao Online.
+- Admin phải đối chiếu **mã thẻ Reader và mã cuốn vật lý** trước khi bấm giao/trả. Màn hình đã có quét bằng camera hoặc cho nhập tay.
 - `OnlineLoanReceipts/{requestId}_v{attempt}` được tạo duy nhất khi giao sách thực tế; trạng thái Open → Returned. Bản ghi giữ nguyên khi Reader gửi lượt mượn khác sau khi trả.
 - Hạn trả tính từ thời điểm Admin giao sách, không phải khi Reader gửi đơn hoặc Admin duyệt.
 - Transaction kiểm tra lại trạng thái của đơn, cuốn và người mượn trước khi cập nhật; việc xử lý trùng hoặc lỗi đối soát sẽ thất bại, không tự ý tăng tồn kho.
 - Khi đầu sách hoặc bản sao đang ẩn, thao tác nhận trả Online yêu cầu thủ thư đối soát thủ công, không tự động hoàn nguyên bản ẩn.
-- Trường `BookTitles.availableCopies` chỉ giảm lúc duyệt, tăng lúc hết hạn/trả. Giao sách không giảm tồn lần thứ hai.
+- Trường `BookTitles.availableCopies` chỉ giảm lúc duyệt, tăng lúc hết hạn/trả. Trường `reservedOnlineCopies` tăng khi duyệt, giảm khi giao hoặc hết hạn. Giao sách không trừ `availableCopies` lần thứ hai. Xem `ONLINE_TITLE_CAPACITY_DESIGN.md`.
 
 ## Cấu hình, giới hạn chưa triển khai
 
