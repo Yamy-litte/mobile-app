@@ -18,19 +18,28 @@ public final class AdminDashboardStatsDao {
 
     public AdminDashboardStatsDao(SQLiteDatabase db) { this.db = db; }
 
+    /** A real locally recorded transaction; timestamps are for ordering only. */
+    public static final class RecentEvent {
+        public final long at;
+        public final String label;
+        RecentEvent(long at, String label) { this.at = at; this.label = label; }
+    }
+
     public static final class Summary {
         public final int borrowedToday, returnedToday, awaitingPickup, overdue;
         public final int[] dailyBorrowed;
         public final List<String> recentActivities;
+        public final List<RecentEvent> recentEvents;
 
         Summary(int borrowed, int returned, int awaiting, int overdue,
-                int[] week, List<String> recent) {
+                int[] week, List<String> recent, List<RecentEvent> events) {
             borrowedToday = borrowed;
             returnedToday = returned;
             awaitingPickup = awaiting;
             this.overdue = overdue;
             dailyBorrowed = week;
             recentActivities = recent;
+            recentEvents = events;
         }
     }
 
@@ -40,7 +49,7 @@ public final class AdminDashboardStatsDao {
         int borrowed = count("SELECT COUNT(*) FROM LoanReceipts "
                 + "WHERE substr(createdAt,1,10)=? AND receiptStatus != 'Cancelled'",
                 new String[]{today});
-        int returned = count("SELECT COUNT(*) FROM LoanDetails WHERE returnDate=?", new String[]{today});
+        int returned = count("SELECT COUNT(*) FROM LoanDetails WHERE substr(returnDate,1,10)=?", new String[]{today});
         int awaiting = count("SELECT COUNT(*) FROM BookCopies WHERE copyStatus='ChoLay' AND isHidden=0", null);
         int overdue = count("SELECT COUNT(*) FROM LoanDetails WHERE returnDate IS NULL "
                 + "AND dueDate < ? AND detailStatus IN ('DangMuon','QuaHan')", new String[]{today});
@@ -67,8 +76,9 @@ public final class AdminDashboardStatsDao {
         }
 
         List<String> recent = new ArrayList<>();
+        List<RecentEvent> events = new ArrayList<>();
         String sql = "SELECT COALESCE(NULLIF(u.fullName,''),'Độc giả'), "
-                + "COALESCE(NULLIF(t.title,''),'Sách thư viện'), d.borrowDate, d.returnDate "
+                + "COALESCE(NULLIF(t.title,''),'Sách thư viện'), d.borrowDate, d.returnDate, d.createdAt "
                 + "FROM LoanDetails d JOIN LoanReceipts r ON r.loanReceiptId=d.loanReceiptId "
                 + "LEFT JOIN Users u ON u.userId=r.userId "
                 + "LEFT JOIN BookCopies c ON c.copyId=d.copyId "
@@ -79,14 +89,35 @@ public final class AdminDashboardStatsDao {
             while (c.moveToNext()) {
                 String reader = c.getString(0), book = c.getString(1);
                 String whenBorrowed = c.getString(2), whenReturned = c.getString(3);
-                if (whenReturned != null && !whenReturned.isEmpty())
-                    recent.add(reader + " • Đã trả " + book + " (" + whenReturned + ")");
-                else
-                    recent.add(reader + " • Đã mượn " + book
-                            + (whenBorrowed == null ? "" : " (" + whenBorrowed + ")"));
+                String label;
+                String eventAt;
+                if (whenReturned != null && !whenReturned.isEmpty()) {
+                    label = reader + " • Đã trả " + book + " (" + whenReturned + ")";
+                    eventAt = whenReturned;
+                } else {
+                    label = reader + " • Đã mượn " + book
+                            + (whenBorrowed == null ? "" : " (" + whenBorrowed + ")");
+                    eventAt = c.getString(4);
+                }
+                recent.add(label);
+                events.add(new RecentEvent(parseEventDate(eventAt), label));
             }
         }
-        return new Summary(borrowed, returned, awaiting, overdue, weekly, recent);
+        return new Summary(borrowed, returned, awaiting, overdue, weekly, recent, events);
+    }
+
+    private static long parseEventDate(String value) {
+        if (value == null || value.length() < 10) return 0L;
+        try {
+            java.text.SimpleDateFormat parser = new java.text.SimpleDateFormat(
+                    value.length() >= 19 ? "yyyy-MM-dd'T'HH:mm:ss" : "yyyy-MM-dd", Locale.ROOT);
+            parser.setLenient(false);
+            java.util.Date date = parser.parse(value.length() >= 19
+                    ? value.substring(0, 19) : value.substring(0, 10));
+            return date == null ? 0L : date.getTime();
+        } catch (java.text.ParseException ignored) {
+            return 0L;
+        }
     }
 
     private int count(String sql, String[] args) {
