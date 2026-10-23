@@ -6,6 +6,7 @@ import android.widget.Toast;
 import androidx.activity.result.ActivityResultLauncher;
 import androidx.appcompat.app.AppCompatActivity;
 
+import com.google.zxing.client.android.Intents;
 import com.journeyapps.barcodescanner.ScanContract;
 import com.journeyapps.barcodescanner.ScanOptions;
 
@@ -28,7 +29,16 @@ public final class LibraryBarcodeScanner {
             Consumer<String> callback = pending;
             pending = null;
             inProgress = false;
-            if (result == null || result.getContents() == null) return;
+            if (result == null || result.getContents() == null) {
+                if (result != null && result.getOriginalIntent() != null
+                        && result.getOriginalIntent().getBooleanExtra(
+                                Intents.Scan.MISSING_CAMERA_PERMISSION, false)) {
+                    Toast.makeText(activity, "Chưa cấp quyền camera. Có thể cấp quyền trong"
+                            + " Cài đặt ứng dụng hoặc nhập barcode bằng tay.",
+                            Toast.LENGTH_LONG).show();
+                }
+                return;
+            }
             String value = result.getContents().trim();
             if (value.isEmpty()) {
                 Toast.makeText(activity, "Barcode rỗng, vui lòng quét lại.",
