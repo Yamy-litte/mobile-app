@@ -138,7 +138,8 @@ final class AdminOnlineLoanController {
             if (OnlineLoanRequestRepository.COLLECTED.equals(doc.getString("status"))) collected++;
         }
         activity.updateHomeOnlineWork(pending, approved, collected,
-                snapshot.getMetadata().isFromCache());
+                snapshot.getMetadata().isFromCache()
+                        || snapshot.getMetadata().hasPendingWrites());
         if (!snapshot.getMetadata().isFromCache()) {
             java.util.List<String> ids = new java.util.ArrayList<>();
             for (DocumentSnapshot d : docs)
