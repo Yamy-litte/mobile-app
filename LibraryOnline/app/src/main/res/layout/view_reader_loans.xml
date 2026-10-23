@@ -3,45 +3,109 @@
     android:id="@+id/readerLoans"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
+    android:background="@color/background"
     android:fillViewport="true"
     android:visibility="gone">
-    <LinearLayout
-        android:layout_width="match_parent"
+    <LinearLayout android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="vertical"
-        android:padding="20dp">
-        <TextView style="@style/CatalogueHeading"
-            android:text="@string/online_borrow_reader_heading" />
-        <TextView android:id="@+id/textReaderOnlineSummary"
-            style="@style/CatalogueBody" android:layout_marginTop="6dp"
-            android:text="@string/online_borrow_loading"/>
-        <LinearLayout android:id="@+id/containerReaderOnlineRequests"
-            android:layout_width="match_parent" android:layout_height="wrap_content"
-            android:layout_marginTop="12dp" android:layout_marginBottom="20dp"
-            android:orientation="vertical"/>
-        <TextView style="@style/CatalogueHeading"
-            android:text="Lịch sử giao sách Online" />
-        <TextView android:id="@+id/textReaderOnlineReceiptsSummary"
-            style="@style/CatalogueCaption"
-            android:layout_marginTop="6dp"
-            android:text="Đang tải lịch sử nhận sách…" />
-        <LinearLayout android:id="@+id/containerReaderOnlineReceipts"
-            android:layout_width="match_parent" android:layout_height="wrap_content"
-            android:layout_marginTop="12dp" android:layout_marginBottom="20dp"
-            android:orientation="vertical"/>
+        android:paddingStart="16dp"
+        android:paddingEnd="16dp"
+        android:paddingTop="22dp"
+        android:paddingBottom="28dp">
         <TextView
-            style="@style/CatalogueHeading"
-            android:text="Sách đang mượn (dữ liệu trên thiết bị)" />
+            style="@style/ReaderLoansHeading"
+            android:text="Sách của tôi"
+            android:textSize="23sp"/>
         <TextView
-            android:id="@+id/textReaderLoansSummary"
-            style="@style/CatalogueBody"
+            style="@style/ReaderLoansCaption"
             android:layout_marginTop="6dp"
-            android:text="Đang tải phiếu mượn..." />
-        <LinearLayout
-            android:id="@+id/containerReaderLoans"
-            android:layout_width="match_parent"
+            android:text="Theo dõi các yêu cầu Online, hạn nhận, hạn trả và lịch sử mượn sách." />
+
+        <HorizontalScrollView android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="16dp"
-            android:orientation="vertical" />
+            android:layout_marginTop="18dp"
+            android:clipToPadding="false"
+            android:scrollbars="none"
+            android:fillViewport="false">
+            <LinearLayout android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal">
+                <Button android:id="@+id/readerLoansTabBorrowed"
+                    style="@style/ReaderLoansTab" android:text="Đang mượn"
+                    android:contentDescription="Hiển thị sách đã nhận, chưa trả"/>
+                <Button android:id="@+id/readerLoansTabPickup"
+                    style="@style/ReaderLoansTab" android:layout_marginStart="8dp"
+                    android:text="Chờ lấy"
+                    android:contentDescription="Hiển thị yêu cầu đã duyệt, đang chờ nhận sách"/>
+                <Button android:id="@+id/readerLoansTabPending"
+                    style="@style/ReaderLoansTab" android:layout_marginStart="8dp"
+                    android:text="Chờ duyệt"
+                    android:contentDescription="Hiển thị yêu cầu đang chờ thủ thư xét duyệt"/>
+                <Button android:id="@+id/readerLoansTabHistory"
+                    style="@style/ReaderLoansTab" android:layout_marginStart="8dp"
+                    android:text="Lịch sử"
+                    android:contentDescription="Hiển thị đơn đã kết thúc và lịch sử giao trả Online"/>
+            </LinearLayout>
+        </HorizontalScrollView>
+
+        <LinearLayout android:id="@+id/readerLoansOnlineSection"
+            style="@style/ReaderLoansSection">
+            <TextView android:id="@+id/readerLoansSectionHeading"
+                style="@style/ReaderLoansHeading"
+                android:text="Sách đang mượn Online"/>
+            <TextView android:id="@+id/readerLoansSectionDescription"
+                style="@style/ReaderLoansCaption"
+                android:layout_marginTop="5dp"
+                android:text="Các cuốn đã được giao tại quầy và chưa ghi nhận trả."/>
+            <TextView android:id="@+id/textReaderOnlineSummary"
+                style="@style/ReaderLoansCaption"
+                android:layout_marginTop="10dp"
+                android:text="@string/online_borrow_loading"
+                android:accessibilityLiveRegion="polite"/>
+            <LinearLayout android:id="@+id/containerReaderOnlineRequests"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="12dp"
+                android:orientation="vertical"/>
+        </LinearLayout>
+
+        <LinearLayout android:id="@+id/readerLoansLocalPanel"
+            style="@style/ReaderLoansSection">
+            <TextView style="@style/ReaderLoansHeading"
+                android:text="Sách mượn tại quầy"/>
+            <TextView style="@style/ReaderLoansCaption"
+                android:layout_marginTop="5dp"
+                android:text="Dữ liệu mượn trực tiếp được lưu trên thiết bị này, có thể chưa đồng bộ với Firestore."/>
+            <TextView android:id="@+id/textReaderLoansSummary"
+                style="@style/ReaderLoansCaption"
+                android:layout_marginTop="9dp"
+                android:text="Đang tải phiếu mượn..."/>
+            <LinearLayout android:id="@+id/containerReaderLoans"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="12dp"
+                android:orientation="vertical"/>
+        </LinearLayout>
+
+        <LinearLayout android:id="@+id/readerLoansHistoryPanel"
+            style="@style/ReaderLoansSection"
+            android:visibility="gone">
+            <TextView style="@style/ReaderLoansHeading"
+                android:text="Lịch sử giao / trả Online"/>
+            <TextView style="@style/ReaderLoansCaption"
+                android:layout_marginTop="5dp"
+                android:text="Các lượt đã giao, trả được lưu trên Firestore. Phiếu đang mượn có thể xem trong mục Đang mượn."/>
+            <TextView android:id="@+id/textReaderOnlineReceiptsSummary"
+                style="@style/ReaderLoansCaption"
+                android:layout_marginTop="9dp"
+                android:text="Đang tải lịch sử nhận sách…"
+                android:accessibilityLiveRegion="polite"/>
+            <LinearLayout android:id="@+id/containerReaderOnlineReceipts"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="12dp"
+                android:orientation="vertical"/>
+        </LinearLayout>
     </LinearLayout>
 </ScrollView>
