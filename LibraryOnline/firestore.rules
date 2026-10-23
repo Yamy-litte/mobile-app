@@ -492,6 +492,76 @@ service cloud.firestore {
         && onlineDecisionNotice();
     }
 
+    // Confirm physical handover of the held copy. This transition cannot
+    // change stock because stock was already reduced during Admin approval.
+    function validOnlineCollection() {
+      let next = request.resource.data;
+      let copyPath = /databases/$(database)/documents/BookCopies/$(resource.data.copyId);
+      let oldCopy = get(copyPath).data;
+      let newCopy = getAfter(copyPath).data;
+      return resource.data.status == 'Approved'
+        && next.status == 'Collected'
+        && resource.data.holdUntil is timestamp
+        && request.time < resource.data.holdUntil
+        && resource.data.loanDays is int
+        && next.diff(resource.data).affectedKeys().hasOnly([
+          'status', 'collectedBy', 'collectedAt', 'dueAt',
+          'notificationId', 'updatedAt'
+        ])
+        && next.collectedBy == request.auth.uid
+        && next.collectedAt == request.time
+        // A future deadline of precisely loanDays (allow client/server clock drift).
+        && next.dueAt is timestamp
+        && next.dueAt >= request.time + duration.value(resource.data.loanDays * 24 - 1, 'h')
+        && next.dueAt <= request.time + duration.value(resource.data.loanDays * 24 + 1, 'h')
+        && exists(copyPath)
+        && oldCopy.bookTitleId == resource.data.bookTitleId
+        && oldCopy.copyStatus == 'ChoLay'
+        && oldCopy.isHidden == false
+        && oldCopy.priorityUserId == resource.data.userId
+        && newCopy.copyStatus == 'DaMuon'
+        && newCopy.isHidden == false
+        && newCopy.priorityUserId == null
+        && newCopy.diff(oldCopy).affectedKeys()
+            .hasOnly(['copyStatus', 'priorityUserId', 'updatedAt'])
+        && newCopy.updatedAt == request.time
+        && activeOnlineReader(resource.data.userId)
+        && onlineDecisionNotice();
+    }
+
+    // Online returns are a separate verified transaction; a returned copy
+    // must become available exactly once, and hidden inventory needs manual review.
+    function validOnlineReturn() {
+      let next = request.resource.data;
+      let copyPath = /databases/$(database)/documents/BookCopies/$(resource.data.copyId);
+      let titlePath = /databases/$(database)/documents/BookTitles/$(resource.data.bookTitleId);
+      let oldCopy = get(copyPath).data;
+      let newCopy = getAfter(copyPath).data;
+      return resource.data.status == 'Collected'
+        && next.status == 'Returned'
+        && next.diff(resource.data).affectedKeys().hasOnly([
+          'status', 'returnedAt', 'returnedBy', 'notificationId', 'updatedAt'
+        ])
+        && next.returnedBy == request.auth.uid
+        && next.returnedAt == request.time
+        && exists(copyPath)
+        && oldCopy.copyStatus == 'DaMuon'
+        && oldCopy.isHidden == false
+        && oldCopy.bookTitleId == resource.data.bookTitleId
+        && newCopy.copyStatus == 'SanSang'
+        && newCopy.isHidden == false
+        && newCopy.priorityUserId == null
+        && newCopy.diff(oldCopy).affectedKeys()
+            .hasOnly(['copyStatus', 'priorityUserId', 'updatedAt'])
+        && newCopy.updatedAt == request.time
+        && get(titlePath).data.isHidden == false
+        && get(titlePath).data.availableCopies < get(titlePath).data.totalCopies
+        && getAfter(titlePath).data.availableCopies == get(titlePath).data.availableCopies + 1
+        && getAfter(titlePath).data.totalCopies == get(titlePath).data.totalCopies
+        && getAfter(titlePath).data.updatedAt == request.time
+        && onlineDecisionNotice();
+    }
+
     match /OnlineLoanRequests/{requestId} {
       allow read: if isAdmin()
         || (signedIn() && resource.data.userId == request.auth.uid);
@@ -501,7 +571,7 @@ service cloud.firestore {
         // must be cleared, and attempt must increase, preserving the same title.
         signedIn()
         && request.auth.uid == resource.data.userId
-        && resource.data.status in ['Rejected', 'Expired']
+        && resource.data.status in ['Rejected', 'Expired', 'Returned']
         && request.resource.data.keys().hasOnly([
           'requestId', 'userId', 'bookTitleId', 'bookTitle',
           'loanDays', 'status', 'attempt', 'createdAt', 'updatedAt'
@@ -541,6 +611,26 @@ service cloud.firestore {
         && request.resource.data.createdAt == resource.data.createdAt
         && request.resource.data.updatedAt == request.time
         && validOnlineExpiry()
+      ) || (
+        isAdmin()
+        && request.resource.data.userId == resource.data.userId
+        && request.resource.data.bookTitleId == resource.data.bookTitleId
+        && request.resource.data.requestId == resource.data.requestId
+        && request.resource.data.attempt == resource.data.attempt
+        && request.resource.data.loanDays == resource.data.loanDays
+        && request.resource.data.createdAt == resource.data.createdAt
+        && request.resource.data.updatedAt == request.time
+        && validOnlineCollection()
+      ) || (
+        isAdmin()
+        && request.resource.data.userId == resource.data.userId
+        && request.resource.data.bookTitleId == resource.data.bookTitleId
+        && request.resource.data.requestId == resource.data.requestId
+        && request.resource.data.attempt == resource.data.attempt
+        && request.resource.data.loanDays == resource.data.loanDays
+        && request.resource.data.createdAt == resource.data.createdAt
+        && request.resource.data.updatedAt == request.time
+        && validOnlineReturn()
       );
       allow delete: if false;
     }
@@ -557,7 +647,7 @@ service cloud.firestore {
           'requestId', 'userId', 'status', 'attempt', 'title',
           'message', 'createdAt', 'readAt'
         ])
-        && request.resource.data.status in ['Approved', 'Rejected', 'Expired']
+        && request.resource.data.status in ['Approved', 'Rejected', 'Expired', 'Collected', 'Returned']
         && request.resource.data.attempt is int
         && request.resource.data.title is string
         && request.resource.data.message is string
