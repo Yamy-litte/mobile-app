@@ -26,6 +26,18 @@ public class LoanDetailDao {
         try(Cursor c=db.rawQuery(sql,new String[]{userId})) { while(c.moveToNext()) out.add(read(c)); }
         return out;
     }
+    /** Returned physical copies cached on this device; never mix with pending requests. */
+    public List<LoanDetail> findReturnedByUser(String userId) {
+        List<LoanDetail> out = new ArrayList<>();
+        String sql = "SELECT d.* FROM LoanDetails d "
+                + "JOIN LoanReceipts r ON r.loanReceiptId=d.loanReceiptId "
+                + "WHERE r.userId=? AND d.returnDate IS NOT NULL AND d.detailStatus='DaTra' "
+                + "ORDER BY d.returnDate DESC, d.createdAt DESC";
+        try (Cursor c = db.rawQuery(sql, new String[]{userId})) {
+            while (c.moveToNext()) out.add(read(c));
+        }
+        return out;
+    }
     private static ContentValues values(LoanDetail x) {
         ContentValues v=new ContentValues(); v.put("loanDetailId",x.loanDetailId); v.put("loanReceiptId",x.loanReceiptId); v.put("copyId",x.copyId);
         v.put("borrowDate",x.borrowDate); v.put("dueDate",x.dueDate); v.put("returnDate",x.returnDate);
