@@ -85,6 +85,10 @@
                         android:orientation="horizontal"
                         android:gravity="center_vertical">
                         <com.google.android.material.button.MaterialButton
+                            android:id="@+id/inventoryScanBarcode"
+                            style="@style/InventoryHalf"
+                            android:text="Quét camera" />
+                        <com.google.android.material.button.MaterialButton
                             android:id="@+id/inventoryFindBarcode"
                             style="@style/InventoryHalf"
                             android:text="@string/inventory_ui_find_barcode"/>
