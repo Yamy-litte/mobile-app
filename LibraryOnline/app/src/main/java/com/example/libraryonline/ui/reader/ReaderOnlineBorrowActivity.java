@@ -14,6 +14,7 @@ import com.example.libraryonline.data.session.SessionProfile;
 import com.example.libraryonline.ui.auth.SessionActivity;
 import com.google.firebase.firestore.DocumentSnapshot;
 import com.google.firebase.firestore.FirebaseFirestore;
+import com.google.firebase.firestore.FirebaseFirestoreException;
 import com.google.firebase.firestore.ListenerRegistration;
 import com.google.firebase.firestore.MetadataChanges;
 import com.google.firebase.firestore.Source;
@@ -26,6 +27,7 @@ public final class ReaderOnlineBorrowActivity extends SessionActivity {
     private final FirebaseFirestore db = FirebaseFirestore.getInstance();
     private final OnlineLoanRequestRepository requests = new OnlineLoanRequestRepository();
     private ListenerRegistration bookListener, requestListener;
+    private SessionProfile activeProfile;
     private String bookId, readerId, requestStatus = "";
     private int maxDays = 14, maxBooks = 5, selectedDays = 7, stock;
     private boolean bookVerified, requestVerified, configVerified, quotaVerified, submitting;
@@ -33,7 +35,7 @@ public final class ReaderOnlineBorrowActivity extends SessionActivity {
     private boolean cardActive;
     private Button day3, day7, day14, confirm;
     private EditText customDays;
-    private TextView availability, status, selection, limit, reader, holdInfo;
+    private TextView availability, status, selection, limit, reader, holdInfo, validation;
 
     @Override protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -60,6 +62,7 @@ public final class ReaderOnlineBorrowActivity extends SessionActivity {
         limit = findViewById(R.id.onlineBorrowLimit);
         reader = findViewById(R.id.onlineBorrowReader);
         holdInfo = findViewById(R.id.onlineBorrowHoldInfo);
+        validation = findViewById(R.id.onlineBorrowValidation);
         day3 = findViewById(R.id.onlineBorrowDay3);
         day7 = findViewById(R.id.onlineBorrowDay7);
         day14 = findViewById(R.id.onlineBorrowDay14);
@@ -82,6 +85,14 @@ public final class ReaderOnlineBorrowActivity extends SessionActivity {
             @Override public void afterTextChanged(android.text.Editable s) {}
         });
         confirm.setOnClickListener(v -> submit());
+        findViewById(R.id.onlineBorrowRetry).setOnClickListener(v -> {
+            if (activeProfile != null && validSession(activeProfile.uid)) {
+                status.setText("Đang kiểm tra lại thông tin với Firestore…");
+                onSessionAuthorized(activeProfile);
+            } else {
+                status.setText("Phiên đăng nhập chưa sẵn sàng. Hãy đăng nhập lại.");
+            }
+        });
         refresh();
     }
 
@@ -106,7 +117,13 @@ public final class ReaderOnlineBorrowActivity extends SessionActivity {
 
     @Override protected void onSessionAuthorized(SessionProfile profile) {
         stopListeners();
+        activeProfile = profile;
         readerId = profile.uid;
+        requestStatus = "";
+        stock = 0;
+        bookVerified = false;
+        requestVerified = false;
+        configVerified = false;
         quotaVerified = false;
         activeOnlineCount = 0;
         cardActive = profile.user != null
@@ -128,7 +145,8 @@ public final class ReaderOnlineBorrowActivity extends SessionActivity {
                     if (!validSession(profile.uid)) return;
                     if (error != null) {
                         requestVerified = false;
-                        status.setText("Chưa kiểm tra được yêu cầu trước đó. Kiểm tra kết nối.");
+                        status.setText(remoteError(error,
+                                "Chưa kiểm tra được yêu cầu cũ. Hãy thử lại."));
                     } else if (doc != null) {
                         requestVerified = !doc.getMetadata().isFromCache()
                                 && !doc.getMetadata().hasPendingWrites();
@@ -157,7 +175,8 @@ public final class ReaderOnlineBorrowActivity extends SessionActivity {
                     } else {
                         stock = 0;
                         if (error != null)
-                            availability.setText("Không xác minh được tồn kho; cần kết nối mạng.");
+                            availability.setText(remoteError(error,
+                                    "Không thể xác minh tồn kho; cần kết nối mạng."));
                     }
                     refresh();
                 });
@@ -175,7 +194,8 @@ public final class ReaderOnlineBorrowActivity extends SessionActivity {
                         }
                     }
                     if (!configVerified)
-                        status.setText("Không đọc được cấu hình thư viện. Hãy kiểm tra kết nối.");
+                        status.setText(remoteError(task.getException(),
+                                "Không đọc được cấu hình thư viện. Hãy thử lại."));
                     refresh();
                 });
         db.collection(OnlineLoanRequestRepository.REQUESTS)
@@ -184,7 +204,8 @@ public final class ReaderOnlineBorrowActivity extends SessionActivity {
                     if (!validSession(profile.uid)) return;
                     quotaVerified = task.isSuccessful();
                     if (!task.isSuccessful()) {
-                        holdInfo.setText("Chưa đối soát được các yêu cầu Online khác.");
+                        holdInfo.setText(remoteError(task.getException(),
+                                "Chưa đối soát được các yêu cầu Online khác."));
                         refresh();
                         return;
                     }
@@ -245,6 +266,55 @@ public final class ReaderOnlineBorrowActivity extends SessionActivity {
         return selectedDays;
     }
 
+    /** The request button remains tappable so a failed prerequisite never looks inert. */
+    private String blockingReason() {
+        if (!isSessionReady() || readerId == null)
+            return "Phiên đăng nhập chưa sẵn sàng. Hãy đăng nhập lại.";
+        if (bookId == null || bookId.trim().isEmpty() || bookId.contains("/"))
+            return "Không xác định được đầu sách. Hãy quay lại chọn sách.";
+        if (!cardActive)
+            return "Thẻ độc giả chưa hoạt động hoặc đang bị khóa.";
+        if (!bookVerified)
+            return "Chưa xác minh được đầu sách trực tuyến. Kiểm tra kết nối rồi bấm Kiểm tra lại.";
+        if (!requestVerified)
+            return "Chưa đọc được trạng thái yêu cầu trên Firestore. Kiểm tra kết nối hoặc quyền truy cập Firestore rồi thử lại.";
+        if (!configVerified)
+            return "Chưa tải được cấu hình thư viện. Bấm Kiểm tra lại.";
+        if (!quotaVerified)
+            return "Chưa đối soát được số yêu cầu Online đang có. Bấm Kiểm tra lại.";
+        if (OnlineLoanRequestRepository.PENDING.equals(requestStatus))
+            return "Bạn đã gửi yêu cầu đầu sách này. Hãy xem mục Mượn sách để theo dõi.";
+        if (OnlineLoanRequestRepository.APPROVED.equals(requestStatus))
+            return "Đơn này đã được duyệt. Hãy đến quầy nhận sách đúng hạn.";
+        if (OnlineLoanRequestRepository.COLLECTED.equals(requestStatus))
+            return "Bạn đang mượn đầu sách này. Trả sách trước khi gửi lượt mượn mới.";
+        if (activeOnlineCount >= maxBooks)
+            return "Bạn đã đạt hạn mức " + maxBooks + " đơn Online đang hoạt động.";
+        if (stock <= 0)
+            return "Đầu sách hiện không còn cuốn sẵn sàng để gửi yêu cầu.";
+        int count = days();
+        if (count < 1 || count > maxDays)
+            return "Nhập số ngày mượn từ 1 đến " + maxDays + ".";
+        return null;
+    }
+
+    private static String remoteError(Exception error, String fallback) {
+        if (error instanceof FirebaseFirestoreException) {
+            FirebaseFirestoreException.Code code =
+                    ((FirebaseFirestoreException) error).getCode();
+            if (code == FirebaseFirestoreException.Code.PERMISSION_DENIED)
+                return "Firestore từ chối quyền truy cập (PERMISSION_DENIED). "
+                        + "Kiểm tra Rules đã triển khai và tài khoản đăng nhập.";
+            if (code == FirebaseFirestoreException.Code.UNAVAILABLE)
+                return "Không kết nối được Firestore. Kiểm tra Internet và thử lại.";
+            if (code == FirebaseFirestoreException.Code.FAILED_PRECONDITION)
+                return "Firestore chưa đáp ứng điều kiện truy vấn (FAILED_PRECONDITION). "
+                        + "Kiểm tra cấu hình và chỉ mục.";
+        }
+        return error != null && error.getMessage() != null
+                ? fallback + " " + error.getMessage() : fallback;
+    }
+
     private void refresh() {
         if (day3 == null) return;
         day3.setEnabled(configVerified && maxDays >= 3);
@@ -252,9 +322,8 @@ public final class ReaderOnlineBorrowActivity extends SessionActivity {
         day14.setEnabled(configVerified && maxDays >= 14);
         int choice = days();
         for (Button button : new Button[]{day3, day7, day14}) {
-            int days = button == day3 ? 3 : button == day7 ? 7 : 14;
-            boolean chosen = choice == days && customDays.getText().length() == 0;
-            button.setSelected(chosen);
+            int preset = button == day3 ? 3 : button == day7 ? 7 : 14;
+            button.setSelected(choice == preset && customDays.getText().length() == 0);
         }
         selection.setText(configVerified
                 ? "Đang chọn " + (choice > 0 ? choice : "—") + " ngày · Tối đa " + maxDays + " ngày"
@@ -264,26 +333,37 @@ public final class ReaderOnlineBorrowActivity extends SessionActivity {
                     + " ngày/lượt. Đơn Online chưa kết thúc: " + activeOnlineCount
                     + ". Đối soát thêm mượn tại quầy khi giao."
                 : "Đang tải cấu hình thư viện…");
-        boolean active = OnlineLoanRequestRepository.PENDING.equals(requestStatus)
+        String reason = blockingReason();
+        if (validation != null) {
+            validation.setText(submitting
+                    ? "Đang gửi lên Firestore. Yêu cầu chưa được xác nhận…"
+                    : reason == null
+                    ? "Đủ điều kiện sơ bộ. Nhấn Xác nhận để gửi lên Firestore."
+                    : reason);
+            validation.setTextColor(androidx.core.content.ContextCompat.getColor(this,
+                    reason == null ? R.color.library_success : R.color.text_secondary));
+        }
+        // Never silently disable the button for a missing network or rule permission.
+        confirm.setEnabled(!submitting);
+        boolean existing = OnlineLoanRequestRepository.PENDING.equals(requestStatus)
                 || OnlineLoanRequestRepository.APPROVED.equals(requestStatus)
                 || OnlineLoanRequestRepository.COLLECTED.equals(requestStatus);
-        confirm.setEnabled(isSessionReady() && !submitting && cardActive
-                && bookVerified && requestVerified && configVerified && quotaVerified
-                && activeOnlineCount < maxBooks && stock > 0
-                && !active && choice >= 1 && choice <= maxDays);
-        confirm.setText(submitting ? "Đang gửi yêu cầu…"
-                : active ? "Yêu cầu đã được ghi nhận" : "Xác nhận mượn Online");
+        confirm.setText(submitting ? "Đang gửi lên Firestore…"
+                : existing ? "Yêu cầu đã được ghi nhận" : "Xác nhận mượn Online");
     }
 
     private void submit() {
-        if (!confirm.isEnabled() || !isSessionReady()) return;
-        final int count = days();
-        if (count < 1 || count > maxDays) {
-            status.setText("Số ngày mượn phải từ 1 đến " + maxDays + ".");
+        if (submitting) return;
+        String blocking = blockingReason();
+        if (blocking != null) {
+            status.setText(blocking);
+            Toast.makeText(this, blocking, Toast.LENGTH_LONG).show();
             return;
         }
+        final int count = days();
         final String uid = readerId;
         submitting = true;
+        status.setText("Đang gửi yêu cầu và xác nhận với Firestore…");
         refresh();
         requests.submit(uid, bookId, count).addOnCompleteListener(this, task -> {
             if (!validSession(uid)) return;
@@ -292,17 +372,22 @@ public final class ReaderOnlineBorrowActivity extends SessionActivity {
                 requestStatus = OnlineLoanRequestRepository.PENDING;
                 activeOnlineCount++;
                 status.setText("Đã gửi thành công · Chờ Admin duyệt. Chưa giữ cuốn sách.");
-                Toast.makeText(this, "Yêu cầu mượn Online đã được gửi.", Toast.LENGTH_LONG).show();
+                Toast.makeText(this, "Đã ghi yêu cầu lên Firestore. Xem trong mục Mượn sách.",
+                        Toast.LENGTH_LONG).show();
+                ReaderNavigation.returnToMain(this, ReaderHomeView.LOANS);
             } else {
-                status.setText("Gửi thất bại: " + (task.getException() == null
-                        ? "Vui lòng thử lại." : task.getException().getMessage()));
+                String failure = remoteError(task.getException(),
+                        "Gửi yêu cầu thất bại.");
+                status.setText(failure);
+                Toast.makeText(this, failure, Toast.LENGTH_LONG).show();
+                refresh();
             }
-            refresh();
         });
     }
 
     @Override protected void onSessionStopped() {
         stopListeners();
+        activeProfile = null;
         readerId = null;
         bookVerified = false;
         requestVerified = false;
