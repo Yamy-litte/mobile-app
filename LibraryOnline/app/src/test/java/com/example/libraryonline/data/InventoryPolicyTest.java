@@ -70,6 +70,17 @@ public class InventoryPolicyTest {
         b.availableCopies=2;
         assertThrows(IllegalArgumentException.class,()->InventoryPolicy.audit(b,Arrays.asList(copy("SanSang"),copy("ThanhLy"))));
     }
+    @Test public void titleReservationsReduceApprovableStockWithoutChangingPhysicalReadiness() {
+        BookTitle b=title();b.totalCopies=2;b.availableCopies=1;b.reservedOnlineCopies=1;
+        InventoryPolicy.audit(b,Arrays.asList(copy("SanSang"),copy("SanSang")));
+        b.reservedOnlineCopies=2;
+        assertThrows(IllegalArgumentException.class,
+                ()->InventoryPolicy.audit(b,Arrays.asList(copy("SanSang"),copy("SanSang"))));
+        b.reservedOnlineCopies=-1;
+        assertThrows(IllegalArgumentException.class,
+                ()->InventoryPolicy.audit(b,Arrays.asList(copy("SanSang"),copy("SanSang"))));
+    }
+
     @Test public void barcodeNeverReusesRetiredOrNonSequentialSuffix() {
         assertEquals(10,InventoryPolicy.nextSequence("BOOK",Arrays.asList("BOOK-001","BOOK-009","legacy")));
         assertEquals(1,InventoryPolicy.nextSequence("BOOK",Collections.singletonList("OTHER-099")));
