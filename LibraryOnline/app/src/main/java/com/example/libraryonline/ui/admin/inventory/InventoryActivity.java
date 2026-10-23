@@ -11,6 +11,7 @@ import androidx.core.view.*;
 import androidx.lifecycle.ViewModelProvider;
 
 import com.example.libraryonline.R;
+import com.example.libraryonline.ui.scanner.LibraryBarcodeScanner;
 import com.example.libraryonline.data.inventory.*;
 import com.example.libraryonline.data.local.dao.*;
 import com.example.libraryonline.data.local.db.DatabaseHelper;
@@ -32,6 +33,7 @@ public class InventoryActivity extends SessionActivity {
             COPIES = "copies",
             COPY = "copy",
             LABELS = "labels";
+    private LibraryBarcodeScanner barcodeScanner;
     private InventoryViewModel model;
     private DatabaseHelper helper;
     private BookCatalogueSyncManager sync;
@@ -53,6 +55,7 @@ public class InventoryActivity extends SessionActivity {
     @Override
     protected void onCreate(Bundle state) {
         super.onCreate(state);
+        barcodeScanner = new LibraryBarcodeScanner(this);
         setContentView(R.layout.activity_admin_inventory);
         WindowCompat.setDecorFitsSystemWindows(getWindow(), false);
         ViewCompat.setOnApplyWindowInsetsListener(
@@ -123,6 +126,10 @@ public class InventoryActivity extends SessionActivity {
                             chooseIntake = true;
                             status.setText("Chọn đầu sách bên dưới để nhập bổ sung.");
                         });
+        findViewById(R.id.inventoryScanBarcode).setOnClickListener(v -> {
+            if (isSessionReady())
+                barcodeScanner.scan("Quét barcode cuốn hoặc ISBN", this::openScannedInventory);
+        });
         findViewById(R.id.inventoryFindBarcode)
                 .setOnClickListener(
                         v -> {
@@ -807,6 +814,32 @@ public class InventoryActivity extends SessionActivity {
         if (model.draftKind == null) return;
         model.selectedId = model.draftId;
         go("intake".equals(model.draftKind) ? INTAKE : EDIT);
+    }
+
+    private void openScannedInventory(String code) {
+        if (!isSessionReady()) return;
+        // Physical copy Code128 is NOT the title ISBN.
+        for (BookCopy copy : copies) {
+            if (code.equals(copy.barcode)) {
+                openCopy(copy);
+                return;
+            }
+        }
+        for (BookTitle title : books) {
+            if (code.equals(title.isbn)) {
+                model.selectedId = title.bookTitleId;
+                selectedCopyId = null;
+                go(COPIES);
+                return;
+            }
+        }
+        status.setText("Không tìm thấy barcode/ISBN " + code
+                + " trong kho đã đồng bộ. Hãy làm mới hoặc nhập mã thủ công.");
+        Toast.makeText(this, "Barcode chưa có trong dữ liệu kho trên thiết bị.",
+                Toast.LENGTH_LONG).show();
+        search.setText(code);
+        page = LIST;
+        render();
     }
 
     private void findBarcode() {
