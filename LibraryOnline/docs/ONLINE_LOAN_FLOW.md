@@ -60,3 +60,18 @@ firebase deploy --only firestore:rules
 ```
 
 Không cấp quyền thêm cho Reader được ghi BookCopies/BookTitles, không deploy hoặc ghi Firebase production trong bước sửa code này.
+
+## Khắc phục khi bấm Gửi yêu cầu mà không thấy phản hồi (23/10/2026)
+
+Đã sửa hai nguyên nhân ở mã nguồn:
+
+1. Reader dùng `tx.get(OnlineLoanRequests/{uid}_{bookId})` để kiểm tra trùng trước khi tạo. Yêu cầu lần đầu **chưa tồn tại**, do đó Rules cũ chỉ kiểm tra `resource.data.userId` có thể từ chối GET. Rules mới tách `allow get` và `allow list`: cho phép kiểm tra **chính ID của Reader** khi văn bản chưa tồn tại, không cấp quyền đọc đơn hiện có của người khác.
+2. Nút `onlineBorrowConfirm` cũ bị vô hiệu hóa âm thầm nếu không có internet/quyền Firestore hoặc chưa đọc cấu hình, quota. Giao diện mới có `onlineBorrowValidation`, `onlineBorrowRetry` và báo lý do cụ thể bằng Toast. Chỉ ghi sau khi tất cả kiểm tra hợp lệ; chỉ chuyển đến tab Mượn sách sau khi transaction Firestore báo thành công.
+
+Nếu vẫn gặp `PERMISSION_DENIED`: cần chạy Firebase Emulator Rules tests và **deploy `firestore.rules` mới** vào đúng Firebase project. `git pull` chỉ cập nhật mã trên máy, không cập nhật Rules trên Firebase. Lỗi này không khắc phục được chỉ bằng Build lại APK.
+
+Chu trình kiểm tra:
+- Reader đăng nhập với thẻ `HoatDong`, mở chi tiết sách còn `availableCopies > 0`, vào Mượn Online.
+- Dùng `Kiểm tra lại kết nối và điều kiện` nếu trang báo chưa xác minh.
+- Nhấn Xác nhận: trước khi Firestore xác nhận hiển thị “Đang gửi…”. Thành công tự mở tab Mượn sách, danh sách Online có `Pending`; Admin mở mục Yêu cầu Online sẽ thấy đơn.
+- Nếu không thành công, ghi lại chính xác mã lỗi trên màn hình. Không đánh dấu đơn là thành công khi Firestore báo lỗi.
