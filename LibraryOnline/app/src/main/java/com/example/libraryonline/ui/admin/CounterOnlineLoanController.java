@@ -15,6 +15,7 @@ import androidx.appcompat.app.AlertDialog;
 
 import com.example.libraryonline.R;
 import com.example.libraryonline.data.remote.firebase.OnlineLoanRequestRepository;
+import com.example.libraryonline.data.remote.firebase.OnlineBorrowCopyMatch;
 import com.google.firebase.Timestamp;
 import com.google.firebase.firestore.DocumentSnapshot;
 import com.google.firebase.firestore.FirebaseFirestore;
@@ -372,14 +373,19 @@ final class CounterOnlineLoanController implements AutoCloseable {
             setMessage("Đang xác minh mã cuốn trên Firestore…");
             return;
         }
-        String actualTitle = matchedCopy.getString("bookTitleId");
-        String expectedTitle = selected.getString("bookTitleId");
-        if (expectedTitle == null || !expectedTitle.equals(actualTitle)) {
+        OnlineBorrowCopyMatch.Result match = OnlineBorrowCopyMatch.compare(
+                selected.getString("bookTitleId"), selected.getString("copyId"),
+                matchedCopy.getString("bookTitleId"), matchedCopy.getId());
+        if (match == OnlineBorrowCopyMatch.Result.INVALID_DATA) {
+            setMessage("Yêu cầu hoặc mã cuốn thiếu dữ liệu. Cần đối soát kho.");
+            return;
+        }
+        if (match == OnlineBorrowCopyMatch.Result.WRONG_TITLE) {
             setMessage("SAI ĐẦU SÁCH: Cuốn đã quét không thuộc đầu sách “"
                     + value(selected, "bookTitle") + "”. Không thể giao/trả.");
             return;
         }
-        if (!matchedCopy.getId().equals(selected.getString("copyId"))) {
+        if (match == OnlineBorrowCopyMatch.Result.WRONG_COPY) {
             setMessage("ĐÚNG ĐẦU SÁCH, SAI CUỐN: Đây không phải bản sao đã được"
                     + " giữ cho yêu cầu này. Hãy quét đúng cuốn đã duyệt.");
             return;
