@@ -191,6 +191,10 @@ public final class OnlineLoanRequestRepository {
                         || free == null || free < 1)
                     throw new IllegalArgumentException(
                             "Đã hết suất có thể duyệt của đầu sách này. Không duyệt vượt tồn kho.");
+                long reserved = title.getLong("reservedOnlineCopies") == null
+                        ? 0 : title.getLong("reservedOnlineCopies");
+                if (reserved < 0 || free + reserved > title.getLong("totalCopies"))
+                    throw new IllegalArgumentException("Bộ đếm suất giữ Online không hợp lệ.");
                 long attempt = current.getLong("attempt") == null ? 1 : current.getLong("attempt");
                 Timestamp holdUntil = new Timestamp(new Date(System.currentTimeMillis() + HOLD_MS));
                 Map<String, Object> accepted = new HashMap<>();
@@ -206,6 +210,7 @@ public final class OnlineLoanRequestRepository {
                 // Atomically reserve capacity; other approvals and inventory retire
                 // transactions must use this same shared BookTitles document.
                 tx.update(titleRef, "availableCopies", free - 1,
+                        "reservedOnlineCopies", reserved + 1,
                         "updatedAt", FieldValue.serverTimestamp());
                 tx.set(notification(requestId, attempt, APPROVED),
                         notice(requestId, userId, APPROVED, attempt,
@@ -274,13 +279,23 @@ public final class OnlineLoanRequestRepository {
                     || title.getLong("totalCopies") == null
                     || title.getLong("availableCopies") >= title.getLong("totalCopies"))
                 throw new IllegalArgumentException("Tồn kho không khớp; không tự động chỉnh sửa.");
+            long reserved = title.getLong("reservedOnlineCopies") == null
+                    ? 0 : title.getLong("reservedOnlineCopies");
+            if (copyRef == null && reserved < 1)
+                throw new IllegalArgumentException("Không tìm thấy suất Online để hoàn trả.");
             long attempt = request.getLong("attempt") == null ? 1 : request.getLong("attempt");
             tx.update(requestRef, "status", EXPIRED, "updatedAt", FieldValue.serverTimestamp(),
                     "notificationId", notification(requestId, attempt, EXPIRED).getId());
             if (copyRef != null) tx.update(copyRef, "copyStatus", "SanSang",
                     "priorityUserId", null, "updatedAt", FieldValue.serverTimestamp());
-            tx.update(titleRef, "availableCopies", title.getLong("availableCopies") + 1,
-                    "updatedAt", FieldValue.serverTimestamp());
+            if (copyRef == null) {
+                tx.update(titleRef, "availableCopies", title.getLong("availableCopies") + 1,
+                        "reservedOnlineCopies", reserved - 1,
+                        "updatedAt", FieldValue.serverTimestamp());
+            } else {
+                tx.update(titleRef, "availableCopies", title.getLong("availableCopies") + 1,
+                        "updatedAt", FieldValue.serverTimestamp());
+            }
             tx.set(notification(requestId, attempt, EXPIRED),
                     notice(requestId, request.getString("userId"), EXPIRED, attempt,
                             "Yêu cầu mượn Online đã hết hạn",
@@ -316,10 +331,13 @@ public final class OnlineLoanRequestRepository {
                 DocumentReference copyRef = copies.getDocuments().get(0).getReference();
                 String copyId = copyRef.getId();
                 DocumentReference userRef = db.collection("Users").document(userId);
+                DocumentReference titleRef = db.collection("BookTitles")
+                        .document(request.getString("bookTitleId"));
                 return db.runTransaction(tx -> {
                 DocumentSnapshot current = tx.get(requestRef);
                 DocumentSnapshot user = tx.get(userRef);
                 DocumentSnapshot copy = tx.get(copyRef);
+                DocumentSnapshot title = tx.get(titleRef);
                 if (!current.exists() || !APPROVED.equals(current.getString("status")))
                     throw new IllegalArgumentException("Đơn đã được xử lý. Hãy tải lại.");
                 Timestamp deadline = current.getTimestamp("holdUntil");
@@ -349,6 +367,10 @@ public final class OnlineLoanRequestRepository {
                         || copy.get("priorityUserId") != null))
                     throw new IllegalArgumentException(
                             "Cuốn không còn sẵn sàng. Hãy quét cuốn khác của đúng đầu sách.");
+                Long reserved = title.getLong("reservedOnlineCopies");
+                if (!legacyAssigned && (!title.exists() || reserved == null || reserved < 1))
+                    throw new IllegalArgumentException(
+                            "Suất giữ Online không còn hợp lệ. Cần đối soát tồn kho.");
                 Long days = current.getLong("loanDays");
                 if (days == null || days < 1 || days > 60)
                     throw new IllegalArgumentException("Thời hạn mượn không hợp lệ.");
@@ -370,6 +392,11 @@ public final class OnlineLoanRequestRepository {
                 collected.put("notificationId", notification(requestId, attempt, COLLECTED).getId());
                 tx.update(requestRef, collected);
                 tx.update(copyRef, "copyStatus", "DaMuon", "priorityUserId", null,
+                        "updatedAt", FieldValue.serverTimestamp());
+                // This reservation is now a physically checked-out copy.
+                // availableCopies was decremented at approval and MUST NOT
+                // be decremented again at collection.
+                if (!legacyAssigned) tx.update(titleRef, "reservedOnlineCopies", reserved - 1,
                         "updatedAt", FieldValue.serverTimestamp());
                 Map<String, Object> receipt = new HashMap<>();
                 receipt.put("requestId", requestId);
