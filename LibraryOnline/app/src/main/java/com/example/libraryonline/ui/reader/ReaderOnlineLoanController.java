@@ -355,11 +355,18 @@ final class ReaderOnlineLoanController {
             return Long.compare(right == null ? 0 : right.toDate().getTime(),
                     left == null ? 0 : left.toDate().getTime());
         });
-        message(R.id.textReaderOnlineReceiptsSummary, receipts.isEmpty()
-                ? "Chưa nhận sách Online tại quầy."
-                : receipts.size() + " lượt mượn Online"
+        int completed = 0;
+        for (DocumentSnapshot receipt : receipts)
+            if (OnlineLoanRequestRepository.RETURNED.equals(receipt.getString("status")))
+                completed++;
+        message(R.id.textReaderOnlineReceiptsSummary, completed == 0
+                ? "Chưa có lượt mượn Online nào đã trả."
+                : completed + " lượt mượn Online đã hoàn tất"
                   + (snapshot.getMetadata().isFromCache() ? " · Dữ liệu đã lưu" : ""));
         for (DocumentSnapshot receipt : receipts) {
+            // An open receipt is already visible under 'Đang mượn'.
+            if (!OnlineLoanRequestRepository.RETURNED.equals(receipt.getString("status")))
+                continue;
             View card = activity.getLayoutInflater().inflate(
                     R.layout.item_reader_online_receipt, container, false);
             container.addView(card);
