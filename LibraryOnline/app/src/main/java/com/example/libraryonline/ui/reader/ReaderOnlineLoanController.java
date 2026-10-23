@@ -34,9 +34,10 @@ final class ReaderOnlineLoanController {
     private ListenerRegistration requestsListener, notificationsListener, receiptsListener;
     private String authorizedUid;
     static final String BORROWED = "borrowed", PICKUP = "pickup",
-            PENDING_MODE = "pending", HISTORY = "history";
+            PENDING_MODE = "pending", RETURNED = "returned";
     private String loanMode = BORROWED;
-    private QuerySnapshot lastRequests;
+    private QuerySnapshot lastRequests, lastReceipts;
+    private int localBorrowedCount, localReturnedCount;
     private final Handler clockHandler = new Handler(Looper.getMainLooper());
     private final Map<TextView, Timestamp> activeCountdowns = new HashMap<>();
     private final Runnable countdownPulse = new Runnable() {
@@ -61,35 +62,91 @@ final class ReaderOnlineLoanController {
         activity.findViewById(R.id.readerLoansTabPending)
                 .setOnClickListener(v -> setMode(PENDING_MODE));
         activity.findViewById(R.id.readerLoansTabHistory)
-                .setOnClickListener(v -> setMode(HISTORY));
+                .setOnClickListener(v -> setMode(RETURNED));
         updateLoanTabPresentation();
     }
 
     String selectedMode() { return loanMode; }
 
+    /** Local and Online loans belong to the same visible Borrowed/Returned tabs. */
+    void setLocalLoanCounts(int borrowed, int returned) {
+        localBorrowedCount = Math.max(0, borrowed);
+        localReturnedCount = Math.max(0, returned);
+        updateTabCountsAndSummary();
+    }
+
+    private void updateTabCountsAndSummary() {
+        int borrowedOnline = 0, pickup = 0, pending = 0, returnedOnline = 0;
+        if (lastRequests != null) {
+            for (DocumentSnapshot request : lastRequests.getDocuments()) {
+                String status = request.getString("status");
+                if (OnlineLoanRequestRepository.COLLECTED.equals(status)) borrowedOnline++;
+                else if (OnlineLoanRequestRepository.APPROVED.equals(status)) pickup++;
+                else if (OnlineLoanRequestRepository.PENDING.equals(status)) pending++;
+            }
+        }
+        if (lastReceipts != null) {
+            for (DocumentSnapshot receipt : lastReceipts.getDocuments()) {
+                if (OnlineLoanRequestRepository.RETURNED.equals(receipt.getString("status")))
+                    returnedOnline++;
+            }
+        }
+        int borrowedTotal = borrowedOnline + localBorrowedCount;
+        int returnedTotal = returnedOnline + localReturnedCount;
+        ((TextView) activity.findViewById(R.id.readerLoansTabBorrowed))
+                .setText("Đang mượn (" + borrowedTotal + ")");
+        ((TextView) activity.findViewById(R.id.readerLoansTabPickup))
+                .setText("Chờ lấy (" + pickup + ")");
+        ((TextView) activity.findViewById(R.id.readerLoansTabPending))
+                .setText("Chờ duyệt (" + pending + ")");
+        ((TextView) activity.findViewById(R.id.readerLoansTabHistory))
+                .setText("Đã trả (" + returnedTotal + ")");
+
+        if (BORROWED.equals(loanMode)) {
+            message(R.id.textReaderOnlineSummary, borrowedTotal == 0
+                    ? "Bạn chưa có sách đang mượn."
+                    : "Bạn đang mượn " + borrowedTotal + " cuốn sách.");
+        } else if (PICKUP.equals(loanMode)) {
+            message(R.id.textReaderOnlineSummary, pickup == 0
+                    ? "Không có yêu cầu đang chờ nhận sách."
+                    : pickup + " yêu cầu đã duyệt, chờ nhận sách.");
+        } else if (PENDING_MODE.equals(loanMode)) {
+            message(R.id.textReaderOnlineSummary, pending == 0
+                    ? "Không có yêu cầu đang chờ duyệt."
+                    : pending + " yêu cầu đang chờ duyệt.");
+        }
+        message(R.id.textReaderOnlineReceiptsSummary, returnedTotal == 0
+                ? "Bạn chưa có sách đã trả."
+                : "Đã hoàn trả " + returnedTotal + " cuốn sách.");
+    }
+
     void setMode(String mode) {
+        if ("history".equals(mode)) mode = RETURNED; // Restore older saved UI state.
         if (!BORROWED.equals(mode) && !PICKUP.equals(mode)
-                && !PENDING_MODE.equals(mode) && !HISTORY.equals(mode)) mode = BORROWED;
+                && !PENDING_MODE.equals(mode) && !RETURNED.equals(mode)) mode = BORROWED;
         loanMode = mode;
         updateLoanTabPresentation();
         if (lastRequests != null && authorizedUid != null && current(authorizedUid))
             displayRequests(lastRequests);
+        updateTabCountsAndSummary();
     }
 
     private void updateLoanTabPresentation() {
         activity.findViewById(R.id.readerLoansTabBorrowed).setSelected(BORROWED.equals(loanMode));
         activity.findViewById(R.id.readerLoansTabPickup).setSelected(PICKUP.equals(loanMode));
         activity.findViewById(R.id.readerLoansTabPending).setSelected(PENDING_MODE.equals(loanMode));
-        activity.findViewById(R.id.readerLoansTabHistory).setSelected(HISTORY.equals(loanMode));
+        activity.findViewById(R.id.readerLoansTabHistory).setSelected(RETURNED.equals(loanMode));
+        activity.findViewById(R.id.readerLoansOnlineSection).setVisibility(
+                RETURNED.equals(loanMode) ? View.GONE : View.VISIBLE);
         activity.findViewById(R.id.readerLoansLocalPanel).setVisibility(
                 BORROWED.equals(loanMode) ? View.VISIBLE : View.GONE);
         activity.findViewById(R.id.readerLoansHistoryPanel).setVisibility(
-                HISTORY.equals(loanMode) ? View.VISIBLE : View.GONE);
+                RETURNED.equals(loanMode) ? View.VISIBLE : View.GONE);
         TextView heading = activity.findViewById(R.id.readerLoansSectionHeading);
         TextView explanation = activity.findViewById(R.id.readerLoansSectionDescription);
         if (BORROWED.equals(loanMode)) {
-            heading.setText("Sách đang mượn Online");
-            explanation.setText("Đã nhận tại quầy · Hạn trả bắt đầu khi thủ thư giao sách.");
+            heading.setText("Sách đang mượn");
+            explanation.setText("Các cuốn đã nhận và chưa trả, không phân biệt cách mượn.");
         } else if (PICKUP.equals(loanMode)) {
             heading.setText("Đã duyệt · Chờ đến nhận");
             explanation.setText("Thư viện đã giữ suất theo đầu sách. Quét nhận cuốn tại quầy trước hạn.");
@@ -97,8 +154,8 @@ final class ReaderOnlineLoanController {
             heading.setText("Yêu cầu đang chờ duyệt");
             explanation.setText("Theo dõi phản hồi của thủ thư. Bạn có thể hủy đơn chưa duyệt.");
         } else {
-            heading.setText("Yêu cầu đã kết thúc");
-            explanation.setText("Đơn đã trả, từ chối, hủy hoặc hết hạn; bên dưới là lịch sử giao/trả Online.");
+            heading.setText("Sách đã trả");
+            explanation.setText("Các cuốn đã được xác nhận hoàn trả.");
         }
     }
 
@@ -109,10 +166,9 @@ final class ReaderOnlineLoanController {
             return OnlineLoanRequestRepository.APPROVED.equals(status);
         if (PENDING_MODE.equals(loanMode))
             return OnlineLoanRequestRepository.PENDING.equals(status);
-        return OnlineLoanRequestRepository.RETURNED.equals(status)
-                || OnlineLoanRequestRepository.REJECTED.equals(status)
-                || OnlineLoanRequestRepository.EXPIRED.equals(status)
-                || OnlineLoanRequestRepository.CANCELLED.equals(status);
+        // Returned loans are rendered from receipts, not request states.
+        // Rejected, cancelled and expired requests are not returned books.
+        return false;
     }
 
     void start(String uid) {
@@ -124,7 +180,7 @@ final class ReaderOnlineLoanController {
                 .setText(R.string.online_borrow_loading);
         ((TextView) activity.findViewById(R.id.textReaderOnlineNotificationsSummary))
                 .setText(R.string.online_borrow_loading);
-        message(R.id.textReaderOnlineReceiptsSummary, "Đang tải lịch sử giao sách Online…");
+        message(R.id.textReaderOnlineReceiptsSummary, "Đang tải sách đã trả…");
         requestsListener = firestore.collection(OnlineLoanRequestRepository.REQUESTS)
                 .whereEqualTo("userId", uid)
                 .addSnapshotListener(MetadataChanges.INCLUDE, (result, error) -> {
@@ -163,6 +219,9 @@ final class ReaderOnlineLoanController {
     void stop() {
         authorizedUid = null;
         lastRequests = null;
+        lastReceipts = null;
+        localBorrowedCount = 0;
+        localReturnedCount = 0;
         clockHandler.removeCallbacks(countdownPulse);
         activeCountdowns.clear();
         if (requestsListener != null) { requestsListener.remove(); requestsListener = null; }
@@ -226,31 +285,7 @@ final class ReaderOnlineLoanController {
         activeCountdowns.clear();
         lastRequests = snapshot;
         List<DocumentSnapshot> records = recent(snapshot);
-        int matching = 0, pending = 0, pickup = 0, borrowed = 0, completed = 0;
-        for (DocumentSnapshot doc : records) {
-            String state = doc.getString("status");
-            if (visibleInMode(state)) matching++;
-            if (OnlineLoanRequestRepository.PENDING.equals(state)) pending++;
-            else if (OnlineLoanRequestRepository.APPROVED.equals(state)) pickup++;
-            else if (OnlineLoanRequestRepository.COLLECTED.equals(state)) borrowed++;
-            else completed++;
-        }
-        ((TextView) activity.findViewById(R.id.readerLoansTabBorrowed))
-                .setText("Đang mượn (" + borrowed + ")");
-        ((TextView) activity.findViewById(R.id.readerLoansTabPickup))
-                .setText("Chờ lấy (" + pickup + ")");
-        ((TextView) activity.findViewById(R.id.readerLoansTabPending))
-                .setText("Chờ duyệt (" + pending + ")");
-        ((TextView) activity.findViewById(R.id.readerLoansTabHistory))
-                .setText("Lịch sử (" + completed + ")");
-        message(R.id.textReaderOnlineSummary, matching == 0
-                ? (BORROWED.equals(loanMode) ? "Bạn chưa có sách Online đang mượn."
-                    : PICKUP.equals(loanMode) ? "Không có yêu cầu nào đang chờ nhận sách."
-                    : PENDING_MODE.equals(loanMode) ? "Không có yêu cầu chờ duyệt."
-                    : "Không có yêu cầu đã kết thúc.")
-                : matching + " yêu cầu trong mục này"
-                  + (snapshot.getMetadata().isFromCache()
-                    ? " · Dữ liệu đã lưu, đang kiểm tra máy chủ" : ""));
+        updateTabCountsAndSummary();
         for (DocumentSnapshot doc : records) {
             if (!visibleInMode(doc.getString("status"))) continue;
             View item = activity.getLayoutInflater().inflate(
@@ -390,14 +425,8 @@ final class ReaderOnlineLoanController {
             return Long.compare(right == null ? 0 : right.toDate().getTime(),
                     left == null ? 0 : left.toDate().getTime());
         });
-        int completed = 0;
-        for (DocumentSnapshot receipt : receipts)
-            if (OnlineLoanRequestRepository.RETURNED.equals(receipt.getString("status")))
-                completed++;
-        message(R.id.textReaderOnlineReceiptsSummary, completed == 0
-                ? "Chưa có lượt mượn Online nào đã trả."
-                : completed + " lượt mượn Online đã hoàn tất"
-                  + (snapshot.getMetadata().isFromCache() ? " · Dữ liệu đã lưu" : ""));
+        lastReceipts = snapshot;
+        updateTabCountsAndSummary();
         for (DocumentSnapshot receipt : receipts) {
             // An open receipt is already visible under 'Đang mượn'.
             if (!OnlineLoanRequestRepository.RETURNED.equals(receipt.getString("status")))
