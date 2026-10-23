@@ -28,7 +28,8 @@ public final class ReaderOnlineBorrowActivity extends SessionActivity {
     private ListenerRegistration bookListener, requestListener;
     private String bookId, readerId, requestStatus = "";
     private int maxDays = 14, maxBooks = 5, selectedDays = 7, stock;
-    private boolean bookVerified, requestVerified, configVerified, submitting;
+    private boolean bookVerified, requestVerified, configVerified, quotaVerified, submitting;
+    private int activeOnlineCount;
     private boolean cardActive;
     private Button day3, day7, day14, confirm;
     private EditText customDays;
@@ -106,6 +107,8 @@ public final class ReaderOnlineBorrowActivity extends SessionActivity {
     @Override protected void onSessionAuthorized(SessionProfile profile) {
         stopListeners();
         readerId = profile.uid;
+        quotaVerified = false;
+        activeOnlineCount = 0;
         cardActive = profile.user != null
                 && "HoatDong".equals(profile.user.cardStatus);
         String displayName = profile.displayName == null ? "Độc giả" : profile.displayName;
@@ -179,20 +182,26 @@ public final class ReaderOnlineBorrowActivity extends SessionActivity {
                 .whereEqualTo("userId", profile.uid).get(Source.SERVER)
                 .addOnCompleteListener(this, task -> {
                     if (!validSession(profile.uid)) return;
+                    quotaVerified = task.isSuccessful();
                     if (!task.isSuccessful()) {
                         holdInfo.setText("Chưa đối soát được các yêu cầu Online khác.");
+                        refresh();
                         return;
                     }
-                    int pending = 0, approved = 0;
+                    int pending = 0, approved = 0, collected = 0;
                     for (DocumentSnapshot doc : task.getResult().getDocuments()) {
                         if (OnlineLoanRequestRepository.PENDING.equals(doc.getString("status")))
                             pending++;
                         if (OnlineLoanRequestRepository.APPROVED.equals(doc.getString("status")))
                             approved++;
+                        if (OnlineLoanRequestRepository.COLLECTED.equals(doc.getString("status")))
+                            collected++;
                     }
+                    activeOnlineCount = pending + approved + collected;
                     holdInfo.setText("Đang chờ duyệt: " + pending
-                            + " · Đã giữ chờ lấy: " + approved
-                            + "\nSách đang mượn thực tế được đối soát riêng khi giao tại quầy.");
+                            + " · Chờ lấy: " + approved + " · Đang mượn Online: " + collected
+                            + "\nNgày đến hạn được tính khi thủ thư xác nhận giao sách.");
+                    refresh();
                 });
     }
 
@@ -245,24 +254,23 @@ public final class ReaderOnlineBorrowActivity extends SessionActivity {
         for (Button button : new Button[]{day3, day7, day14}) {
             int days = button == day3 ? 3 : button == day7 ? 7 : 14;
             boolean chosen = choice == days && customDays.getText().length() == 0;
-            button.setBackgroundTintList(android.content.res.ColorStateList.valueOf(
-                    androidx.core.content.ContextCompat.getColor(this,
-                            chosen ? R.color.online_forest : R.color.online_tint)));
-            button.setTextColor(androidx.core.content.ContextCompat.getColor(this,
-                    chosen ? R.color.white : R.color.online_forest));
+            button.setSelected(chosen);
         }
         selection.setText(configVerified
                 ? "Đang chọn " + (choice > 0 ? choice : "—") + " ngày · Tối đa " + maxDays + " ngày"
                 : "Đang xác minh thời hạn mượn tối đa…");
         limit.setText(configVerified
                 ? "Hạn mức thư viện: tối đa " + maxBooks + " cuốn, " + maxDays
-                    + " ngày/lượt. Đơn mới: +1 cuốn nếu được duyệt."
+                    + " ngày/lượt. Đơn Online chưa kết thúc: " + activeOnlineCount
+                    + ". Đối soát thêm mượn tại quầy khi giao."
                 : "Đang tải cấu hình thư viện…");
         boolean active = OnlineLoanRequestRepository.PENDING.equals(requestStatus)
-                || OnlineLoanRequestRepository.APPROVED.equals(requestStatus);
+                || OnlineLoanRequestRepository.APPROVED.equals(requestStatus)
+                || OnlineLoanRequestRepository.COLLECTED.equals(requestStatus);
         confirm.setEnabled(isSessionReady() && !submitting && cardActive
-                && bookVerified && requestVerified && configVerified
-                && stock > 0 && !active && choice >= 1 && choice <= maxDays);
+                && bookVerified && requestVerified && configVerified && quotaVerified
+                && activeOnlineCount < maxBooks && stock > 0
+                && !active && choice >= 1 && choice <= maxDays);
         confirm.setText(submitting ? "Đang gửi yêu cầu…"
                 : active ? "Yêu cầu đã được ghi nhận" : "Xác nhận mượn Online");
     }
@@ -282,6 +290,7 @@ public final class ReaderOnlineBorrowActivity extends SessionActivity {
             submitting = false;
             if (task.isSuccessful()) {
                 requestStatus = OnlineLoanRequestRepository.PENDING;
+                activeOnlineCount++;
                 status.setText("Đã gửi thành công · Chờ Admin duyệt. Chưa giữ cuốn sách.");
                 Toast.makeText(this, "Yêu cầu mượn Online đã được gửi.", Toast.LENGTH_LONG).show();
             } else {
@@ -298,6 +307,8 @@ public final class ReaderOnlineBorrowActivity extends SessionActivity {
         bookVerified = false;
         requestVerified = false;
         configVerified = false;
+        quotaVerified = false;
+        activeOnlineCount = 0;
         cardActive = false;
         submitting = false;
         refresh();

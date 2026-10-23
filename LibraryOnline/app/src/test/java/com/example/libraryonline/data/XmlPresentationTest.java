@@ -47,7 +47,14 @@ public class XmlPresentationTest {
                     {R.layout.item_reader_online_request, R.id.readerOnlineItemCountdown},
                     {R.layout.item_reader_online_notification, R.id.readerOnlineNotRead},
                     {R.layout.item_admin_online_request, R.id.adminOnlineItemApprove},
-                    {R.layout.dialog_admin_online_reject, R.id.adminOnlineRejectReason}
+                    {R.layout.dialog_admin_online_reject, R.id.adminOnlineRejectReason},
+                    {R.layout.item_admin_online_request, R.id.adminOnlineReaderBarcode},
+                    {R.layout.item_admin_online_request, R.id.adminOnlineItemCollect},
+                    {R.layout.item_admin_online_request, R.id.adminOnlineItemReturn},
+                    {R.layout.item_reader_online_request, R.id.readerOnlineItemCancel},
+                    {R.layout.item_reader_online_request, R.id.readerOnlineItemDue},
+                    {R.layout.view_reader_loans, R.id.containerReaderOnlineReceipts},
+                    {R.layout.item_reader_online_receipt, R.id.readerOnlineReceiptStatus}
             };
             for (int[] pair : checks) {
                 View view = activity.getLayoutInflater().inflate(
@@ -75,6 +82,24 @@ public class XmlPresentationTest {
             assertEquals(0xFFDCE3EF, ContextCompat.getColor(activity, R.color.border));
             assertEquals(0xFF182230, ContextCompat.getColor(activity, R.color.text_primary));
             assertEquals(0xFF68758A, ContextCompat.getColor(activity, R.color.text_secondary));
+        }
+    }
+
+    @Test public void onlineDurationButtonsUseXmlSelectedStatePalette() {
+        try (ActivityController<Screen> controller =
+                Robolectric.buildActivity(Screen.class).setup()) {
+            Screen activity = controller.get();
+            ColorStateList bg = ContextCompat.getColorStateList(
+                    activity, R.color.online_borrow_day_background);
+            ColorStateList text = ContextCompat.getColorStateList(
+                    activity, R.color.online_borrow_day_text);
+            int[] selected = {android.R.attr.state_selected};
+            assertEquals(ContextCompat.getColor(activity, R.color.library_blue),
+                    bg.getColorForState(selected, 0));
+            assertEquals(ContextCompat.getColor(activity, R.color.white),
+                    text.getColorForState(selected, 0));
+            assertEquals(ContextCompat.getColor(activity, R.color.library_accent_background),
+                    bg.getDefaultColor());
         }
     }
 

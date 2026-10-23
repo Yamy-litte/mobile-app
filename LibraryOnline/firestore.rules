@@ -492,16 +492,105 @@ service cloud.firestore {
         && onlineDecisionNotice();
     }
 
+    // Confirm physical handover of the held copy. This transition cannot
+    // change stock because stock was already reduced during Admin approval.
+    function validOnlineCollection() {
+      let next = request.resource.data;
+      let copyPath = /databases/$(database)/documents/BookCopies/$(resource.data.copyId);
+      let oldCopy = get(copyPath).data;
+      let newCopy = getAfter(copyPath).data;
+      return resource.data.status == 'Approved'
+        && next.status == 'Collected'
+        && resource.data.holdUntil is timestamp
+        && request.time < resource.data.holdUntil
+        && resource.data.loanDays is int
+        && next.diff(resource.data).affectedKeys().hasOnly([
+          'status', 'receiptId', 'collectedBy', 'collectedAt', 'dueAt',
+          'notificationId', 'updatedAt'
+        ])
+        && next.receiptId is string
+        && next.receiptId.size() > 0
+        && existsAfter(/databases/$(database)/documents/OnlineLoanReceipts/$(next.receiptId))
+        && getAfter(/databases/$(database)/documents/OnlineLoanReceipts/$(next.receiptId)).data.status == 'Open'
+        && getAfter(/databases/$(database)/documents/OnlineLoanReceipts/$(next.receiptId)).data.requestId == resource.data.requestId
+        && next.collectedBy == request.auth.uid
+        && next.collectedAt == request.time
+        // A future deadline of precisely loanDays (allow client/server clock drift).
+        && next.dueAt is timestamp
+        && next.dueAt >= request.time + duration.value(resource.data.loanDays * 24 - 1, 'h')
+        && next.dueAt <= request.time + duration.value(resource.data.loanDays * 24 + 1, 'h')
+        && exists(copyPath)
+        && oldCopy.bookTitleId == resource.data.bookTitleId
+        && oldCopy.copyStatus == 'ChoLay'
+        && oldCopy.isHidden == false
+        && oldCopy.priorityUserId == resource.data.userId
+        && newCopy.copyStatus == 'DaMuon'
+        && newCopy.isHidden == false
+        && newCopy.priorityUserId == null
+        && newCopy.diff(oldCopy).affectedKeys()
+            .hasOnly(['copyStatus', 'priorityUserId', 'updatedAt'])
+        && newCopy.updatedAt == request.time
+        && activeOnlineReader(resource.data.userId)
+        && onlineDecisionNotice();
+    }
+
+    // Online returns are a separate verified transaction; a returned copy
+    // must become available exactly once, and hidden inventory needs manual review.
+    function validOnlineReturn() {
+      let next = request.resource.data;
+      let copyPath = /databases/$(database)/documents/BookCopies/$(resource.data.copyId);
+      let titlePath = /databases/$(database)/documents/BookTitles/$(resource.data.bookTitleId);
+      let oldCopy = get(copyPath).data;
+      let newCopy = getAfter(copyPath).data;
+      return resource.data.status == 'Collected'
+        && next.status == 'Returned'
+        && next.diff(resource.data).affectedKeys().hasOnly([
+          'status', 'returnedAt', 'returnedBy', 'notificationId', 'updatedAt'
+        ])
+        && resource.data.receiptId is string
+        && exists(/databases/$(database)/documents/OnlineLoanReceipts/$(resource.data.receiptId))
+        && get(/databases/$(database)/documents/OnlineLoanReceipts/$(resource.data.receiptId)).data.status == 'Open'
+        && getAfter(/databases/$(database)/documents/OnlineLoanReceipts/$(resource.data.receiptId)).data.status == 'Returned'
+        && getAfter(/databases/$(database)/documents/OnlineLoanReceipts/$(resource.data.receiptId)).data.returnedAt == request.time
+        && next.returnedBy == request.auth.uid
+        && next.returnedAt == request.time
+        && exists(copyPath)
+        && oldCopy.copyStatus == 'DaMuon'
+        && oldCopy.priorityUserId == null
+        && oldCopy.isHidden == false
+        && oldCopy.bookTitleId == resource.data.bookTitleId
+        && newCopy.copyStatus == 'SanSang'
+        && newCopy.isHidden == false
+        && newCopy.priorityUserId == null
+        && newCopy.diff(oldCopy).affectedKeys()
+            .hasOnly(['copyStatus', 'priorityUserId', 'updatedAt'])
+        && newCopy.updatedAt == request.time
+        && get(titlePath).data.isHidden == false
+        && get(titlePath).data.availableCopies < get(titlePath).data.totalCopies
+        && getAfter(titlePath).data.availableCopies == get(titlePath).data.availableCopies + 1
+        && getAfter(titlePath).data.totalCopies == get(titlePath).data.totalCopies
+        && getAfter(titlePath).data.updatedAt == request.time
+        && onlineDecisionNotice();
+    }
+
     match /OnlineLoanRequests/{requestId} {
       allow read: if isAdmin()
         || (signedIn() && resource.data.userId == request.auth.uid);
       allow create: if validNewOnlineRequest(requestId);
       allow update: if (
-        // Reader re-submits a rejected/expired request; previous decision metadata
-        // must be cleared, and attempt must increase, preserving the same title.
         signedIn()
         && request.auth.uid == resource.data.userId
-        && resource.data.status in ['Rejected', 'Expired']
+        && resource.data.status == 'Pending'
+        && request.resource.data.status == 'Cancelled'
+        && request.resource.data.diff(resource.data).affectedKeys()
+            .hasOnly(['status', 'updatedAt'])
+        && request.resource.data.updatedAt == request.time
+      ) || (
+        // Reader re-submits a rejected, expired, cancelled or returned request;
+        // previous decision and checkout metadata must be cleared and attempt incremented.
+        signedIn()
+        && request.auth.uid == resource.data.userId
+        && resource.data.status in ['Rejected', 'Expired', 'Returned', 'Cancelled']
         && request.resource.data.keys().hasOnly([
           'requestId', 'userId', 'bookTitleId', 'bookTitle',
           'loanDays', 'status', 'attempt', 'createdAt', 'updatedAt'
@@ -541,7 +630,72 @@ service cloud.firestore {
         && request.resource.data.createdAt == resource.data.createdAt
         && request.resource.data.updatedAt == request.time
         && validOnlineExpiry()
+      ) || (
+        isAdmin()
+        && request.resource.data.userId == resource.data.userId
+        && request.resource.data.bookTitleId == resource.data.bookTitleId
+        && request.resource.data.requestId == resource.data.requestId
+        && request.resource.data.attempt == resource.data.attempt
+        && request.resource.data.loanDays == resource.data.loanDays
+        && request.resource.data.createdAt == resource.data.createdAt
+        && request.resource.data.updatedAt == request.time
+        && validOnlineCollection()
+      ) || (
+        isAdmin()
+        && request.resource.data.userId == resource.data.userId
+        && request.resource.data.bookTitleId == resource.data.bookTitleId
+        && request.resource.data.requestId == resource.data.requestId
+        && request.resource.data.attempt == resource.data.attempt
+        && request.resource.data.loanDays == resource.data.loanDays
+        && request.resource.data.createdAt == resource.data.createdAt
+        && request.resource.data.updatedAt == request.time
+        && validOnlineReturn()
       );
+      allow delete: if false;
+    }
+
+    // Per-attempt cloud receipts are the durable loan history. Approval alone
+    // is not a loan receipt: a receipt appears only after verified physical pickup.
+    match /OnlineLoanReceipts/{receiptId} {
+      allow read: if isAdmin()
+        || (signedIn() && resource.data.userId == request.auth.uid);
+      allow create: if isAdmin()
+        && request.resource.data.keys().hasAll([
+          'requestId', 'userId', 'bookTitleId', 'bookTitle', 'copyId',
+          'loanDays', 'attempt', 'status', 'collectedAt', 'collectedBy',
+          'dueAt', 'returnedAt', 'returnedBy'
+        ])
+        && request.resource.data.keys().hasOnly([
+          'requestId', 'userId', 'bookTitleId', 'bookTitle', 'copyId',
+          'loanDays', 'attempt', 'status', 'collectedAt', 'collectedBy',
+          'dueAt', 'returnedAt', 'returnedBy'
+        ])
+        && request.resource.data.status == 'Open'
+        && request.resource.data.collectedBy == request.auth.uid
+        && request.resource.data.collectedAt == request.time
+        && request.resource.data.returnedAt == null
+        && request.resource.data.returnedBy == null
+        && request.resource.data.dueAt is timestamp
+        && getAfter(/databases/$(database)/documents/OnlineLoanRequests/$(request.resource.data.requestId)).data.status == 'Collected'
+        && getAfter(/databases/$(database)/documents/OnlineLoanRequests/$(request.resource.data.requestId)).data.receiptId == receiptId
+        && getAfter(/databases/$(database)/documents/OnlineLoanRequests/$(request.resource.data.requestId)).data.copyId == request.resource.data.copyId
+        && getAfter(/databases/$(database)/documents/OnlineLoanRequests/$(request.resource.data.requestId)).data.userId == request.resource.data.userId
+        && getAfter(/databases/$(database)/documents/OnlineLoanRequests/$(request.resource.data.requestId)).data.bookTitleId == request.resource.data.bookTitleId
+        && getAfter(/databases/$(database)/documents/OnlineLoanRequests/$(request.resource.data.requestId)).data.bookTitle == request.resource.data.bookTitle
+        && getAfter(/databases/$(database)/documents/OnlineLoanRequests/$(request.resource.data.requestId)).data.loanDays == request.resource.data.loanDays
+        && getAfter(/databases/$(database)/documents/OnlineLoanRequests/$(request.resource.data.requestId)).data.collectedAt == request.resource.data.collectedAt
+        && getAfter(/databases/$(database)/documents/OnlineLoanRequests/$(request.resource.data.requestId)).data.attempt == request.resource.data.attempt
+        && getAfter(/databases/$(database)/documents/OnlineLoanRequests/$(request.resource.data.requestId)).data.dueAt == request.resource.data.dueAt;
+      allow update: if isAdmin()
+        && resource.data.status == 'Open'
+        && request.resource.data.status == 'Returned'
+        && request.resource.data.diff(resource.data).affectedKeys()
+            .hasOnly(['status', 'returnedAt', 'returnedBy'])
+        && request.resource.data.returnedAt == request.time
+        && request.resource.data.returnedBy == request.auth.uid
+        && getAfter(/databases/$(database)/documents/OnlineLoanRequests/$(resource.data.requestId)).data.status == 'Returned'
+        && getAfter(/databases/$(database)/documents/OnlineLoanRequests/$(resource.data.requestId)).data.receiptId == receiptId
+        && getAfter(/databases/$(database)/documents/OnlineLoanRequests/$(resource.data.requestId)).data.returnedAt == request.time;
       allow delete: if false;
     }
 
@@ -557,7 +711,7 @@ service cloud.firestore {
           'requestId', 'userId', 'status', 'attempt', 'title',
           'message', 'createdAt', 'readAt'
         ])
-        && request.resource.data.status in ['Approved', 'Rejected', 'Expired']
+        && request.resource.data.status in ['Approved', 'Rejected', 'Expired', 'Collected', 'Returned']
         && request.resource.data.attempt is int
         && request.resource.data.title is string
         && request.resource.data.message is string

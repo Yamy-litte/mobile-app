@@ -127,10 +127,11 @@ final class AdminOnlineLoanController {
             if (!knownApprovedHolds.isEmpty())
                 expiryHandler.postDelayed(expiryPulse, 60_000L);
         }
-        int pending = 0, approved = 0;
+        int pending = 0, approved = 0, collected = 0;
         for (DocumentSnapshot doc : docs) {
             if (OnlineLoanRequestRepository.PENDING.equals(doc.getString("status"))) pending++;
             if (OnlineLoanRequestRepository.APPROVED.equals(doc.getString("status"))) approved++;
+            if (OnlineLoanRequestRepository.COLLECTED.equals(doc.getString("status"))) collected++;
         }
         if (!snapshot.getMetadata().isFromCache()) {
             java.util.List<String> ids = new java.util.ArrayList<>();
@@ -148,7 +149,8 @@ final class AdminOnlineLoanController {
         }
         final int count = pending;
         ((TextView) activity.findViewById(R.id.textAdminOnlineCount))
-                .setText(count + " đang chờ duyệt · " + approved + " đã giữ sách"
+                .setText(count + " đang chờ duyệt · " + approved + " chờ lấy · "
+                        + collected + " đang mượn"
                         + (snapshot.getMetadata().isFromCache()
                                 ? " · Dữ liệu đã lưu, chờ kết nối" : ""));
         if (previousPending >= 0 && pending > previousPending
@@ -158,7 +160,7 @@ final class AdminOnlineLoanController {
                     Toast.LENGTH_LONG).show();
         previousPending = pending;
 
-        if (pending == 0 && approved == 0) {
+        if (pending == 0 && approved == 0 && collected == 0) {
             TextView empty = (TextView) activity.getLayoutInflater().inflate(
                     R.layout.view_ui_text_secondary, container, false);
             empty.setText("Hiện không có yêu cầu cần xử lý.");
@@ -168,7 +170,8 @@ final class AdminOnlineLoanController {
         for (DocumentSnapshot doc : docs) {
             String state = doc.getString("status");
             if (!OnlineLoanRequestRepository.PENDING.equals(state)
-                    && !OnlineLoanRequestRepository.APPROVED.equals(state)) continue;
+                    && !OnlineLoanRequestRepository.APPROVED.equals(state)
+                    && !OnlineLoanRequestRepository.COLLECTED.equals(state)) continue;
             View item = activity.getLayoutInflater().inflate(
                     R.layout.item_admin_online_request, container, false);
             container.addView(item);
@@ -214,6 +217,15 @@ final class AdminOnlineLoanController {
                     });
                 }
                 if (!snapshot.getMetadata().isFromCache()) checkExpiry(doc, uid);
+                bindOnlineHandover(item, doc, uid, snapshot.getMetadata().isFromCache(), false);
+                continue;
+            }
+            if (OnlineLoanRequestRepository.COLLECTED.equals(state)) {
+                TextView loanState = item.findViewById(R.id.adminOnlineItemLoanState);
+                loanState.setVisibility(View.VISIBLE);
+                loanState.setText("Đã giao: " + date(doc.getTimestamp("collectedAt"))
+                        + " · Hạn trả: " + date(doc.getTimestamp("dueAt")));
+                bindOnlineHandover(item, doc, uid, snapshot.getMetadata().isFromCache(), true);
                 continue;
             }
             TextView sent = item.findViewById(R.id.adminOnlineItemSent);
@@ -252,6 +264,55 @@ final class AdminOnlineLoanController {
                 show(dialog);
             });
         }
+    }
+
+    /** Only the XML fields are presentation; this controller only verifies data and binds actions. */
+    private void bindOnlineHandover(View item, DocumentSnapshot request, String uid,
+                                     boolean cached, boolean returning) {
+        View panel = item.findViewById(R.id.adminOnlineHandoverPanel);
+        panel.setVisibility(View.VISIBLE);
+        EditText readerBarcode = item.findViewById(R.id.adminOnlineReaderBarcode);
+        EditText copyBarcode = item.findViewById(R.id.adminOnlineCopyBarcode);
+        Button action = item.findViewById(returning
+                ? R.id.adminOnlineItemReturn : R.id.adminOnlineItemCollect);
+        action.setVisibility(View.VISIBLE);
+        action.setEnabled(!cached);
+        action.setOnClickListener(v -> {
+            if (!current(uid) || !action.isEnabled()) return;
+            String reader = readerBarcode.getText().toString().trim();
+            String copy = copyBarcode.getText().toString().trim();
+            if (reader.isEmpty() || copy.isEmpty()) {
+                Toast.makeText(activity, "Quét/nhập đủ mã thẻ và mã cuốn sách.",
+                        Toast.LENGTH_LONG).show();
+                return;
+            }
+            showConfirmation(returning ? "Xác nhận trả sách Online" : "Xác nhận giao sách Online",
+                    returning ? "Đã nhận lại đúng cuốn sách và xác minh thẻ độc giả?"
+                            : "Đã đối chiếu mã thẻ và mã cuốn thực tế trước khi giao sách?",
+                    () -> {
+                        if (!current(uid)) return;
+                        action.setEnabled(false);
+                        com.google.android.gms.tasks.Task<Void> task = returning
+                                ? repository.returnOnline(request.getId(), uid, reader, copy)
+                                : repository.collect(request.getId(), uid, reader, copy);
+                        task.addOnCompleteListener(activity, result -> {
+                            if (!current(uid)) return;
+                            if (!result.isSuccessful()) {
+                                action.setEnabled(true);
+                                Toast.makeText(activity, "Không thể xác nhận: "
+                                        + (result.getException() == null
+                                          ? "Cần tải lại dữ liệu." : result.getException().getMessage()),
+                                        Toast.LENGTH_LONG).show();
+                            } else {
+                                Toast.makeText(activity, returning
+                                                ? "Đã xác nhận trả sách Online trên Firestore."
+                                                : "Đã giao sách Online và ghi nhận hạn trả.",
+                                        Toast.LENGTH_LONG).show();
+                                // Firestore's listener redraws the new state.
+                            }
+                        });
+                    });
+        });
     }
 
     private void showConfirmation(String title, String body, Runnable action) {

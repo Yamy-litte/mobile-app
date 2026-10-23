@@ -6,6 +6,6 @@
         <item name="android:textSize">14sp</item>
         <item name="android:minWidth">0dp</item>
         <item name="android:backgroundTint">@color/library_accent_background</item>
-        <item name="android:textColor">@color/library_blue</item>
+        <item name="android:textColor">@color/online_borrow_day_text</item>
     </style>
 </resources>
