@@ -418,31 +418,20 @@ service cloud.firestore {
         && getAfter(notificationPath).data.readAt == null;
     }
 
+    // Approval reserves ONE free title-level slot, never a physical BookCopy.
+    // Firestore serializes concurrent approvals updating the same BookTitles doc.
     function validOnlineApproval() {
       let next = request.resource.data;
-      let copyPath = /databases/$(database)/documents/BookCopies/$(next.copyId);
       let titlePath = /databases/$(database)/documents/BookTitles/$(resource.data.bookTitleId);
       return next.status == 'Approved'
         && next.diff(resource.data).affectedKeys().hasOnly([
-          'status', 'copyId', 'holdUntil', 'reviewedBy', 'reviewedAt',
+          'status', 'holdUntil', 'reviewedBy', 'reviewedAt',
           'notificationId', 'updatedAt'
         ])
-        && next.copyId is string
-        && next.copyId.size() > 0
+        && !next.keys().hasAny(['copyId'])
         && next.holdUntil is timestamp
         && next.holdUntil > request.time
         && next.holdUntil <= request.time + duration.value(25, 'h')
-        && exists(copyPath)
-        && get(copyPath).data.bookTitleId == resource.data.bookTitleId
-        && get(copyPath).data.copyStatus == 'SanSang'
-        && get(copyPath).data.isHidden == false
-        && get(copyPath).data.priorityUserId == null
-        && getAfter(copyPath).data.copyStatus == 'ChoLay'
-        && getAfter(copyPath).data.isHidden == false
-        && getAfter(copyPath).data.priorityUserId == resource.data.userId
-        && getAfter(copyPath).data.diff(get(copyPath).data).affectedKeys()
-            .hasOnly(['copyStatus', 'priorityUserId', 'updatedAt'])
-        && getAfter(copyPath).data.updatedAt == request.time
         && get(titlePath).data.isHidden == false
         && get(titlePath).data.availableCopies > 0
         && getAfter(titlePath).data.availableCopies == get(titlePath).data.availableCopies - 1
@@ -467,8 +456,9 @@ service cloud.firestore {
 
     function validOnlineExpiry() {
       let next = request.resource.data;
-      let copyPath = /databases/$(database)/documents/BookCopies/$(resource.data.copyId);
       let titlePath = /databases/$(database)/documents/BookTitles/$(resource.data.bookTitleId);
+      // Legacy orders approved before this migration already locked a copy.
+      let legacy = resource.data.keys().hasAny(['copyId']);
       return resource.data.status == 'Approved'
         && next.status == 'Expired'
         && resource.data.holdUntil is timestamp
@@ -476,16 +466,18 @@ service cloud.firestore {
         && next.diff(resource.data).affectedKeys().hasOnly([
           'status', 'notificationId', 'updatedAt'
         ])
-        && exists(copyPath)
-        && get(copyPath).data.copyStatus == 'ChoLay'
-        && get(copyPath).data.priorityUserId == resource.data.userId
-        && get(copyPath).data.isHidden == false
-        && getAfter(copyPath).data.copyStatus == 'SanSang'
-        && getAfter(copyPath).data.priorityUserId == null
-        && getAfter(copyPath).data.isHidden == false
-        && getAfter(copyPath).data.diff(get(copyPath).data).affectedKeys()
-            .hasOnly(['copyStatus', 'priorityUserId', 'updatedAt'])
-        && getAfter(copyPath).data.updatedAt == request.time
+        && (!legacy || (
+          exists(/databases/$(database)/documents/BookCopies/$(resource.data.copyId))
+          && get(/databases/$(database)/documents/BookCopies/$(resource.data.copyId)).data.copyStatus == 'ChoLay'
+          && get(/databases/$(database)/documents/BookCopies/$(resource.data.copyId)).data.priorityUserId == resource.data.userId
+          && getAfter(/databases/$(database)/documents/BookCopies/$(resource.data.copyId)).data.copyStatus == 'SanSang'
+          && getAfter(/databases/$(database)/documents/BookCopies/$(resource.data.copyId)).data.priorityUserId == null
+          && getAfter(/databases/$(database)/documents/BookCopies/$(resource.data.copyId)).data.diff(
+                get(/databases/$(database)/documents/BookCopies/$(resource.data.copyId)).data
+              ).affectedKeys().hasOnly(['copyStatus', 'priorityUserId', 'updatedAt'])
+          && getAfter(/databases/$(database)/documents/BookCopies/$(resource.data.copyId)).data.updatedAt == request.time
+        ))
+        && get(titlePath).data.availableCopies < get(titlePath).data.totalCopies
         && getAfter(titlePath).data.availableCopies == get(titlePath).data.availableCopies + 1
         && getAfter(titlePath).data.totalCopies == get(titlePath).data.totalCopies
         && getAfter(titlePath).data.updatedAt == request.time
@@ -496,18 +488,22 @@ service cloud.firestore {
     // change stock because stock was already reduced during Admin approval.
     function validOnlineCollection() {
       let next = request.resource.data;
-      let copyPath = /databases/$(database)/documents/BookCopies/$(resource.data.copyId);
+      let copyPath = /databases/$(database)/documents/BookCopies/$(next.copyId);
       let oldCopy = get(copyPath).data;
       let newCopy = getAfter(copyPath).data;
+      let legacy = resource.data.keys().hasAny(['copyId']);
       return resource.data.status == 'Approved'
         && next.status == 'Collected'
         && resource.data.holdUntil is timestamp
         && request.time < resource.data.holdUntil
         && resource.data.loanDays is int
         && next.diff(resource.data).affectedKeys().hasOnly([
-          'status', 'receiptId', 'collectedBy', 'collectedAt', 'dueAt',
+          'status', 'copyId', 'receiptId', 'collectedBy', 'collectedAt', 'dueAt',
           'notificationId', 'updatedAt'
         ])
+        && next.copyId is string
+        && next.copyId.size() > 0
+        && (!legacy || next.copyId == resource.data.copyId)
         && next.receiptId is string
         && next.receiptId.size() > 0
         && existsAfter(/databases/$(database)/documents/OnlineLoanReceipts/$(next.receiptId))
@@ -515,15 +511,18 @@ service cloud.firestore {
         && getAfter(/databases/$(database)/documents/OnlineLoanReceipts/$(next.receiptId)).data.requestId == resource.data.requestId
         && next.collectedBy == request.auth.uid
         && next.collectedAt == request.time
-        // A future deadline of precisely loanDays (allow client/server clock drift).
         && next.dueAt is timestamp
         && next.dueAt >= request.time + duration.value(resource.data.loanDays * 24 - 1, 'h')
         && next.dueAt <= request.time + duration.value(resource.data.loanDays * 24 + 1, 'h')
         && exists(copyPath)
         && oldCopy.bookTitleId == resource.data.bookTitleId
-        && oldCopy.copyStatus == 'ChoLay'
         && oldCopy.isHidden == false
-        && oldCopy.priorityUserId == resource.data.userId
+        && ((legacy
+             && oldCopy.copyStatus == 'ChoLay'
+             && oldCopy.priorityUserId == resource.data.userId)
+            || (!legacy
+             && oldCopy.copyStatus == 'SanSang'
+             && oldCopy.priorityUserId == null))
         && newCopy.copyStatus == 'DaMuon'
         && newCopy.isHidden == false
         && newCopy.priorityUserId == null
