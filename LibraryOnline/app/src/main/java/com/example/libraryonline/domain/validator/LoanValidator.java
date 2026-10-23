@@ -49,14 +49,10 @@ public final class LoanValidator {
         }
         if (copy.isHidden || copy.parentTitleHidden) return "Cuốn sách đang bị ẩn khỏi phục vụ.";
         if (COPY_AVAILABLE.equals(copy.copyStatus)) return null;
-        if (COPY_ONLINE_HOLD.equals(copy.copyStatus) && sameId(copy.priorityUserId, readerId)) return null;
-        if (COPY_RESERVED.equals(copy.copyStatus) && sameId(copy.priorityUserId, readerId)) return null;
-        if (COPY_ONLINE_HOLD.equals(copy.copyStatus)) return "Cuốn sách đang được giữ cho độc giả khác đến nhận.";
-        if (COPY_RESERVED.equals(copy.copyStatus)) return "Cuốn sách được ưu tiên cho độc giả đặt trước khác.";
+        if (COPY_ONLINE_HOLD.equals(copy.copyStatus))
+            return "Cuốn đang giữ Online; hãy dùng quy trình giao sách Online.";
+        if (COPY_RESERVED.equals(copy.copyStatus))
+            return "Cuốn đang ở trạng thái đặt trước cũ; Admin cần đối soát.";
         return "Cuốn sách hiện không ở trạng thái sẵn sàng cho mượn.";
-    }
-
-    private static boolean sameId(String first, String second) {
-        return first != null && second != null && first.equals(second);
     }
 }
