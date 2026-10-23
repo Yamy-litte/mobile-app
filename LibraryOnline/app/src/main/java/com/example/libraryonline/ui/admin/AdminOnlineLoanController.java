@@ -55,6 +55,7 @@ final class AdminOnlineLoanController {
     };
     private String adminUid;
     private int previousPending = -1;
+    private String lastServerActivitySignature;
 
     AdminOnlineLoanController(AdminMainActivity activity) { this.activity = activity; }
 
@@ -84,6 +85,7 @@ final class AdminOnlineLoanController {
     void stop() {
         adminUid = null;
         previousPending = -1;
+        lastServerActivitySignature = null;
         activity.homeOnlineWorkUnavailable("Chưa tải yêu cầu Online.");
         expiryAttempted.clear();
         expiryHandler.removeCallbacks(expiryPulse);
@@ -140,6 +142,25 @@ final class AdminOnlineLoanController {
         activity.updateHomeOnlineWork(pending, approved, collected,
                 snapshot.getMetadata().isFromCache()
                         || snapshot.getMetadata().hasPendingWrites());
+        // Refresh the combined SQLite/Firestore dashboard when another Reader
+        // submits a request or an Admin processes one. Ignore cache-only and
+        // metadata-only snapshots to avoid repeated aggregate fetches.
+        if (!snapshot.getMetadata().isFromCache()
+                && !snapshot.getMetadata().hasPendingWrites()) {
+            StringBuilder signature = new StringBuilder();
+            for (DocumentSnapshot item : docs) {
+                Timestamp changed = item.getTimestamp("updatedAt");
+                signature.append(item.getId()).append(':')
+                        .append(item.getString("status")).append(':')
+                        .append(changed == null ? 0L : changed.toDate().getTime())
+                        .append(';');
+            }
+            String currentSignature = signature.toString();
+            if (!currentSignature.equals(lastServerActivitySignature)) {
+                lastServerActivitySignature = currentSignature;
+                activity.refreshDashboardAfterCirculation();
+            }
+        }
         if (!snapshot.getMetadata().isFromCache()) {
             java.util.List<String> ids = new java.util.ArrayList<>();
             for (DocumentSnapshot d : docs)
