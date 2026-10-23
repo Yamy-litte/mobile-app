@@ -247,11 +247,7 @@ public final class ReaderOnlineBorrowActivity extends SessionActivity {
         for (Button button : new Button[]{day3, day7, day14}) {
             int days = button == day3 ? 3 : button == day7 ? 7 : 14;
             boolean chosen = choice == days && customDays.getText().length() == 0;
-            button.setBackgroundTintList(android.content.res.ColorStateList.valueOf(
-                    androidx.core.content.ContextCompat.getColor(this,
-                            chosen ? R.color.online_forest : R.color.online_tint)));
-            button.setTextColor(androidx.core.content.ContextCompat.getColor(this,
-                    chosen ? R.color.white : R.color.online_forest));
+            button.setSelected(chosen);
         }
         selection.setText(configVerified
                 ? "Đang chọn " + (choice > 0 ? choice : "—") + " ngày · Tối đa " + maxDays + " ngày"
