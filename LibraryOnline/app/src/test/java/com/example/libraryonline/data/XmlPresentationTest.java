@@ -37,6 +37,7 @@ public class XmlPresentationTest {
             Screen activity = controller.get();
             int[][] checks = {
                     {R.layout.view_admin_reader_list, R.id.adminReaderSearch},
+                    {R.layout.view_admin_reader_list, R.id.adminReaderScanCard},
                     {R.layout.item_admin_reader_profile, R.id.adminReaderCardOpen},
                     {R.layout.view_admin_reader_detail, R.id.adminReaderDetailLock},
                     {R.layout.view_admin_config_panel, R.id.adminConfigBooksInput},
