@@ -497,6 +497,60 @@ public final class OnlineLoanRequestRepository {
         });
     }
 
+    /**
+     * From physical pickup onward the renewal rule is identical to a direct
+     * counter loan: one seven-day extension, never after the due date.
+     * Updating request and receipt together keeps both reader views consistent.
+     */
+    public Task<Void> extendLoan(String uid, String requestId) {
+        FirebaseUser auth = FirebaseAuth.getInstance().getCurrentUser();
+        if (auth == null || uid == null || !uid.equals(auth.getUid())
+                || requestId == null || requestId.trim().isEmpty())
+            return Tasks.forException(new IllegalArgumentException("Phiên độc giả không hợp lệ."));
+        DocumentReference requestRef = db.collection(REQUESTS).document(requestId);
+        return db.runTransaction(tx -> {
+            DocumentSnapshot request = tx.get(requestRef);
+            if (!request.exists() || !uid.equals(request.getString("userId"))
+                    || !COLLECTED.equals(request.getString("status")))
+                throw new IllegalArgumentException("Khoản mượn chưa được giao hoặc đã trả.");
+            String receiptId = request.getString("receiptId");
+            if (receiptId == null || receiptId.isEmpty())
+                throw new IllegalArgumentException("Không tìm thấy phiếu mượn đã giao.");
+            DocumentReference receiptRef = db.collection("OnlineLoanReceipts").document(receiptId);
+            DocumentSnapshot receipt = tx.get(receiptRef);
+            if (!receipt.exists() || !"Open".equals(receipt.getString("status"))
+                    || !requestId.equals(receipt.getString("requestId"))
+                    || !uid.equals(receipt.getString("userId")))
+                throw new IllegalArgumentException("Phiếu giao sách không còn hoạt động.");
+            Timestamp oldDue = receipt.getTimestamp("dueAt");
+            if (oldDue == null || request.getTimestamp("dueAt") == null
+                    || !oldDue.equals(request.getTimestamp("dueAt")))
+                throw new IllegalArgumentException("Hạn trả không khớp, cần đối soát.");
+            Long count = receipt.getLong("extensionCount");
+            long countValue = count == null ? 0L : count;
+            if (Boolean.TRUE.equals(receipt.getBoolean("extended"))) countValue = 1L;
+            Long requestCount = request.getLong("extensionCount");
+            if ((requestCount != null && requestCount > 0)
+                    || Boolean.TRUE.equals(request.getBoolean("extended"))) countValue = 1L;
+            String reason = com.example.libraryonline.domain.validator.LoanExtensionPolicy
+                    .rejection(false, (int) countValue, oldDue.toDate().getTime(),
+                            System.currentTimeMillis());
+            if (reason != null) throw new IllegalArgumentException(reason);
+            Timestamp newDue = new Timestamp(new Date(
+                    com.example.libraryonline.domain.validator.LoanExtensionPolicy
+                            .extendMillis(oldDue.toDate().getTime())));
+            Map<String, Object> changes = new HashMap<>();
+            changes.put("dueAt", newDue);
+            changes.put("originalDueAt", oldDue);
+            changes.put("extensionCount", 1L);
+            changes.put("extended", true);
+            tx.update(receiptRef, changes);
+            changes.put("updatedAt", FieldValue.serverTimestamp());
+            tx.update(requestRef, changes);
+            return (Void) null;
+        });
+    }
+
     public Task<Void> markNotificationRead(String notificationId) {
         return db.collection(NOTIFICATIONS).document(notificationId)
                 .update("readAt", FieldValue.serverTimestamp());
