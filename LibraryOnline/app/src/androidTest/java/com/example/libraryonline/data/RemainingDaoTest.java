@@ -41,11 +41,11 @@ public class RemainingDaoTest {
         assertTrue(new AdminDao(db).insert(admin)>0);
         assertEquals("EMP-1", new AdminDao(db).findByUserId("u-1").employeeCode);
 
-        RegistrationRequest request = new RegistrationRequest();
-        request.requestId="req-1"; request.fullName="New Reader"; request.dateOfBirth="2001-01-01";
-        request.email="new@test.example"; request.phone="0900000000"; request.createdAt="2026-10-20";
-        assertTrue(new RegistrationRequestDao(db).insert(request)>0);
-        assertEquals(1, new RegistrationRequestDao(db).findPending().size());
+        // Historical tables remain compatible even without unused DAO wrappers.
+        db.execSQL("INSERT INTO RegistrationRequests(requestId,fullName,dateOfBirth,email,phone,createdAt) "
+                + "VALUES('req-1','New Reader','2001-01-01','new@test.example','0900000000','2026-10-20')");
+        assertEquals(1L, android.database.DatabaseUtils.longForQuery(db,
+                "SELECT COUNT(*) FROM RegistrationRequests", null));
 
         BookTitle title = new BookTitle();
         title.bookTitleId="title-1"; title.title="Test Book"; title.totalCopies=1; title.availableCopies=1;
@@ -58,11 +58,10 @@ public class RemainingDaoTest {
         assertTrue(new BookCopyDao(db).insert(copy)>0);
         assertEquals(1, new BookCopyDao(db).findAvailableByTitle("title-1").size());
 
-        LoanReceipt receipt = new LoanReceipt();
-        receipt.loanReceiptId="receipt-1"; receipt.userId="u-1"; receipt.adminId="a-1";
-        receipt.loanType="TrucTiep"; receipt.createdAt="2026-10-20";
-        assertTrue(new LoanReceiptDao(db).insert(receipt)>0);
-        assertEquals(1, new LoanReceiptDao(db).findByUser("u-1").size());
+        db.execSQL("INSERT INTO LoanReceipts(loanReceiptId,userId,adminId,loanType,createdAt) "
+                + "VALUES('receipt-1','u-1','a-1','TrucTiep','2026-10-20')");
+        assertEquals(1L, android.database.DatabaseUtils.longForQuery(db,
+                "SELECT COUNT(*) FROM LoanReceipts WHERE userId='u-1'", null));
 
         LoanDetail detail = new LoanDetail();
         detail.loanDetailId="detail-1"; detail.loanReceiptId="receipt-1"; detail.copyId="copy-1";
@@ -70,24 +69,20 @@ public class RemainingDaoTest {
         assertTrue(new LoanDetailDao(db).insert(detail)>0);
         assertEquals(1, new LoanDetailDao(db).findActiveByUser("u-1").size());
 
-        Reservation reservation = new Reservation();
-        reservation.reservationId="reservation-1"; reservation.userId="u-1"; reservation.bookTitleId="title-1";
-        reservation.reservationType="Online"; reservation.createdAt="2026-10-20";
-        assertTrue(new ReservationDao(db).insert(reservation)>0);
-        assertEquals(1, new ReservationDao(db).findQueue("title-1").size());
+        db.execSQL("INSERT INTO Reservations(reservationId,userId,bookTitleId,reservationType,reservationStatus,createdAt) "
+                + "VALUES('reservation-1','u-1','title-1','Online','Pending','2026-10-20')");
+        assertEquals(1L, android.database.DatabaseUtils.longForQuery(db,
+                "SELECT COUNT(*) FROM Reservations WHERE bookTitleId='title-1'", null));
 
-        Penalty penalty = new Penalty();
-        penalty.penaltyId="penalty-1"; penalty.userId="u-1"; penalty.copyId="copy-1";
-        penalty.penaltyType="LateReturn"; penalty.daysLate=2; penalty.amountDue=10000;
-        penalty.createdAt="2026-10-20";
-        assertTrue(new PenaltyDao(db).insert(penalty)>0);
-        assertEquals(1, new PenaltyDao(db).findUnpaidByUser("u-1").size());
+        db.execSQL("INSERT INTO Penalties(penaltyId,userId,copyId,penaltyType,daysLate,amountDue,createdAt) "
+                + "VALUES('penalty-1','u-1','copy-1','LateReturn',2,10000,'2026-10-20')");
+        assertEquals(1L, android.database.DatabaseUtils.longForQuery(db,
+                "SELECT COUNT(*) FROM Penalties WHERE userId='u-1'", null));
 
-        PenaltyPayment payment = new PenaltyPayment();
-        payment.paymentId="payment-1"; payment.penaltyId="penalty-1"; payment.receivedBy="a-1";
-        payment.amountReceived=5000; payment.paymentMethod="Cash"; payment.receivedAt="2026-10-20";
-        assertTrue(new PenaltyPaymentDao(db).insert(payment)>0);
-        assertEquals(1, new PenaltyPaymentDao(db).findByPenalty("penalty-1").size());
+        db.execSQL("INSERT INTO PenaltyPayments(paymentId,penaltyId,receivedBy,amountReceived,paymentMethod,receivedAt) "
+                + "VALUES('payment-1','penalty-1','a-1',5000,'Cash','2026-10-20')");
+        assertEquals(1L, android.database.DatabaseUtils.longForQuery(db,
+                "SELECT COUNT(*) FROM PenaltyPayments WHERE penaltyId='penalty-1'", null));
 
         LibraryNotification notification = new LibraryNotification();
         notification.notificationId="notification-1"; notification.userId="u-1";
