@@ -79,15 +79,16 @@
                         android:inputType="text"
                         android:drawableStart="@drawable/ic_inventory_search"
                         android:drawablePadding="8dp"/>
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/inventoryScanBarcode"
+                        style="@style/InventoryOutline"
+                        android:layout_marginTop="8dp"
+                        android:text="Quét barcode bằng camera" />
                     <LinearLayout
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:orientation="horizontal"
                         android:gravity="center_vertical">
-                        <com.google.android.material.button.MaterialButton
-                            android:id="@+id/inventoryScanBarcode"
-                            style="@style/InventoryHalf"
-                            android:text="Quét camera" />
                         <com.google.android.material.button.MaterialButton
                             android:id="@+id/inventoryFindBarcode"
                             style="@style/InventoryHalf"
