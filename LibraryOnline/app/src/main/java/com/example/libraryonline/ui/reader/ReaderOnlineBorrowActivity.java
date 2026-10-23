@@ -140,18 +140,29 @@ public final class ReaderOnlineBorrowActivity extends SessionActivity {
         }
         status.setText("Đang xác minh sách và hạn mức với thư viện…");
         String id = OnlineLoanRequestRepository.requestId(profile.uid, bookId);
+        // A collection query scoped to the signed-in UID can return an empty
+        // result under the existing Rules. A direct get() on a yet-missing
+        // request document would be denied by older deployed Rules.
         requestListener = db.collection(OnlineLoanRequestRepository.REQUESTS)
-                .document(id).addSnapshotListener(MetadataChanges.INCLUDE, (doc, error) -> {
+                .whereEqualTo("userId", profile.uid)
+                .addSnapshotListener(MetadataChanges.INCLUDE, (snapshot, error) -> {
                     if (!validSession(profile.uid)) return;
                     if (error != null) {
                         requestVerified = false;
                         status.setText(remoteError(error,
                                 "Chưa kiểm tra được yêu cầu cũ. Hãy thử lại."));
-                    } else if (doc != null) {
-                        requestVerified = !doc.getMetadata().isFromCache()
-                                && !doc.getMetadata().hasPendingWrites();
-                        requestStatus = doc.exists() ? doc.getString("status") : "";
-                        if (doc.exists())
+                    } else if (snapshot != null) {
+                        requestVerified = !snapshot.getMetadata().isFromCache()
+                                && !snapshot.getMetadata().hasPendingWrites();
+                        DocumentSnapshot current = null;
+                        for (DocumentSnapshot doc : snapshot.getDocuments()) {
+                            if (id.equals(doc.getId())) {
+                                current = doc;
+                                break;
+                            }
+                        }
+                        requestStatus = current == null ? "" : current.getString("status");
+                        if (current != null)
                             status.setText(OnlineLoanRequestRepository.label(requestStatus));
                         else if (requestVerified)
                             status.setText("Sẵn sàng gửi yêu cầu. Admin sẽ kiểm tra trước khi giữ sách.");
