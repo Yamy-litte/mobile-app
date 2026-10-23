@@ -623,3 +623,58 @@ test("Reader may cancel only Pending Online request, then resubmit; no stock mut
   await assertFails(updateDoc(request,{status:"Cancelled",copyId:"fake",
     updatedAt:serverTimestamp()}));
 });
+
+test("one seven-day extension requires paired request/receipt update by the owning Reader", async () => {
+  const now = new Date();
+  const due = Timestamp.fromDate(new Date(now.getTime() + 5 * 86400000));
+  await env.withSecurityRulesDisabled(async context => {
+    const d = context.firestore(), b = writeBatch(d);
+    b.set(doc(d, "OnlineLoanRequests/reader_book"), {
+      requestId:"reader_book", userId:"reader", bookTitleId:"book",
+      bookTitle:"Real inventory", loanDays:7, attempt:1, status:"Collected",
+      createdAt:Timestamp.fromDate(now), updatedAt:Timestamp.fromDate(now),
+      reviewedBy:"admin", reviewedAt:Timestamp.fromDate(now),
+      copyId:"copy", receiptId:"reader_book_v1",
+      collectedAt:Timestamp.fromDate(now), collectedBy:"admin", dueAt:due
+    });
+    b.set(doc(d, "OnlineLoanReceipts/reader_book_v1"), {
+      requestId:"reader_book", userId:"reader", bookTitleId:"book",
+      bookTitle:"Real inventory", copyId:"copy", loanDays:7,
+      attempt:1, status:"Open", collectedBy:"admin",
+      collectedAt:Timestamp.fromDate(now), dueAt:due,
+      returnedAt:null, returnedBy:null
+    });
+    await b.commit();
+  });
+  const reader=db("reader");
+  const request=doc(reader,"OnlineLoanRequests/reader_book");
+  const receipt=doc(reader,"OnlineLoanReceipts/reader_book_v1");
+  const extended=Timestamp.fromMillis(due.toMillis()+7*86400000);
+  const recordChanges={dueAt:extended,originalDueAt:due,extensionCount:1,extended:true};
+  await assertFails(updateDoc(request,{...recordChanges,updatedAt:serverTimestamp()}));
+  await assertFails(updateDoc(receipt,recordChanges));
+  const other=db("other"), wrong=writeBatch(other);
+  wrong.update(doc(other,"OnlineLoanRequests/reader_book"),{
+    ...recordChanges,updatedAt:serverTimestamp()
+  });
+  wrong.update(doc(other,"OnlineLoanReceipts/reader_book_v1"),recordChanges);
+  await assertFails(wrong.commit());
+  const batch=writeBatch(reader);
+  batch.update(request,{...recordChanges,updatedAt:serverTimestamp()});
+  batch.update(receipt,recordChanges);
+  await assertSucceeds(batch.commit());
+  const r=await getDoc(request), v=await getDoc(receipt);
+  require("node:assert/strict").equal(r.data().extensionCount,1);
+  require("node:assert/strict").equal(v.data().extensionCount,1);
+  require("node:assert/strict").equal(v.data().dueAt.toMillis(),extended.toMillis());
+  const replay=writeBatch(reader);
+  replay.update(request,{
+    dueAt:Timestamp.fromMillis(extended.toMillis()+7*86400000),
+    updatedAt:serverTimestamp(),extensionCount:2
+  });
+  replay.update(receipt,{
+    dueAt:Timestamp.fromMillis(extended.toMillis()+7*86400000),
+    extensionCount:2
+  });
+  await assertFails(replay.commit());
+});
