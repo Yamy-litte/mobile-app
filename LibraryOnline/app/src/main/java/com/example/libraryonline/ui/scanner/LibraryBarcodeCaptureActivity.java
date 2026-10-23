@@ -9,6 +9,7 @@ public final class LibraryBarcodeCaptureActivity extends CaptureActivity {
     @Override
     protected DecoratedBarcodeView initializeContent() {
         setContentView(R.layout.activity_library_barcode_scan);
+        findViewById(R.id.libraryBarcodeCancel).setOnClickListener(v -> finish());
         return findViewById(R.id.zxing_barcode_scanner);
     }
 }
