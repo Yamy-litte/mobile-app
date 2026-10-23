@@ -235,7 +235,8 @@ final class CounterOnlineLoanController implements AutoCloseable {
             String state = doc.getString("status");
             ((TextView) row.findViewById(R.id.counterOnlineBookDetails)).setText(
                     "Mã đầu sách: " + value(doc, "bookTitleId")
-                    + " · Thời hạn yêu cầu: " + (days == null ? "—" : days) + " ngày");
+                    + " · Thời hạn yêu cầu: " + (days == null ? "—" : days) + " ngày"
+                    + "\nCuốn đã được giữ/giao (ID): " + value(doc, "copyId"));
             ((TextView) row.findViewById(R.id.counterOnlineBookStatus)).setText(
                     OnlineLoanRequestRepository.APPROVED.equals(state)
                             ? "Đã duyệt · Chờ lấy · Nhận trước: "
