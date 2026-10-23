@@ -134,6 +134,9 @@ public final class OnlineLoanRequestRepository {
                             changes.put("returnedAt", FieldValue.delete());
                             changes.put("returnedBy", FieldValue.delete());
                             changes.put("receiptId", FieldValue.delete());
+                            changes.put("extensionCount", FieldValue.delete());
+                            changes.put("extended", FieldValue.delete());
+                            changes.put("originalDueAt", FieldValue.delete());
                             tx.update(requestRef, changes);
                         } else {
                             throw new IllegalArgumentException(
@@ -545,8 +548,9 @@ public final class OnlineLoanRequestRepository {
             changes.put("extensionCount", 1L);
             changes.put("extended", true);
             tx.update(receiptRef, changes);
-            changes.put("updatedAt", FieldValue.serverTimestamp());
-            tx.update(requestRef, changes);
+            Map<String, Object> requestChanges = new HashMap<>(changes);
+            requestChanges.put("updatedAt", FieldValue.serverTimestamp());
+            tx.update(requestRef, requestChanges);
             return (Void) null;
         });
     }
