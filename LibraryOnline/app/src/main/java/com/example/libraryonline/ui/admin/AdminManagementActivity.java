@@ -532,8 +532,14 @@ public class AdminManagementActivity extends SessionActivity {
                 else if (loan.returnedAt == null
                         && ("DangMuon".equals(loan.status) || "QuaHan".equals(loan.status)))
                     activeCount++;
+                String today = new SimpleDateFormat("yyyy-MM-dd", Locale.ROOT)
+                        .format(new Date());
+                boolean overdue = loan.returnedAt == null
+                        && ("QuaHan".equals(loan.status)
+                            || ("DangMuon".equals(loan.status) && loan.dueAt != null
+                                && loan.dueAt.compareTo(today) < 0));
                 String label = returned ? "Đã trả"
-                        : "QuaHan".equals(loan.status) ? "Quá hạn"
+                        : overdue ? "Quá hạn"
                         : "DangMuon".equals(loan.status) ? "Đang mượn"
                         : loan.status == null ? "Chưa rõ trạng thái" : loan.status;
                 historyCard(loans, loan.title == null || loan.title.isEmpty()
@@ -578,7 +584,8 @@ public class AdminManagementActivity extends SessionActivity {
             }
         }
         loanStatus.setText(data.localDone && data.cloudDone
-                ? "Firestore: " + cloudCount + " phiếu · SQLite trên máy: " + localCount + " chi tiết"
+                ? "Firestore: " + (data.online == null ? "—" : cloudCount + " phiếu")
+                    + " · SQLite trên máy: " + (data.local == null ? "—" : localCount + " chi tiết")
                 : "Đang tổng hợp lịch sử từ hai nguồn…");
         if (data.cloudDone && data.cloudError != null)
             loanStatus.append("\nKhông tải được phiếu Firestore: " + data.cloudError);
