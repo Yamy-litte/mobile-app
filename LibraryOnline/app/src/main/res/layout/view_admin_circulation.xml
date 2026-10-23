@@ -37,6 +37,46 @@
             android:textColor="@color/surface" android:textAllCaps="false"
             android:text="Quét mã thẻ bằng camera" />
 
+        <!-- Show this Reader's approved requests immediately after scanning a card. -->
+        <LinearLayout
+            android:id="@+id/panelCounterOnlineLoans"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="16dp"
+            android:padding="16dp"
+            android:background="@drawable/bg_admin_screen_card"
+            android:orientation="vertical">
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Yêu cầu mượn Online của độc giả"
+                android:textSize="17sp"
+                android:textStyle="bold"
+                android:textColor="@color/text_primary" />
+            <TextView
+                android:id="@+id/textCounterOnlineReader"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:text="Quét mã thẻ để tải yêu cầu đã được duyệt."
+                android:textSize="13sp"
+                android:textColor="@color/text_secondary"
+                android:accessibilityLiveRegion="polite"/>
+            <TextView
+                android:id="@+id/textCounterOnlineSummary"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="4dp"
+                android:textSize="13sp"
+                android:textColor="@color/text_secondary"/>
+            <LinearLayout
+                android:id="@+id/containerCounterOnlineLoans"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:orientation="vertical"/>
+        </LinearLayout>
+
         <TextView
             style="@style/CatalogueHeading"
             android:layout_marginTop="16dp"
@@ -55,6 +95,35 @@
             android:textColor="@color/surface" android:textAllCaps="false"
             android:text="Quét mã cuốn bằng camera" />
 
+        <TextView
+            android:id="@+id/textCounterOnlineVerification"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="10dp"
+            android:text="Chọn yêu cầu đã duyệt rồi quét đúng cuốn sách được giữ."
+            android:textSize="13sp"
+            android:textColor="@color/text_secondary"
+            android:accessibilityLiveRegion="polite"/>
+        <Button
+            android:id="@+id/buttonCounterOnlineCollect"
+            android:layout_width="match_parent"
+            android:layout_height="48dp"
+            android:layout_marginTop="8dp"
+            android:backgroundTint="@color/library_blue"
+            android:textColor="@color/surface"
+            android:textAllCaps="false"
+            android:text="Xác nhận giao sách Online"
+            android:enabled="false"/>
+        <Button
+            android:id="@+id/buttonCounterOnlineReturn"
+            android:layout_width="match_parent"
+            android:layout_height="48dp"
+            android:layout_marginTop="8dp"
+            android:backgroundTint="@color/library_blue"
+            android:textColor="@color/surface"
+            android:textAllCaps="false"
+            android:text="Xác nhận nhận trả sách Online"
+            android:enabled="false"/>
         <TextView
             style="@style/CatalogueHeading"
             android:layout_marginTop="16dp"
