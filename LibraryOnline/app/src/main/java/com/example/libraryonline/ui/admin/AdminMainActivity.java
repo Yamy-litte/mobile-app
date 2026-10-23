@@ -10,6 +10,7 @@ import android.widget.TextView;
 import android.widget.Toast;
 
 import com.example.libraryonline.R;
+import com.example.libraryonline.ui.scanner.LibraryBarcodeScanner;
 import com.example.libraryonline.view.AdminWeeklyTrendView;
 import com.example.libraryonline.data.local.dao.AdminDashboardStatsDao;
 import com.example.libraryonline.data.local.db.DatabaseHelper;
@@ -38,6 +39,7 @@ import java.util.Map;
 public class AdminMainActivity extends com.example.libraryonline.ui.auth.SessionActivity {
     private static final String SECONDARY_APP_NAME = "LibraryOnlineSecondaryAuth";
 
+    private LibraryBarcodeScanner barcodeScanner;
     private FirebaseFirestore firestore;
     private FirebaseAuth auth;
     private FirebaseAuth secondaryAuth;
@@ -64,6 +66,8 @@ public class AdminMainActivity extends com.example.libraryonline.ui.auth.Session
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        // Register the Activity Result contract before this Activity starts.
+        barcodeScanner = new LibraryBarcodeScanner(this);
         androidx.core.view.WindowCompat.setDecorFitsSystemWindows(getWindow(), false);
         setContentView(R.layout.activity_admin_main);
         firestore = FirebaseFirestore.getInstance();
@@ -1483,6 +1487,18 @@ public class AdminMainActivity extends com.example.libraryonline.ui.auth.Session
         ((TextView) card.findViewById(R.id.requestPhone))
                 .setText("Số điện thoại: " + value(doc, "phone", "Chưa cung cấp"));
         return card;
+    }
+
+    /** Reuse one camera scanner across counter circulation and Online handover. */
+    void scanBarcodeInto(EditText input, String prompt) {
+        if (!isSessionReady() || barcodeScanner == null || input == null) return;
+        barcodeScanner.scan(prompt, code -> {
+            // A live Online request row can be rerendered while the camera is open.
+            // Never write a scan into a detached/stale field or perform checkout.
+            if (!isSessionReady() || !input.isAttachedToWindow()) return;
+            input.setText(code);
+            input.setSelection(code.length());
+        });
     }
 
     @Override
