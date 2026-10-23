@@ -325,6 +325,41 @@ final class ReaderOnlineLoanController {
                 TextView due = item.findViewById(R.id.readerOnlineItemDue);
                 due.setVisibility(View.VISIBLE);
                 due.setText("Hạn trả: " + time(doc.getTimestamp("dueAt")));
+                // After physical pickup, online and direct loans use the
+                // same automatic once-only seven-day extension policy.
+                if (OnlineLoanRequestRepository.COLLECTED.equals(status)
+                        && doc.getTimestamp("dueAt") != null
+                        && doc.getTimestamp("dueAt").toDate().getTime() >= System.currentTimeMillis()
+                        && (doc.getLong("extensionCount") == null
+                            || doc.getLong("extensionCount") == 0L)
+                        && !Boolean.TRUE.equals(doc.getBoolean("extended"))) {
+                    android.widget.Button extend = new android.widget.Button(activity);
+                    extend.setText("Gia hạn thêm 7 ngày");
+                    ((LinearLayout) item).addView(extend);
+                    extend.setEnabled(!snapshot.getMetadata().isFromCache()
+                            && !snapshot.getMetadata().hasPendingWrites());
+                    extend.setOnClickListener(v -> {
+                        if (!current(authorizedUid)) return;
+                        String uid = authorizedUid;
+                        extend.setEnabled(false);
+                        repository.extendLoan(uid, doc.getId())
+                                .addOnCompleteListener(activity, task -> {
+                                    if (!current(uid)) return;
+                                    if (task.isSuccessful()) {
+                                        Toast.makeText(activity,
+                                                "Gia hạn thêm 7 ngày thành công.",
+                                                Toast.LENGTH_LONG).show();
+                                    } else {
+                                        extend.setEnabled(true);
+                                        Toast.makeText(activity,
+                                                "Không thể gia hạn: " + (task.getException() == null
+                                                        ? "Vui lòng kiểm tra kết nối và thử lại."
+                                                        : task.getException().getMessage()),
+                                                Toast.LENGTH_LONG).show();
+                                    }
+                                });
+                    });
+                }
                 if (OnlineLoanRequestRepository.RETURNED.equals(status)) {
                     TextView returned = item.findViewById(R.id.readerOnlineItemReturned);
                     returned.setVisibility(View.VISIBLE);
