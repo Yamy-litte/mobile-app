@@ -43,6 +43,7 @@ import java.util.concurrent.Executors;
 public class AdminManagementActivity extends SessionActivity {
     private final ExecutorService io = Executors.newSingleThreadExecutor();
     private LibraryBarcodeScanner barcodeScanner;
+    private String pendingCardBarcode, scanOwnerUid;
     private FirebaseFirestore firestore;
     private String adminUid;
     private LinearLayout content;
@@ -57,7 +58,11 @@ public class AdminManagementActivity extends SessionActivity {
 
     @Override protected void onCreate(Bundle state) {
         super.onCreate(state);
-        barcodeScanner = new LibraryBarcodeScanner(this);
+        barcodeScanner = new LibraryBarcodeScanner(this, this::onScannedReaderCard);
+        if (state != null) {
+            pendingCardBarcode = state.getString("pendingCardBarcode");
+            scanOwnerUid = state.getString("scanOwnerUid");
+        }
         setContentView(R.layout.activity_admin_management);
         firestore = FirebaseFirestore.getInstance();
         content = findViewById(R.id.adminManagementContent);
@@ -98,6 +103,7 @@ public class AdminManagementActivity extends SessionActivity {
         if ("config".equals(section)) showConfig();
         else if ("reports".equals(section)) showReports();
         else showReaders();
+        applyPendingReaderCard();
     }
 
     @Override protected void onSessionStopped() {
@@ -112,6 +118,34 @@ public class AdminManagementActivity extends SessionActivity {
         super.onDestroy();
     }
 
+    private void onScannedReaderCard(String barcode) {
+        pendingCardBarcode = barcode;
+        applyPendingReaderCard();
+    }
+
+    private void applyPendingReaderCard() {
+        if (pendingCardBarcode == null || !isSessionReady()
+                || !"readers".equals(managementSection())) return;
+        if (!java.util.Objects.equals(scanOwnerUid, adminUid)) {
+            pendingCardBarcode = null;
+            return;
+        }
+        if (searchInput == null || !searchInput.isAttachedToWindow()) return;
+        String code = pendingCardBarcode;
+        pendingCardBarcode = null;
+        readerFilter = "all";
+        searchInput.setText(code);
+        searchInput.setSelection(code.length());
+        renderUsers();
+        Toast.makeText(this, "Đã tự điền mã thẻ vừa quét.", Toast.LENGTH_SHORT).show();
+    }
+
+    @Override protected void onSaveInstanceState(Bundle state) {
+        state.putString("pendingCardBarcode", pendingCardBarcode);
+        state.putString("scanOwnerUid", scanOwnerUid);
+        super.onSaveInstanceState(state);
+    }
+
     private void showReaders() {
         if (!isSessionReady()) return;
         clearContent("Tìm độc giả", "Tìm theo họ tên hoặc số điện thoại. Thẻ được quản lý trên Firestore.");
@@ -122,14 +156,8 @@ public class AdminManagementActivity extends SessionActivity {
         searchInput.setText(searchText);
         screen.findViewById(R.id.adminReaderScanCard).setOnClickListener(v -> {
             if (!isSessionReady()) return;
-            barcodeScanner.scan("Quét mã thẻ độc giả", code -> {
-                if (!isSessionReady() || !searchInput.isAttachedToWindow()) return;
-                readerFilter = "all";
-                searchInput.setText(code);
-                searchInput.setSelection(code.length());
-                // Refresh the selected filter styles after changing to 'all'.
-                showReaders();
-            });
+            scanOwnerUid = adminUid;
+            barcodeScanner.scan("Quét mã thẻ độc giả");
         });
         readersSummary = screen.findViewById(R.id.adminReaderSummary);
         resultsContainer = screen.findViewById(R.id.adminReaderResults);
@@ -156,6 +184,7 @@ public class AdminManagementActivity extends SessionActivity {
             }
             @Override public void afterTextChanged(android.text.Editable text) {}
         });
+        applyPendingReaderCard();
         if (usersListener != null) { usersListener.remove(); usersListener = null; }
         usersListener = firestore.collection("Users").whereEqualTo("role", "Reader")
                 .addSnapshotListener((snapshot, error) -> {
