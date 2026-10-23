@@ -425,6 +425,7 @@ final class CounterOnlineLoanController implements AutoCloseable {
                 || selected == null || matchedCopy == null || !freshRequests || !freshCopy)
             return;
         if (returning ? !returnBook.isEnabled() : !handover.isEnabled()) return;
+        final long operationToken = generation;
         final String requestId = selected.getId();
         final String cardCode = readerBarcode.getText().toString().trim();
         final String copyCode = copyBarcode.getText().toString().trim();
@@ -451,7 +452,9 @@ final class CounterOnlineLoanController implements AutoCloseable {
                             : repository.collect(requestId, adminUid, cardCode, copyCode);
                     task.addOnCompleteListener(activity, completed -> {
                         processing = false;
-                        if (closed || !activity.isSessionReady()) return;
+                        // Never overwrite the fields for a different Reader if the
+                        // counter switched cards while the server was processing.
+                        if (!live(operationToken)) return;
                         if (completed.isSuccessful()) {
                             copyBarcode.setText("");
                             selected = null;
