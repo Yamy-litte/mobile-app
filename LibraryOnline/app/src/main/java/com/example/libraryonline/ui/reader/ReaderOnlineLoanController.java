@@ -31,7 +31,7 @@ final class ReaderOnlineLoanController {
     private final ReaderMainActivity activity;
     private final FirebaseFirestore firestore = FirebaseFirestore.getInstance();
     private final OnlineLoanRequestRepository repository = new OnlineLoanRequestRepository();
-    private ListenerRegistration requestsListener, notificationsListener;
+    private ListenerRegistration requestsListener, notificationsListener, receiptsListener;
     private String authorizedUid;
     private final Handler clockHandler = new Handler(Looper.getMainLooper());
     private final Map<TextView, Timestamp> activeCountdowns = new HashMap<>();
@@ -54,6 +54,7 @@ final class ReaderOnlineLoanController {
                 .setText(R.string.online_borrow_loading);
         ((TextView) activity.findViewById(R.id.textReaderOnlineNotificationsSummary))
                 .setText(R.string.online_borrow_loading);
+        message(R.id.textReaderOnlineReceiptsSummary, "Đang tải lịch sử giao sách Online…");
         requestsListener = firestore.collection(OnlineLoanRequestRepository.REQUESTS)
                 .whereEqualTo("userId", uid)
                 .addSnapshotListener(MetadataChanges.INCLUDE, (result, error) -> {
@@ -76,6 +77,17 @@ final class ReaderOnlineLoanController {
                     }
                     if (result != null) displayNotifications(result);
                 });
+        receiptsListener = firestore.collection("OnlineLoanReceipts")
+                .whereEqualTo("userId", uid)
+                .addSnapshotListener(MetadataChanges.INCLUDE, (result, error) -> {
+                    if (!current(uid)) return;
+                    if (error != null) {
+                        message(R.id.textReaderOnlineReceiptsSummary,
+                                "Không tải được lịch sử giao sách Online. Hãy thử lại.");
+                        return;
+                    }
+                    if (result != null) displayReceipts(result);
+                });
     }
 
     void stop() {
@@ -87,9 +99,15 @@ final class ReaderOnlineLoanController {
             notificationsListener.remove();
             notificationsListener = null;
         }
+        if (receiptsListener != null) {
+            receiptsListener.remove();
+            receiptsListener = null;
+        }
         ((LinearLayout) activity.findViewById(R.id.containerReaderOnlineRequests))
                 .removeAllViews();
         ((LinearLayout) activity.findViewById(R.id.containerReaderOnlineNotifications))
+                .removeAllViews();
+        ((LinearLayout) activity.findViewById(R.id.containerReaderOnlineReceipts))
                 .removeAllViews();
     }
 
@@ -196,6 +214,39 @@ final class ReaderOnlineLoanController {
             activity.notificationSettings().updateOnlineRequests(records);
         if (!activeCountdowns.isEmpty() && current(authorizedUid))
             clockHandler.postDelayed(countdownPulse, 60_000L);
+    }
+
+    private void displayReceipts(QuerySnapshot snapshot) {
+        LinearLayout container = activity.findViewById(R.id.containerReaderOnlineReceipts);
+        container.removeAllViews();
+        List<DocumentSnapshot> receipts = new ArrayList<>(snapshot.getDocuments());
+        Collections.sort(receipts, (a, b) -> {
+            Timestamp left = a.getTimestamp("collectedAt"), right = b.getTimestamp("collectedAt");
+            return Long.compare(right == null ? 0 : right.toDate().getTime(),
+                    left == null ? 0 : left.toDate().getTime());
+        });
+        message(R.id.textReaderOnlineReceiptsSummary, receipts.isEmpty()
+                ? "Chưa nhận sách Online tại quầy."
+                : receipts.size() + " lượt mượn Online"
+                  + (snapshot.getMetadata().isFromCache() ? " · Dữ liệu đã lưu" : ""));
+        for (DocumentSnapshot receipt : receipts) {
+            View card = activity.getLayoutInflater().inflate(
+                    R.layout.item_reader_online_receipt, container, false);
+            container.addView(card);
+            String name = receipt.getString("bookTitle");
+            ((TextView) card.findViewById(R.id.readerOnlineReceiptTitle))
+                    .setText(name == null ? "Đầu sách" : name);
+            ((TextView) card.findViewById(R.id.readerOnlineReceiptCopy))
+                    .setText("Mã cuốn: " + receipt.getString("copyId"));
+            ((TextView) card.findViewById(R.id.readerOnlineReceiptDates))
+                    .setText("Nhận: " + time(receipt.getTimestamp("collectedAt"))
+                            + "\nHạn trả: " + time(receipt.getTimestamp("dueAt")));
+            boolean returned = OnlineLoanRequestRepository.RETURNED.equals(
+                    receipt.getString("status"));
+            ((TextView) card.findViewById(R.id.readerOnlineReceiptStatus))
+                    .setText(returned ? "Đã trả: " + time(receipt.getTimestamp("returnedAt"))
+                            : "Đang mượn · Chưa ghi nhận trả");
+        }
     }
 
     private void displayNotifications(QuerySnapshot snapshot) {
