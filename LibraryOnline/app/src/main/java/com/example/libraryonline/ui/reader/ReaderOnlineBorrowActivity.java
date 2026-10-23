@@ -183,16 +183,18 @@ public final class ReaderOnlineBorrowActivity extends SessionActivity {
                         holdInfo.setText("Chưa đối soát được các yêu cầu Online khác.");
                         return;
                     }
-                    int pending = 0, approved = 0;
+                    int pending = 0, approved = 0, collected = 0;
                     for (DocumentSnapshot doc : task.getResult().getDocuments()) {
                         if (OnlineLoanRequestRepository.PENDING.equals(doc.getString("status")))
                             pending++;
                         if (OnlineLoanRequestRepository.APPROVED.equals(doc.getString("status")))
                             approved++;
+                        if (OnlineLoanRequestRepository.COLLECTED.equals(doc.getString("status")))
+                            collected++;
                     }
                     holdInfo.setText("Đang chờ duyệt: " + pending
-                            + " · Đã giữ chờ lấy: " + approved
-                            + "\nSách đang mượn thực tế được đối soát riêng khi giao tại quầy.");
+                            + " · Chờ lấy: " + approved + " · Đang mượn Online: " + collected
+                            + "\nNgày đến hạn được tính khi thủ thư xác nhận giao sách.");
                 });
     }
 
@@ -259,7 +261,8 @@ public final class ReaderOnlineBorrowActivity extends SessionActivity {
                     + " ngày/lượt. Đơn mới: +1 cuốn nếu được duyệt."
                 : "Đang tải cấu hình thư viện…");
         boolean active = OnlineLoanRequestRepository.PENDING.equals(requestStatus)
-                || OnlineLoanRequestRepository.APPROVED.equals(requestStatus);
+                || OnlineLoanRequestRepository.APPROVED.equals(requestStatus)
+                || OnlineLoanRequestRepository.COLLECTED.equals(requestStatus);
         confirm.setEnabled(isSessionReady() && !submitting && cardActive
                 && bookVerified && requestVerified && configVerified
                 && stock > 0 && !active && choice >= 1 && choice <= maxDays);
