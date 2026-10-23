@@ -169,6 +169,20 @@ final class ReaderOnlineLoanController {
                 item.findViewById(R.id.readerOnlineItemHelp).setVisibility(View.VISIBLE);
                 if (hold != null) activeCountdowns.put(countdown, hold);
             }
+            if (OnlineLoanRequestRepository.COLLECTED.equals(status)
+                    || OnlineLoanRequestRepository.RETURNED.equals(status)) {
+                TextView checkout = item.findViewById(R.id.readerOnlineItemCheckout);
+                checkout.setVisibility(View.VISIBLE);
+                checkout.setText("Đã nhận sách tại quầy: " + time(doc.getTimestamp("collectedAt")));
+                TextView due = item.findViewById(R.id.readerOnlineItemDue);
+                due.setVisibility(View.VISIBLE);
+                due.setText("Hạn trả: " + time(doc.getTimestamp("dueAt")));
+                if (OnlineLoanRequestRepository.RETURNED.equals(status)) {
+                    TextView returned = item.findViewById(R.id.readerOnlineItemReturned);
+                    returned.setVisibility(View.VISIBLE);
+                    returned.setText("Đã trả: " + time(doc.getTimestamp("returnedAt")));
+                }
+            }
             if (OnlineLoanRequestRepository.REJECTED.equals(status)
                     && doc.getString("rejectionReason") != null) {
                 TextView rejection = item.findViewById(R.id.readerOnlineItemReject);
