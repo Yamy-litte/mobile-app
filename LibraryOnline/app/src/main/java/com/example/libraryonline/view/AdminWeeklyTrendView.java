@@ -21,6 +21,7 @@ public final class AdminWeeklyTrendView extends View {
     private final int primary, muted, grid;
     private int[] counts = new int[7];
     private boolean loaded;
+    private String emptyMessage = "Đang tải lượt mượn...";
 
     public AdminWeeklyTrendView(Context context) { this(context, null); }
 
@@ -30,6 +31,14 @@ public final class AdminWeeklyTrendView extends View {
         muted = ContextCompat.getColor(context, R.color.admin_screen_muted);
         grid = ContextCompat.getColor(context, R.color.admin_screen_border);
         setContentDescription("Biểu đồ mượn trong tuần, đang tải giao dịch.");
+    }
+
+    /** Clear stale values while the two data sources refresh, or on an error. */
+    public void showMessage(String message) {
+        loaded = false;
+        emptyMessage = message;
+        setContentDescription(message);
+        invalidate();
     }
 
     public void setCounts(int[] values) {
@@ -71,7 +80,7 @@ public final class AdminWeeklyTrendView extends View {
         }
 
         if (!loaded) {
-            canvas.drawText("Đang tải lượt mượn...", width / 2f, (top + bottom) / 2f, paint);
+            canvas.drawText(emptyMessage, width / 2f, (top + bottom) / 2f, paint);
             return;
         }
         int peak = 1, total = 0;
