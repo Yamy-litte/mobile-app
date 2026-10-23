@@ -59,6 +59,10 @@ public class AdminMainActivity extends com.example.libraryonline.ui.auth.Session
     private CirculationPanelController circulationController;
     private AdminOnlineLoanController onlineLoanController;
     private long dashboardGeneration, requestsGeneration;
+    private AdminDashboardStatsDao.Summary dashboardLocalSummary;
+    private AdminDashboardCloudStats.Summary dashboardCloudSummary;
+    private boolean dashboardLocalFinished, dashboardCloudFinished;
+    private String dashboardLocalError, dashboardCloudError;
     private final java.util.concurrent.ExecutorService dashboardLocalWorker =
             java.util.concurrent.Executors.newSingleThreadExecutor();
     private String adminUid, adminPhone = "", adminBirthDate = "", adminDisplayName = "";
@@ -606,7 +610,22 @@ public class AdminMainActivity extends com.example.libraryonline.ui.auth.Session
 
     private void loadDashboard() {
         final long request = ++dashboardGeneration;
+        dashboardLocalSummary = null;
+        dashboardCloudSummary = null;
+        dashboardLocalFinished = false;
+        dashboardCloudFinished = false;
+        dashboardLocalError = null;
+        dashboardCloudError = null;
         loadLocalDashboard(request);
+        new AdminDashboardCloudStats(firestore).load(this, java.util.Calendar.getInstance(),
+                (online, error) -> {
+                    if (!isSessionReady() || request != dashboardGeneration
+                            || isDestroyed() || isFinishing()) return;
+                    dashboardCloudSummary = online;
+                    dashboardCloudError = error;
+                    dashboardCloudFinished = true;
+                    renderCirculationDashboard();
+                });
         Button refresh = findViewById(R.id.buttonAdminRefresh);
         refresh.setEnabled(false);
         TextView status = findViewById(R.id.textAdminDataStatus);
@@ -663,14 +682,17 @@ public class AdminMainActivity extends com.example.libraryonline.ui.auth.Session
                         });
     }
 
-    /** Refresh local stats off the UI thread. Cloud counts remain in loadDashboard(). */
+    /** SQLite holds direct counter transactions; Firestore holds online receipts. */
+    void refreshDashboardAfterCirculation() {
+        if (isSessionReady() && !isFinishing() && !isDestroyed()) loadDashboard();
+    }
+
     private void loadLocalDashboard(long request) {
+        int[] ids = {R.id.textAdminTodayBorrow, R.id.textAdminTodayReturn,
+                R.id.textAdminTodayWaiting, R.id.textAdminTodayOverdue};
+        for (int id : ids) ((TextView) findViewById(id)).setText(R.string.admin_dash);
         ((TextView) findViewById(R.id.textAdminLocalStatus))
                 .setText(R.string.admin_screen_data_loading);
-        int[] ids = { R.id.textAdminTodayBorrow, R.id.textAdminTodayReturn,
-                R.id.textAdminTodayWaiting, R.id.textAdminTodayOverdue };
-        for (int id : ids)
-            ((TextView) findViewById(id)).setText(R.string.admin_dash);
         ((TextView) findViewById(R.id.textAdminRecentActivity))
                 .setText(R.string.admin_screen_data_loading);
         dashboardLocalWorker.execute(() -> {
@@ -691,30 +713,83 @@ public class AdminMainActivity extends com.example.libraryonline.ui.auth.Session
             runOnUiThread(() -> {
                 if (!isSessionReady() || request != dashboardGeneration
                         || isFinishing() || isDestroyed()) return;
-                if (value == null) {
-                    ((TextView) findViewById(R.id.textAdminLocalStatus))
-                            .setText(getString(R.string.admin_screen_data_error)
-                                    + (failedReason == null ? "" : " (" + failedReason + ")"));
-                    ((TextView) findViewById(R.id.textAdminRecentActivity))
-                            .setText(R.string.admin_screen_recent_empty);
-                    return;
-                }
-                int[] counts = {value.borrowedToday, value.returnedToday,
-                        value.awaitingPickup, value.overdue};
-                for (int i = 0; i < ids.length; i++)
-                    ((TextView) findViewById(ids[i])).setText(
-                            java.text.NumberFormat.getIntegerInstance(new Locale("vi", "VN"))
-                                    .format(counts[i]));
-                ((AdminWeeklyTrendView) findViewById(R.id.adminWeeklyTrend))
-                        .setCounts(value.dailyBorrowed);
-                ((TextView) findViewById(R.id.textAdminLocalStatus))
-                        .setText(R.string.admin_screen_local_note);
-                ((TextView) findViewById(R.id.textAdminRecentActivity))
-                        .setText(value.recentActivities.isEmpty()
-                                ? getString(R.string.admin_screen_recent_empty)
-                                : android.text.TextUtils.join("\n", value.recentActivities));
+                dashboardLocalSummary = value;
+                dashboardLocalError = failedReason;
+                dashboardLocalFinished = true;
+                renderCirculationDashboard();
             });
         });
+    }
+
+    /** Merge disjoint direct/online loan records; never add two stock-hold caches. */
+    private void renderCirculationDashboard() {
+        AdminDashboardStatsDao.Summary local = dashboardLocalSummary;
+        AdminDashboardCloudStats.Summary cloud = dashboardCloudSummary;
+        TextView status = findViewById(R.id.textAdminLocalStatus);
+        if (local == null && cloud == null) {
+            status.setText(dashboardLocalFinished && dashboardCloudFinished
+                    ? "Không đọc được thống kê mượn/trả từ SQLite hoặc Firebase."
+                    : "Đang tải thống kê từ SQLite và Firebase...");
+            if (dashboardLocalFinished && dashboardCloudFinished)
+                ((TextView) findViewById(R.id.textAdminRecentActivity))
+                        .setText(R.string.admin_screen_recent_empty);
+            return;
+        }
+        int borrowed = (local == null ? 0 : local.borrowedToday)
+                + (cloud == null ? 0 : cloud.borrowedToday);
+        int returned = (local == null ? 0 : local.returnedToday)
+                + (cloud == null ? 0 : cloud.returnedToday);
+        int overdue = (local == null ? 0 : local.overdue)
+                + (cloud == null ? 0 : cloud.overdue);
+        // BookCopies is also cached from Firestore: local ChoLay plus cloud
+        // Approved can describe the same physical book. Prefer the cloud queue.
+        int waiting = cloud == null ? (local == null ? 0 : local.awaitingPickup)
+                : cloud.awaitingPickup;
+        int[] counts = {borrowed, returned, waiting, overdue};
+        int[] ids = {R.id.textAdminTodayBorrow, R.id.textAdminTodayReturn,
+                R.id.textAdminTodayWaiting, R.id.textAdminTodayOverdue};
+        for (int i = 0; i < ids.length; i++)
+            ((TextView) findViewById(ids[i]))
+                    .setText(java.text.NumberFormat.getIntegerInstance(new Locale("vi", "VN"))
+                            .format(counts[i]));
+        int[] weekly = new int[7];
+        for (int i = 0; i < 7; i++)
+            weekly[i] = (local == null ? 0 : local.dailyBorrowed[i])
+                    + (cloud == null ? 0 : cloud.weekly[i]);
+        ((AdminWeeklyTrendView) findViewById(R.id.adminWeeklyTrend)).setCounts(weekly);
+
+        java.util.List<java.util.Map.Entry<Long, String>> events = new java.util.ArrayList<>();
+        if (local != null)
+            for (AdminDashboardStatsDao.RecentEvent event : local.recentEvents)
+                events.add(new java.util.AbstractMap.SimpleEntry<>(event.at, event.label));
+        if (cloud != null)
+            for (AdminDashboardCloudStats.ActivityEvent event : cloud.recent)
+                events.add(new java.util.AbstractMap.SimpleEntry<>(event.at, event.description));
+        java.util.Collections.sort(events,
+                (left, right) -> Long.compare(right.getKey(), left.getKey()));
+        java.util.List<String> latest = new java.util.ArrayList<>();
+        for (int i = 0; i < Math.min(events.size(), 3); i++)
+            latest.add(events.get(i).getValue());
+        ((TextView) findViewById(R.id.textAdminRecentActivity))
+                .setText(latest.isEmpty()
+                        ? getString(R.string.admin_screen_recent_empty)
+                        : android.text.TextUtils.join("\n\n", latest));
+
+        if (!dashboardLocalFinished || !dashboardCloudFinished) {
+            status.setText("Đang tổng hợp SQLite và Firebase...");
+        } else if (local != null && cloud != null) {
+            status.setText(cloud.cached
+                    ? "SQLite + dữ liệu Firebase đã lưu (chưa xác minh đồng bộ mới nhất)."
+                    : "Đã tổng hợp SQLite trực tiếp và lịch sử Online trên Firebase.");
+        } else if (local != null) {
+            status.setText("Chỉ có dữ liệu SQLite trên máy này. "
+                    + (dashboardCloudError == null ? "Firebase đang tải."
+                    : "Không thể tải giao dịch Online từ Firebase."));
+        } else {
+            status.setText("Chỉ có dữ liệu Firebase"
+                    + (cloud.cached ? " đã lưu ngoại tuyến" : "")
+                    + ". Không đọc được SQLite trên thiết bị.");
+        }
     }
 
     private void bindCatalogueSyncButton() {
