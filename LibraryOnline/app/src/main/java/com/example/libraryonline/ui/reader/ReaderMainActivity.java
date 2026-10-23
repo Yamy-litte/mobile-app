@@ -19,6 +19,7 @@ import com.example.libraryonline.data.model.BookTitle;
 import com.example.libraryonline.data.model.LoanDetail;
 import com.example.libraryonline.data.model.LibraryNotification;
 import com.example.libraryonline.data.repository.LoanDetailRepository;
+import com.example.libraryonline.data.repository.CirculationRepository;
 import com.example.libraryonline.data.repository.LibraryNotificationRepository;
 import com.example.libraryonline.data.remote.firebase.BookCatalogueSyncManager;
 import com.google.firebase.auth.FirebaseAuth;
@@ -408,6 +409,43 @@ public class ReaderMainActivity extends com.example.libraryonline.ui.auth.Sessio
                             "Hạn trả: " + safe(loan.dueDate, "Chưa cập nhật"));
                     ((TextView) card.findViewById(R.id.readerLoanStatus)).setText(
                             "Trạng thái: " + ("QuaHan".equals(loan.detailStatus) ? "Quá hạn" : "Đang mượn"));
+                    // Both loan origins use the same seven-day, once-only policy.
+                    String localToday = new java.text.SimpleDateFormat(
+                            "yyyy-MM-dd", Locale.ROOT).format(new java.util.Date());
+                    if (loan.extensionCount == 0 && !loan.extended
+                            && "DangMuon".equals(loan.detailStatus)
+                            && loan.dueDate != null
+                            && loan.dueDate.compareTo(localToday) >= 0) {
+                        android.widget.Button extend = new android.widget.Button(this);
+                        extend.setText("Gia hạn thêm 7 ngày");
+                        ((LinearLayout) card).addView(extend);
+                        extend.setOnClickListener(v -> {
+                            extend.setEnabled(false);
+                            catalogueExecutor.execute(() -> {
+                                String due = null;
+                                String error = null;
+                                try (CirculationRepository repo =
+                                             new CirculationRepository(getApplicationContext())) {
+                                    due = repo.extendLoan(userId, loan.loanDetailId);
+                                } catch (Exception failure) {
+                                    error = failure.getMessage();
+                                }
+                                final String updatedDue = due;
+                                final String failureMessage = error;
+                                runOnUiThread(() -> {
+                                    if (isFinishing() || isDestroyed()) return;
+                                    if (updatedDue != null) {
+                                        showMessage("Đã gia hạn đến " + updatedDue);
+                                        loadReaderLoans(userId);
+                                    } else {
+                                        extend.setEnabled(true);
+                                        showMessage(failureMessage == null
+                                                ? "Không thể gia hạn khoản mượn." : failureMessage);
+                                    }
+                                });
+                            });
+                        });
+                    }
                 }
             });
         });
