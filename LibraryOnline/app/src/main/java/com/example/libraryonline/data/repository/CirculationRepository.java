@@ -285,7 +285,7 @@ public final class CirculationRepository implements AutoCloseable {
             // but only overdue-return fines can be paid in the current workflow.
             if (!PenaltyTypePolicy.canCollect(penaltyType))
                 throw new IllegalArgumentException(
-                        "Chỉ hỗ trợ thu phạt trả sách quá hạn. Không xử lý khoản bồi thường mất sách.");
+                        "Loại khoản phạt không được hỗ trợ. Chỉ có thể thu phạt trả sách quá hạn.");
             int remaining = due - paid;
             if (remaining <= 0 || "Paid".equals(status)) {
                 throw new IllegalArgumentException("Khoản phạt này đã được thanh toán đủ.");
