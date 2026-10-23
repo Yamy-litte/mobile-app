@@ -14,6 +14,7 @@ import android.widget.Toast;
 import androidx.appcompat.app.AlertDialog;
 
 import com.example.libraryonline.R;
+import com.example.libraryonline.ui.scanner.LibraryBarcodeScanner;
 import com.example.libraryonline.data.local.dao.SystemConfigDao;
 import com.example.libraryonline.data.local.db.DatabaseHelper;
 import com.example.libraryonline.data.model.SystemConfig;
@@ -41,6 +42,7 @@ import java.util.concurrent.Executors;
 /** Admin-only tools. Cloud-backed user/config changes are guarded by Firestore Rules. */
 public class AdminManagementActivity extends SessionActivity {
     private final ExecutorService io = Executors.newSingleThreadExecutor();
+    private LibraryBarcodeScanner barcodeScanner;
     private FirebaseFirestore firestore;
     private String adminUid;
     private LinearLayout content;
@@ -55,6 +57,7 @@ public class AdminManagementActivity extends SessionActivity {
 
     @Override protected void onCreate(Bundle state) {
         super.onCreate(state);
+        barcodeScanner = new LibraryBarcodeScanner(this);
         setContentView(R.layout.activity_admin_management);
         firestore = FirebaseFirestore.getInstance();
         content = findViewById(R.id.adminManagementContent);
@@ -117,6 +120,17 @@ public class AdminManagementActivity extends SessionActivity {
         content.addView(screen);
         searchInput = screen.findViewById(R.id.adminReaderSearch);
         searchInput.setText(searchText);
+        screen.findViewById(R.id.adminReaderScanCard).setOnClickListener(v -> {
+            if (!isSessionReady()) return;
+            barcodeScanner.scan("Quét mã thẻ độc giả", code -> {
+                if (!isSessionReady() || !searchInput.isAttachedToWindow()) return;
+                readerFilter = "all";
+                searchInput.setText(code);
+                searchInput.setSelection(code.length());
+                // Refresh the selected filter styles after changing to 'all'.
+                showReaders();
+            });
+        });
         readersSummary = screen.findViewById(R.id.adminReaderSummary);
         resultsContainer = screen.findViewById(R.id.adminReaderResults);
         String[] keys = {"all", "active", "expired", "locked"};
@@ -230,7 +244,9 @@ public class AdminManagementActivity extends SessionActivity {
             String phone = value(doc, "phone");
             if (!searchText.isEmpty()
                     && !name.toLowerCase(Locale.ROOT).contains(searchText)
-                    && !phone.toLowerCase(Locale.ROOT).contains(searchText)) continue;
+                    && !phone.toLowerCase(Locale.ROOT).contains(searchText)
+                    && !value(doc, "barcode").toLowerCase(Locale.ROOT).contains(searchText))
+                continue;
             if ("active".equals(readerFilter) && (isLocked || isExpired)) continue;
             if ("expired".equals(readerFilter) && (!isExpired || isLocked)) continue;
             if ("locked".equals(readerFilter) && !isLocked) continue;
