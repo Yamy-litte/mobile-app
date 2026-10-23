@@ -53,13 +53,21 @@ public class LoanValidatorTest {
         assertNull(LoanValidator.validateCopyCheckout(copy, "reader-1"));
     }
 
-    @Test public void permitsHoldOnlyForMatchingReader() {
+    @Test public void onlineHoldAlwaysRequiresCloudHandover() {
         BookCopy copy = new BookCopy();
         copy.copyId = "copy-1";
         copy.copyStatus = "ChoLay";
         copy.priorityUserId = "reader-1";
-        assertNull(LoanValidator.validateCopyCheckout(copy, "reader-1"));
+        assertNotNull(LoanValidator.validateCopyCheckout(copy, "reader-1"));
         assertNotNull(LoanValidator.validateCopyCheckout(copy, "reader-2"));
+    }
+
+    @Test public void legacyPreorderCannotBeCheckedOutDirectly() {
+        BookCopy copy = new BookCopy();
+        copy.copyId = "copy-1";
+        copy.copyStatus = "DaDatTruoc";
+        copy.priorityUserId = "reader-1";
+        assertNotNull(LoanValidator.validateCopyCheckout(copy, "reader-1"));
     }
 
     @Test public void blocksHiddenParentTitleEvenIfCopyIsAvailable() {
