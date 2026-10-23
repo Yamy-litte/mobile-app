@@ -240,6 +240,23 @@ function onlineNoticeFixture(status, message) {
     createdAt:serverTimestamp(), readAt:null
   };
 }
+test("First-time online submit creates after reading user, title and config without GET on missing request", async () => {
+  const own=db("reader"), ref=doc(own,"OnlineLoanRequests/reader_book");
+  await assertSucceeds(runTransaction(own, async tx => {
+    const profile = await tx.get(doc(own,"Users/reader"));
+    const title = await tx.get(doc(own,"BookTitles/book"));
+    const config = await tx.get(doc(own,"SystemConfigs/default"));
+    require("node:assert/strict").equal(profile.data().role,"Reader");
+    require("node:assert/strict").equal(title.data().availableCopies,1);
+    require("node:assert/strict").equal(config.exists(),false);
+    // The previously deployed Rules denied reading a missing request. Do not
+    // query ref in the transaction; create is validated by security rules.
+    tx.set(ref,onlineRequestFixture());
+  }));
+  require("node:assert/strict").equal((await getDoc(ref)).data().status,"Pending");
+  await assertFails(setDoc(ref,onlineRequestFixture()));
+});
+
 test("Reader can fetch its missing request and submit in Firestore transaction, without exposing others", async () => {
   const own = db("reader");
   const ref = doc(own, "OnlineLoanRequests/reader_book");
