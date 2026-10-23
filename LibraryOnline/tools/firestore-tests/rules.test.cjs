@@ -355,7 +355,8 @@ test("Online handover checks linked copy and notification; Reader cannot forge c
   const due=Timestamp.fromDate(new Date(Date.now()+7*86400000));
   const notification=doc(d,"OnlineLoanNotifications/reader_book_v1_Collected");
   const issued={status:"Collected",collectedBy:"admin",collectedAt:serverTimestamp(),
-      dueAt:due,updatedAt:serverTimestamp(),notificationId:notification.id};
+      receiptId:"reader_book_v1",dueAt:due,updatedAt:serverTimestamp(),
+      notificationId:notification.id};
   await assertFails(updateDoc(request,issued));
   await assertFails(updateDoc(doc(db("reader"),"OnlineLoanRequests/reader_book"),issued));
   const batch=writeBatch(d);
@@ -363,6 +364,12 @@ test("Online handover checks linked copy and notification; Reader cannot forge c
   batch.update(doc(d,"BookCopies/copy"),{copyStatus:"DaMuon",priorityUserId:null,
       updatedAt:serverTimestamp()});
   batch.set(notification,onlineNoticeFixture("Collected","Đã nhận sách tại quầy."));
+  batch.set(doc(d,"OnlineLoanReceipts/reader_book_v1"),{
+    requestId:"reader_book",userId:"reader",bookTitleId:"book",
+    bookTitle:"Real inventory",copyId:"copy",loanDays:7,attempt:1,
+    status:"Open",collectedBy:"admin",collectedAt:serverTimestamp(),dueAt:due,
+    returnedAt:null,returnedBy:null
+  });
   await assertSucceeds(batch.commit());
   const title=await getDoc(doc(d,"BookTitles/book"));
   require("node:assert/strict").equal(title.data().availableCopies,0);
@@ -380,12 +387,20 @@ test("Online return restores availability once; Reader can request again only af
       createdAt:Timestamp.fromDate(now),updatedAt:Timestamp.fromDate(now),
       reviewedBy:"admin",reviewedAt:Timestamp.fromDate(now),
       notificationId:"reader_book_v1_Collected",copyId:"copy",
+      receiptId:"reader_book_v1",
       holdUntil:Timestamp.fromDate(new Date(Date.now()+24*3600000)),
       collectedAt:Timestamp.fromDate(now),collectedBy:"admin",
       dueAt:Timestamp.fromDate(new Date(Date.now()+7*86400000))
     });
     batch.update(doc(d,"BookCopies/copy"),{copyStatus:"DaMuon",priorityUserId:null});
     batch.update(doc(d,"BookTitles/book"),{availableCopies:0});
+    batch.set(doc(d,"OnlineLoanReceipts/reader_book_v1"),{
+      requestId:"reader_book",userId:"reader",bookTitleId:"book",
+      bookTitle:"Real inventory",copyId:"copy",loanDays:7,attempt:1,
+      status:"Open",collectedBy:"admin",collectedAt:Timestamp.fromDate(now),
+      dueAt:Timestamp.fromDate(new Date(Date.now()+7*86400000)),
+      returnedAt:null,returnedBy:null
+    });
     await batch.commit();
   });
   const d=db("admin"), request=doc(d,"OnlineLoanRequests/reader_book");
@@ -399,6 +414,9 @@ test("Online return restores availability once; Reader can request again only af
     updatedAt:serverTimestamp()});
   batch.update(doc(d,"BookTitles/book"),{availableCopies:1,updatedAt:serverTimestamp()});
   batch.set(notification,onlineNoticeFixture("Returned","Đã nhận trả sách."));
+  batch.update(doc(d,"OnlineLoanReceipts/reader_book_v1"),{
+    status:"Returned",returnedAt:serverTimestamp(),returnedBy:"admin"
+  });
   await assertSucceeds(batch.commit());
   require("node:assert/strict").equal((await getDoc(doc(d,"BookTitles/book"))).data().availableCopies,1);
   const again=writeBatch(d);
@@ -411,7 +429,7 @@ test("Online return restores availability once; Reader can request again only af
     copyId:deleteField(),holdUntil:deleteField(),reviewedBy:deleteField(),
     reviewedAt:deleteField(),notificationId:deleteField(),
     collectedAt:deleteField(),collectedBy:deleteField(),dueAt:deleteField(),
-    returnedAt:deleteField(),returnedBy:deleteField()
+    returnedAt:deleteField(),returnedBy:deleteField(),receiptId:deleteField()
   };
   await assertSucceeds(updateDoc(doc(db("reader"),"OnlineLoanRequests/reader_book"),reapply));
   await assertFails(updateDoc(doc(db("reader"),"OnlineLoanRequests/reader_book"),{status:"Collected"}));
