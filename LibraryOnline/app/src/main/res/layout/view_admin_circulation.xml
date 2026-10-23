@@ -77,6 +77,7 @@
             </LinearLayout>
             <TextView android:id="@+id/circulationReaderGuide"
                 style="@style/CirculationCaption"
+                android:textColor="@color/circulation_verification_text"
                 android:layout_marginTop="8dp"
                 android:text="Dữ liệu được đối chiếu trước khi giao hoặc nhận trả sách."
                 android:accessibilityLiveRegion="polite" />
@@ -159,6 +160,7 @@
                 android:text="Kiểm tra trước khi ghi nhận"/>
             <TextView android:id="@+id/textCounterOnlineVerification"
                 style="@style/CirculationCaption"
+                android:textColor="@color/circulation_verification_text"
                 android:layout_marginTop="8dp"
                 android:padding="12dp"
                 android:background="@drawable/bg_admin_screen_readonly"
