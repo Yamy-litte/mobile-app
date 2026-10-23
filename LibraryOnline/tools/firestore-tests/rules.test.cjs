@@ -3,7 +3,7 @@ const { before, after, beforeEach, test } = require("node:test");
 const fs = require("node:fs");
 const { URL } = require("node:url");
 const { initializeTestEnvironment, assertSucceeds, assertFails } = require("@firebase/rules-unit-testing");
-const { collection, query, where, getDocs, getCountFromServer, doc, setDoc, getDoc, updateDoc, deleteDoc, deleteField, writeBatch, serverTimestamp, Timestamp } = require("firebase/firestore");
+const { collection, query, where, getDocs, getCountFromServer, doc, setDoc, getDoc, updateDoc, deleteDoc, deleteField, writeBatch, runTransaction, serverTimestamp, Timestamp } = require("firebase/firestore");
 let env;
 const projectId = "demo-library-online";
 const category = { categoryId: "cat", name: "Văn học", isActive: true };
@@ -240,6 +240,25 @@ function onlineNoticeFixture(status, message) {
     createdAt:serverTimestamp(), readAt:null
   };
 }
+test("Reader can fetch its missing request and submit in Firestore transaction, without exposing others", async () => {
+  const own = db("reader");
+  const ref = doc(own, "OnlineLoanRequests/reader_book");
+  const absent = await assertSucceeds(getDoc(ref));
+  require("node:assert/strict").equal(absent.exists(), false);
+  // Missing request for another owner must not be readable.
+  await assertFails(getDoc(doc(own, "OnlineLoanRequests/other_book")));
+  await assertFails(getDoc(doc(db("other"), "OnlineLoanRequests/reader_book")));
+  // Android submit() reads the absent document before creating it in a transaction.
+  await assertSucceeds(runTransaction(own, async tx => {
+    const previous = await tx.get(ref);
+    require("node:assert/strict").equal(previous.exists(), false);
+    tx.set(ref, onlineRequestFixture());
+  }));
+  const result = await assertSucceeds(getDoc(ref));
+  require("node:assert/strict").equal(result.data().status, "Pending");
+  await assertFails(getDoc(doc(db("other"), "OnlineLoanRequests/reader_book")));
+});
+
 test("reader submits only their own active request, never a preorder or duplicate", async () => {
   const own = db("reader"), request = doc(own,"OnlineLoanRequests/reader_book");
   await assertFails(setDoc(doc(db("other"), "OnlineLoanRequests/reader_book"), onlineRequestFixture()));
