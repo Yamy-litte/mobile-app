@@ -233,7 +233,8 @@ public class BookDetailActivity extends SessionActivity {
         boolean hasStock = availability != null
                 && availability.getText().toString().startsWith("Có ");
         boolean alreadyOpen = OnlineLoanRequestRepository.PENDING.equals(currentOnlineStatus)
-                || OnlineLoanRequestRepository.APPROVED.equals(currentOnlineStatus);
+                || OnlineLoanRequestRepository.APPROVED.equals(currentOnlineStatus)
+                || OnlineLoanRequestRepository.COLLECTED.equals(currentOnlineStatus);
         request.setEnabled(isSessionReady() && !requestSubmitting
                 && !Boolean.FALSE.equals(remoteVisible) && hasStock && !alreadyOpen
                 && findViewById(R.id.detailContent).getVisibility() == View.VISIBLE);
