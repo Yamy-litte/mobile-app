@@ -12,7 +12,7 @@
 
 | Màn hình | Quét | Sau quét |
 | --- | --- | --- |
-| Reader trang chủ | ISBN hoặc Code128 của cuốn | ISBN → lọc đầu sách tại chỗ; mã cuốn → đối chiếu BookCopies, kiểm tra BookTitles không ẩn rồi mở chi tiết |
+| Reader trang chủ | ISBN hoặc Code128 của cuốn | ISBN → lọc đầu sách tại chỗ hoặc tra BookTitles trên Firestore; mã cuốn → đối chiếu BookCopies và BookTitles trên Firestore rồi mở chi tiết nếu không ẩn |
 | Admin kho sách | ISBN hoặc barcode cuốn | ISBN → danh sách cuốn của đầu sách; mã cuốn → chi tiết cuốn; không tìm thấy có thể nhập mã và làm mới dữ liệu |
 | Admin mượn/trả trực tiếp | Thẻ độc giả + mã cuốn | Điền đúng hai ô; **không tự thực hiện borrow/return**. Admin phải kiểm tra và bấm nút xác nhận |
 | Admin giao/trả Online | Thẻ độc giả + mã cuốn `ChoLay` / `DaMuon` | Điền đúng hai ô trên request hiện tại; việc lưu lên Firestore chỉ bắt đầu khi Admin bấm nút xác nhận |
