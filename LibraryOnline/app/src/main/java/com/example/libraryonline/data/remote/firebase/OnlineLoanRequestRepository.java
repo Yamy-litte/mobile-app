@@ -110,6 +110,7 @@ public final class OnlineLoanRequestRepository {
                 changes.put("dueAt", FieldValue.delete());
                 changes.put("returnedAt", FieldValue.delete());
                 changes.put("returnedBy", FieldValue.delete());
+                changes.put("receiptId", FieldValue.delete());
                 tx.update(requestRef, changes);
             } else {
                 throw new IllegalArgumentException(
@@ -311,9 +312,15 @@ public final class OnlineLoanRequestRepository {
                 if (days == null || days < 1 || days > 60)
                     throw new IllegalArgumentException("Thời hạn mượn không hợp lệ.");
                 long attempt = current.getLong("attempt") == null ? 1 : current.getLong("attempt");
+                String receiptId = requestId + "_v" + attempt;
+                DocumentReference receiptRef =
+                        db.collection("OnlineLoanReceipts").document(receiptId);
+                if (tx.get(receiptRef).exists())
+                    throw new IllegalArgumentException("Phiếu giao sách đã tồn tại.");
                 Timestamp dueAt = new Timestamp(new Date(now + days * 86_400_000L));
                 Map<String, Object> collected = new HashMap<>();
                 collected.put("status", COLLECTED);
+                collected.put("receiptId", receiptId);
                 collected.put("collectedBy", adminUid);
                 collected.put("collectedAt", FieldValue.serverTimestamp());
                 collected.put("dueAt", dueAt);
@@ -322,6 +329,21 @@ public final class OnlineLoanRequestRepository {
                 tx.update(requestRef, collected);
                 tx.update(copyRef, "copyStatus", "DaMuon", "priorityUserId", null,
                         "updatedAt", FieldValue.serverTimestamp());
+                Map<String, Object> receipt = new HashMap<>();
+                receipt.put("requestId", requestId);
+                receipt.put("userId", userId);
+                receipt.put("bookTitleId", current.getString("bookTitleId"));
+                receipt.put("bookTitle", current.getString("bookTitle"));
+                receipt.put("copyId", copyId);
+                receipt.put("loanDays", days);
+                receipt.put("attempt", attempt);
+                receipt.put("status", "Open");
+                receipt.put("collectedBy", adminUid);
+                receipt.put("collectedAt", FieldValue.serverTimestamp());
+                receipt.put("dueAt", dueAt);
+                receipt.put("returnedAt", null);
+                receipt.put("returnedBy", null);
+                tx.set(receiptRef, receipt);
                 tx.set(notification(requestId, attempt, COLLECTED),
                         notice(requestId, userId, COLLECTED, attempt, "Đã nhận sách Online",
                                 "Đã giao " + current.getString("bookTitle")
@@ -357,6 +379,16 @@ public final class OnlineLoanRequestRepository {
                 DocumentSnapshot title = tx.get(titleRef);
                 if (!current.exists() || !COLLECTED.equals(current.getString("status")))
                     throw new IllegalArgumentException("Đơn đã trả hoặc thay đổi. Hãy tải lại.");
+                String receiptId = current.getString("receiptId");
+                if (receiptId == null)
+                    throw new IllegalArgumentException("Thiếu phiếu giao Online để đối soát.");
+                DocumentReference receiptRef =
+                        db.collection("OnlineLoanReceipts").document(receiptId);
+                DocumentSnapshot receipt = tx.get(receiptRef);
+                if (!receipt.exists() || !"Open".equals(receipt.getString("status"))
+                        || !requestId.equals(receipt.getString("requestId"))
+                        || !copyId.equals(receipt.getString("copyId")))
+                    throw new IllegalArgumentException("Phiếu mượn Online không khớp.");
                 if (!user.exists() || !readerBarcode.trim().equals(user.getString("barcode")))
                     throw new IllegalArgumentException("Mã thẻ độc giả không trùng hồ sơ.");
                 if (!copy.exists() || !"DaMuon".equals(copy.getString("copyStatus"))
@@ -381,6 +413,9 @@ public final class OnlineLoanRequestRepository {
                         "updatedAt", FieldValue.serverTimestamp());
                 tx.update(titleRef, "availableCopies", title.getLong("availableCopies") + 1,
                         "updatedAt", FieldValue.serverTimestamp());
+                tx.update(receiptRef, "status", RETURNED,
+                        "returnedAt", FieldValue.serverTimestamp(),
+                        "returnedBy", adminUid);
                 tx.set(notification(requestId, attempt, RETURNED),
                         notice(requestId, userId, RETURNED, attempt,
                                 "Thư viện đã nhận trả sách Online",
